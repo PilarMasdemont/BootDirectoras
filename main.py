@@ -6,23 +6,29 @@ import traceback
 app = FastAPI()
 
 @app.get("/kpis")
-def obtener_kpis(semana: int = Query(None), codsalon: int = Query(None)):
+def obtener_kpis(
+    year: int = Query(...),
+    semana: int = Query(...),
+    codsalon: int = Query(...)
+):
     try:
         data = leer_kpis()
 
-        # Asegurarse de que los datos están cargados como lista
         if not isinstance(data, list):
             return JSONResponse(
                 status_code=500,
                 content={"error": "Los datos no se cargaron correctamente"}
             )
 
-        if semana is not None:
-            data = [kpi for kpi in data if str(kpi.get("semana")).strip() == str(semana)]
-        if codsalon is not None:
-            data = [kpi for kpi in data if int(kpi.get("codsalon", -1)) == codsalon]
+        # Filtrado
+        filtered = [
+            kpi for kpi in data
+            if str(kpi.get("year")).strip() == str(year)
+            and str(kpi.get("semana")).strip() == str(semana)
+            and int(kpi.get("codsalon", -1)) == codsalon
+        ]
 
-        return {"kpis": data}
+        return {"kpis": filtered}
     except Exception as e:
         return JSONResponse(
             status_code=500,
