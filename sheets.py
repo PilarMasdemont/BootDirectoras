@@ -44,6 +44,3 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     df = df.where(pd.notnull(df), None)
 
     return df.to_dict(orient="records")
-
-
-
