@@ -1,36 +1,22 @@
-def leer_kpis(year=None, nsemana=None, codsalon=None):
-     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
-     gid = "2099980865"  # <-- KPIsSemanaS
- 
-     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
- 
-     response = requests.get(SHEET_URL)
-     if response.status_code != 200:
-         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
- 
-     # Lee como texto y cambia ',' por '.' para los decimales
-     csv_text = response.text.replace(",", ".")
-     df = pd.read_csv(StringIO(csv_text))
- 
-     # Limpieza de nombres de columna
-     df.columns = df.columns.str.strip().str.lower()
- 
-     # Convertir columnas clave a numérico (asegurarse)
-     for col in ['year', 'nsemana', 'codsalon']:
-         df[col] = pd.to_numeric(df[col], errors='coerce')
- 
-     # Aplicar filtros si se pasan
-     if year is not None:
-         df = df[df['year'] == year]
-     if nsemana is not None:
-         df = df[df['nsemana'] == nsemana]
-     if codsalon is not None:
-         df = df[df['codsalon'] == codsalon]
- 
-     # Limpiar para ser JSON-compatible
-     df.replace([np.inf, -np.inf], np.nan, inplace=True)
-     df = df.where(pd.notnull(df), None)
- 
-     return df.to_dict(orient="records")
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+from sheets import leer_kpis
+import traceback
 
-    return df.to_dict(orient="records")
+app = FastAPI()
+
+@app.get("/kpis")
+def obtener_kpis(
+    year: int = Query(..., description="Año, por ejemplo 2025"),
+    nsemana: int = Query(..., description="Número de semana"),
+    codsalon: int = Query(..., description="Código de salón")
+):
+    try:
+        data = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
+        return {"kpis": data}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "trace": traceback.format_exc()}
+        )
+
