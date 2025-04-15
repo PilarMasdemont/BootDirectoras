@@ -2,27 +2,19 @@ import pandas as pd
 import requests
 from io import StringIO
 import numpy as np
-import csv  # <- nuevo
 
 def leer_kpis(year=None, nsemana=None, codsalon=None):
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
     gid = "2099980865"
-
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+
     response = requests.get(SHEET_URL)
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
 
-    csv_text = response.text
+    # 👇 Forzamos lectura con separador punto y coma
+    df = pd.read_csv(StringIO(response.text), sep=";")
 
-    # Detectar delimitador automáticamente
-    sample = csv_text[:1024]
-    dialect = csv.Sniffer().sniff(sample)
-    delimiter = dialect.delimiter
-
-    df = pd.read_csv(StringIO(csv_text), delimiter=delimiter)
-
-    # Limpieza de columnas
     df.columns = df.columns.str.strip().str.lower()
     print("🔎 Columnas detectadas:", df.columns.tolist())
 
@@ -45,4 +37,3 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     df = df.where(pd.notnull(df), None)
 
     return df.to_dict(orient="records")
-
