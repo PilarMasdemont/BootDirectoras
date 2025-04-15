@@ -4,8 +4,8 @@ from io import StringIO
 import numpy as np
 
 def leer_kpis(year=None, nsemana=None, codsalon=None):
-    sheet_id = "1-40eCYIUj8yKBC1w55ukAO45lLnL7gEm1-p_OLkL8Lk"
-    gid = "1801451782"  # ✅ CORRECTO: hoja KPIsSemanaS
+    sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"  # ✅ NUEVO SHEET ID
+    gid = "2099980865"  # ✅ GID de la hoja KPIsSemanalesSimplificados
 
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
@@ -15,12 +15,12 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
 
     df = pd.read_csv(StringIO(response.text))
 
-    # Limpiar nombres de columnas
+    # 🧼 Limpiar nombres de columnas
     df.columns = (
         df.columns.str.strip()
         .str.lower()
         .str.replace(" ", "")
-        .str.replace("\ufeff", "")  # Para eliminar BOM si está
+        .str.replace("\ufeff", "")  # BOM
     )
 
     columnas_actuales = list(df.columns)
@@ -42,3 +42,4 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     df.fillna("null", inplace=True)
 
     return df.to_dict(orient="records")
+
