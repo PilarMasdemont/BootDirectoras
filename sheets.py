@@ -2,9 +2,9 @@ import pandas as pd
 import requests
 from io import StringIO
 import numpy as np
+import csv  # <- nuevo
 
 def leer_kpis(year=None, nsemana=None, codsalon=None):
-    # ✅ HOJA CORRECTA: KPIs semana simplificada
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
     gid = "2099980865"
 
@@ -13,25 +13,27 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
 
-    # Reemplazar coma por punto decimal
-    csv_text = response.text.replace(",", ".")
-    df = pd.read_csv(StringIO(csv_text))
+    csv_text = response.text
+
+    # Detectar delimitador automáticamente
+    sample = csv_text[:1024]
+    dialect = csv.Sniffer().sniff(sample)
+    delimiter = dialect.delimiter
+
+    df = pd.read_csv(StringIO(csv_text), delimiter=delimiter)
 
     # Limpieza de columnas
     df.columns = df.columns.str.strip().str.lower()
-    print("🔎 Columnas detectadas:", df.columns.tolist())  # 👈 para depuración
+    print("🔎 Columnas detectadas:", df.columns.tolist())
 
-    # Validar existencia de columnas clave
     columnas_requeridas = ['year', 'nsemana', 'codsalon']
     for col in columnas_requeridas:
         if col not in df.columns:
             raise KeyError(f"Columna esperada no encontrada: '{col}'. Columnas disponibles: {df.columns.tolist()}")
 
-    # Conversión de tipos numéricos
     for col in columnas_requeridas:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Aplicar filtros
     if year is not None:
         df = df[df['year'] == year]
     if nsemana is not None:
@@ -39,8 +41,8 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     if codsalon is not None:
         df = df[df['codsalon'] == codsalon]
 
-    # Limpiar valores no válidos
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
     return df.to_dict(orient="records")
+
