@@ -1,6 +1,6 @@
 def leer_kpis(year=None, nsemana=None, codsalon=None):
-     sheet_id = "1-40eCYIUj8yKBC1w55ukAO45lLnL7gEm1-p_OLkL8Lk"
-     gid = "1801451782"  # <-- KPIsSemanaS
+     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
+     gid = "2099980865"  # <-- KPIsSemanaS
  
      SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
  
