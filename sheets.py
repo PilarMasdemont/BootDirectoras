@@ -6,7 +6,7 @@ import numpy as np
 def leer_kpis(year=None, nsemana=None, codsalon=None):
     # ✅ HOJA CORRECTA: KPIs semana simplificada
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
-    gid = "2099980865"  # Hoja "KPIsSemanaS"
+    gid = "2032263034"  # Hoja "KPIsSemanaS"
 
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     response = requests.get(SHEET_URL)
