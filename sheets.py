@@ -6,7 +6,7 @@ import numpy as np
 def leer_kpis(year=None, nsemana=None, codsalon=None):
     # ✅ Datos de la hoja
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
-    gid = "2032263034"  # Hoja "KPIsSemanaS"
+    gid = "2036398995"  # Hoja "KPIsSemanaS"
 
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     print(f"🌐 Consultando Google Sheet: {SHEET_URL}")
