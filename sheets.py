@@ -4,33 +4,35 @@ from io import StringIO
 import numpy as np
 
 def leer_kpis(year=None, nsemana=None, codsalon=None):
-    # ✅ HOJA CORRECTA: KPIs semana simplificada
+    # ✅ Datos de la hoja
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
     gid = "2032263034"  # Hoja "KPIsSemanaS"
 
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+    print(f"🌐 Consultando Google Sheet: {SHEET_URL}")
+
     response = requests.get(SHEET_URL)
+    print(f"📥 Estado de la respuesta: {response.status_code}")
+
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
 
-    # Reemplazar coma decimal si hiciera falta (pero ya lo estamos exportando bien desde Excel)
     csv_text = response.text
-
-    df = pd.read_csv(StringIO(csv_text), sep=",")  # Usa coma como separador
+    df = pd.read_csv(StringIO(csv_text), sep=",")
     df.columns = df.columns.str.strip().str.lower()
-
     print("🔎 Columnas detectadas:", df.columns.tolist())
 
     columnas_requeridas = ['year', 'nsemana', 'codsalon']
     for col in columnas_requeridas:
         if col not in df.columns:
-            raise KeyError(f"Columna esperada no encontrada: '{col}'. Columnas disponibles: {df.columns.tolist()}")
+            raise KeyError(f"❌ Columna esperada no encontrada: '{col}'. Columnas disponibles: {df.columns.tolist()}")
 
-    # Convertimos a numérico las columnas clave
+    # Conversión a numérico
     for col in columnas_requeridas:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Filtros por parámetros
+    # Filtros
+    print(f"🔍 Filtros aplicados - year: {year}, nsemana: {nsemana}, codsalon: {codsalon}")
     if year is not None:
         df = df[df['year'] == year]
     if nsemana is not None:
@@ -38,7 +40,8 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     if codsalon is not None:
         df = df[df['codsalon'] == codsalon]
 
-    # Limpiar valores inválidos
+    print(f"📊 Filas tras aplicar filtros: {len(df)}")
+
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
