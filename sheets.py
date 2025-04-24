@@ -3,7 +3,6 @@ import requests
 from io import StringIO
 import numpy as np
 import re
-import json
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
@@ -18,10 +17,10 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
 
     gid = gid_map[tipo]
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    print(f"🌐 Consultando Google Sheet ({tipo}): {SHEET_URL}")
+    print(f"\U0001f310 Consultando Google Sheet ({tipo}): {SHEET_URL}")
 
     response = requests.get(SHEET_URL)
-    print(f"📥 Estado de la respuesta: {response.status_code}")
+    print(f"\U0001f4e5 Estado de la respuesta: {response.status_code}")
 
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
@@ -29,12 +28,13 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     csv_text = response.text
     df = pd.read_csv(StringIO(csv_text), sep=",")
     df.columns = df.columns.str.strip().str.lower()
-    print("🔎 Columnas detectadas:", df.columns.tolist())
+    print("\U0001f50e Columnas detectadas:", df.columns.tolist())
 
     columnas_filtro = [col for col in ['year', 'nsemana', 'codsalon'] if col in df.columns]
     for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
+    # Limpiar y convertir todos los valores relevantes a numérico
     for col in df.columns:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).apply(lambda x: re.sub(r'[%€]', '', x).strip())
@@ -47,12 +47,13 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None and 'codsalon' in df.columns:
         df = df[df['codsalon'] == codsalon]
 
-    print(f"📊 Filas tras aplicar filtros: {len(df)}")
+    print(f"\U0001f4ca Filas tras aplicar filtros: {len(df)}")
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
     return df
+
 
 def analizar_trabajadores(df):
     coeficientes = {
@@ -99,6 +100,7 @@ def analizar_trabajadores(df):
 
     return resultados
 
+
 def analizar_salon(df):
     coeficientes = {
         "ratiotiempoindirecto": -0.74,
@@ -137,13 +139,22 @@ def analizar_salon(df):
             "mejoras": mejoras
         }
     except Exception as e:
-        print(f"⚠️ Error en analizar_salon: {e}")
+        print(f"\u26a0\ufe0f Error en analizar_salon: {e}")
         raise
 
-def safe_json(data):
-    def default_converter(o):
-        if isinstance(o, np.generic):
-            return o.item()
-        raise TypeError(f"Tipo no serializable: {type(o)}")
 
-    return json.loads(json.dumps(data, default=default_converter))
+def safe_json(obj):
+    def clean_value(value):
+        if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+            return None
+        return value
+
+    def clean(item):
+        if isinstance(item, dict):
+            return {k: clean(v) for k, v in item.items()}
+        elif isinstance(item, list):
+            return [clean(v) for v in item]
+        else:
+            return clean_value(item)
+
+    return clean(obj)
