@@ -34,7 +34,6 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Limpiar y convertir todos los valores relevantes a numérico
     for col in df.columns:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).apply(lambda x: re.sub(r'[%€]', '', x).strip())
@@ -53,7 +52,6 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     df = df.where(pd.notnull(df), None)
 
     return df
-
 
 def analizar_trabajadores(df):
     coeficientes = {
@@ -100,61 +98,17 @@ def analizar_trabajadores(df):
 
     return resultados
 
-
+# 🔧 MODO PRUEBA para analizar_salon
 def analizar_salon(df):
-    coeficientes = {
-        "ratiotiempoindirecto": -0.74,
-        "ratiodesviaciontiempoteorico": -0.25,
-        "ratioticketsinferior20": -0.19,
-        "horasfichadas": -0.04
-    }
-
     try:
         df = df.copy()
-        for kpi in coeficientes:
-            df[kpi] = pd.to_numeric(df[kpi], errors='coerce')
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        promedio = df.mean(numeric_only=True)
-        impacto_total = 0
-        positivos = []
-        negativos = []
-        mejoras = []
-
-        for kpi, peso in coeficientes.items():
-            valor = promedio.get(kpi, 0)
-            impacto_kpi = valor * peso
-            impacto_total += impacto_kpi
-
-            if peso < 0 and valor > 0.2:
-                negativos.append(kpi)
-                mejoras.append({"kpi": kpi, "impacto": round(impacto_kpi, 2)})
-            elif peso < 0 and valor <= 0.2:
-                positivos.append(kpi)
-
-        return {
-            "ratiogeneral": round(promedio.get("ratiogeneral", 0), 2),
-            "impacto_total": round(impacto_total, 2),
-            "positivos": positivos,
-            "negativos": negativos,
-            "mejoras": mejoras
-        }
+        print("🧪 Fila leída:", df.to_dict(orient="records"))
+        return df.to_dict(orient="records")[0] if not df.empty else {}
     except Exception as e:
-        print(f"\u26a0\ufe0f Error en analizar_salon: {e}")
+        print(f"⚠️ Error en analizar_salon: {e}")
         raise
-
-
-def safe_json(obj):
-    def clean_value(value):
-        if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
-            return None
-        return value
-
-    def clean(item):
-        if isinstance(item, dict):
-            return {k: clean(v) for k, v in item.items()}
-        elif isinstance(item, list):
-            return [clean(v) for v in item]
-        else:
-            return clean_value(item)
 
     return clean(obj)
