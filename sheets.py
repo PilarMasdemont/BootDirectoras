@@ -3,6 +3,7 @@ import requests
 from io import StringIO
 import numpy as np
 import re
+import json
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
@@ -17,10 +18,10 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
 
     gid = gid_map[tipo]
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    print(f"ἱ0 Consultando Google Sheet ({tipo}): {SHEET_URL}")
+    print(f"🌐 Consultando Google Sheet ({tipo}): {SHEET_URL}")
 
     response = requests.get(SHEET_URL)
-    print(f"὎5 Estado de la respuesta: {response.status_code}")
+    print(f"📥 Estado de la respuesta: {response.status_code}")
 
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
@@ -28,7 +29,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     csv_text = response.text
     df = pd.read_csv(StringIO(csv_text), sep=",")
     df.columns = df.columns.str.strip().str.lower()
-    print("ὐE Columnas detectadas:", df.columns.tolist())
+    print("🔎 Columnas detectadas:", df.columns.tolist())
 
     columnas_filtro = [col for col in ['year', 'nsemana', 'codsalon'] if col in df.columns]
     for col in columnas_filtro:
@@ -46,7 +47,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None and 'codsalon' in df.columns:
         df = df[df['codsalon'] == codsalon]
 
-    print(f"ὌA Filas tras aplicar filtros: {len(df)}")
+    print(f"📊 Filas tras aplicar filtros: {len(df)}")
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
@@ -111,19 +112,7 @@ def analizar_salon(df):
         for kpi in coeficientes:
             df[kpi] = pd.to_numeric(df[kpi], errors='coerce')
 
-        df = df.dropna(subset=coeficientes.keys(), how='all')
-
-        if df.empty:
-            return {
-                "ratiogeneral": None,
-                "impacto_total": None,
-                "positivos": [],
-                "negativos": [],
-                "mejoras": []
-            }
-
-        promedio = df[coeficientes.keys()].mean()
-
+        promedio = df.mean(numeric_only=True)
         impacto_total = 0
         positivos = []
         negativos = []
@@ -140,9 +129,8 @@ def analizar_salon(df):
             elif peso < 0 and valor <= 0.2:
                 positivos.append(kpi)
 
-        ratiogeneral_val = pd.to_numeric(df["ratiogeneral"], errors="coerce").mean()
         return {
-            "ratiogeneral": round(ratiogeneral_val, 2) if pd.notnull(ratiogeneral_val) else None,
+            "ratiogeneral": round(promedio.get("ratiogeneral", 0), 2),
             "impacto_total": round(impacto_total, 2),
             "positivos": positivos,
             "negativos": negativos,
@@ -152,4 +140,10 @@ def analizar_salon(df):
         print(f"⚠️ Error en analizar_salon: {e}")
         raise
 
+def safe_json(data):
+    def default_converter(o):
+        if isinstance(o, np.generic):
+            return o.item()
+        raise TypeError(f"Tipo no serializable: {type(o)}")
 
+    return json.loads(json.dumps(data, default=default_converter))
