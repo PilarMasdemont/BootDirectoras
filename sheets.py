@@ -1,9 +1,6 @@
-from pathlib import Path
-
-# Crear el contenido corregido para el archivo sheets.py nuevamente (después del reset)
-sheets_code = """
 import pandas as pd
 
+# URLs y configuración de hojas de Google Sheets
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
 HOJAS = {
     "semana": 2036398995,
@@ -11,6 +8,7 @@ HOJAS = {
     "mensual": 953186733,
 }
 
+# Columnas que se utilizarán
 COLUMNAS_UTILES = [
     "year", "nsemana", "codsalon", "facturacionsiva", "ticketmedio", "horasfichadas",
     "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"
@@ -25,14 +23,13 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     df.columns = [col.lower() for col in df.columns]
     df = df.replace("(en blanco)", pd.NA)
 
-    # Convertir columnas a valores numéricos con errores tolerados
+    # Convertir a numérico con coerción para evitar errores de tipo
     for col in ["year", "nsemana", "codsalon"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     columnas_utiles = [c for c in df.columns if c in COLUMNAS_UTILES]
     df = df[columnas_utiles]
 
-    # Aplicar filtros
     if year is not None:
         df = df[df["year"] == year]
     if nsemana is not None:
@@ -43,11 +40,3 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     print(f"📊 Columnas: {df.columns.tolist()}")
     print(f"📈 Filas tras filtros: {len(df)}")
     return df
-"""
-
-# Guardar el archivo
-path = Path("/mnt/data/sheets.py")
-path.write_text(sheets_code)
-
-path.name
-
