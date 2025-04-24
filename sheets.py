@@ -35,12 +35,27 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
 
 def analizar_salon(df):
     if df.empty:
-        return {"ratiogeneral": None, "impacto_total": None, "positivos": [], "negativos": [], "mejoras": [], "error": "No hay datos"}
+        return {
+            "ratiogeneral": None,
+            "impacto_total": None,
+            "positivos": [],
+            "negativos": [],
+            "mejoras": [],
+            "error": "No hay datos"
+        }
 
     df = df.apply(pd.to_numeric, errors="coerce").dropna()
 
+    # Cálculos seguros
     ratiogeneral = df["ratiogeneral"].mean()
     impacto_total = df["facturacionsiva"].astype(float).sum()
+
+    # Manejo de valores no válidos para JSON
+    if pd.isna(ratiogeneral) or pd.isnull(ratiogeneral) or not pd.api.types.is_number(ratiogeneral):
+        ratiogeneral = None
+
+    if pd.isna(impacto_total) or pd.isnull(impacto_total) or not pd.api.types.is_number(impacto_total):
+        impacto_total = None
 
     return {
         "ratiogeneral": ratiogeneral,
