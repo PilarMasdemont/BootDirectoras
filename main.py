@@ -1,6 +1,7 @@
+
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
-from sheets import leer_kpis, analizar_trabajadores, analizar_salon
+from sheets import leer_kpis, analizar_trabajadores, analizar_salon, safe_json
 import traceback
 
 app = FastAPI()
@@ -30,7 +31,7 @@ def analisis_trabajadores(
     try:
         df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo="trabajadores")
         resultado = analizar_trabajadores(df)
-        return {"analisis": resultado}
+        return {"analisis": safe_json(resultado)}
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -46,7 +47,7 @@ def analisis_salon(
     try:
         df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo="semana")
         resultado = analizar_salon(df)
-        return {"analisis": resultado}
+        return {"analisis": safe_json(resultado)}
     except Exception as e:
         return JSONResponse(
             status_code=500,
