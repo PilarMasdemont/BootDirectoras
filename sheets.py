@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 from io import StringIO
 import numpy as np
+import re
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
@@ -32,6 +33,12 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     columnas_filtro = [col for col in ['year', 'nsemana', 'codsalon'] if col in df.columns]
     for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # Limpiar todos los valores con símbolos y convertir a float
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].astype(str).apply(lambda x: re.sub(r'[%€]', '', x).strip())
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
     if year is not None and 'year' in df.columns:
         df = df[df['year'] == year]
