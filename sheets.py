@@ -15,6 +15,10 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     hoja_id = HOJAS[tipo]
     url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
     df = pd.read_csv(url)
+
+    print("📄 Columnas leídas:", df.columns.tolist())
+    print(df.head())
+
     df.columns = [col.lower() for col in df.columns]
     df = df.replace("(en blanco)", pd.NA)
 
@@ -30,11 +34,13 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
         df = df[df["nsemana"] == nsemana]
     if codsalon is not None:
         df = df[df["codsalon"] == codsalon]
-        print("📦 DataFrame después de filtros:")
-        print(df.head())
-        print("🔢 Número de filas:", len(df))
+
+    print(f"🔎 Filtros aplicados: year={year}, nsemana={nsemana}, codsalon={codsalon}")
+    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
+    print(df.head())
 
     return df
+
 
 def analizar_salon(df):
     if df.empty:
