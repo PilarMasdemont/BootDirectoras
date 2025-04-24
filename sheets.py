@@ -1,5 +1,4 @@
-# Volvemos a tomar la versión detallada del usuario y le agregamos el ajuste para safe_json
-user_code = '''
+
 import pandas as pd
 import requests
 from io import StringIO
@@ -49,7 +48,6 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Limpiar y convertir todos los valores relevantes a numérico
     for col in df.columns:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).apply(lambda x: re.sub(r'[%€]', '', x).strip())
@@ -154,13 +152,6 @@ def analizar_salon(df):
     except Exception as e:
         print(f"⚠️ Error en analizar_salon: {e}")
         raise
-'''
 
-# Guardamos el archivo completo
-file_path = "/mnt/data/sheets_final.py"
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write(user_code)
-
-file_path
 
 
