@@ -1,8 +1,23 @@
+# Volvemos a tomar la versión detallada del usuario y le agregamos el ajuste para safe_json
+user_code = '''
 import pandas as pd
 import requests
 from io import StringIO
 import numpy as np
 import re
+import math
+
+def safe_json(obj):
+    if isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    elif isinstance(obj, list):
+        return [safe_json(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: safe_json(v) for k, v in obj.items()}
+    else:
+        return obj
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
@@ -17,10 +32,10 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
 
     gid = gid_map[tipo]
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    print(f"\U0001f310 Consultando Google Sheet ({tipo}): {SHEET_URL}")
+    print(f"🌐 Consultando Google Sheet ({tipo}): {SHEET_URL}")
 
     response = requests.get(SHEET_URL)
-    print(f"\U0001f4e5 Estado de la respuesta: {response.status_code}")
+    print(f"📥 Estado de la respuesta: {response.status_code}")
 
     if response.status_code != 200:
         raise Exception(f"HTTP Error {response.status_code}: {response.reason}")
@@ -28,7 +43,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     csv_text = response.text
     df = pd.read_csv(StringIO(csv_text), sep=",")
     df.columns = df.columns.str.strip().str.lower()
-    print("\U0001f50e Columnas detectadas:", df.columns.tolist())
+    print("🔎 Columnas detectadas:", df.columns.tolist())
 
     columnas_filtro = [col for col in ['year', 'nsemana', 'codsalon'] if col in df.columns]
     for col in columnas_filtro:
@@ -47,13 +62,12 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None and 'codsalon' in df.columns:
         df = df[df['codsalon'] == codsalon]
 
-    print(f"\U0001f4ca Filas tras aplicar filtros: {len(df)}")
+    print(f"📊 Filas tras aplicar filtros: {len(df)}")
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
     return df
-
 
 def analizar_trabajadores(df):
     coeficientes = {
@@ -100,7 +114,6 @@ def analizar_trabajadores(df):
 
     return resultados
 
-
 def analizar_salon(df):
     coeficientes = {
         "ratiotiempoindirecto": -0.74,
@@ -131,14 +144,23 @@ def analizar_salon(df):
             elif peso < 0 and valor <= 0.2:
                 positivos.append(kpi)
 
-        return {
+        return safe_json({
             "ratiogeneral": round(promedio.get("ratiogeneral", 0), 2),
             "impacto_total": round(impacto_total, 2),
             "positivos": positivos,
             "negativos": negativos,
             "mejoras": mejoras
-        }
+        })
     except Exception as e:
-        print(f"\u26a0\ufe0f Error en analizar_salon: {e}")
+        print(f"⚠️ Error en analizar_salon: {e}")
         raise
+'''
+
+# Guardamos el archivo completo
+file_path = "/mnt/data/sheets_final.py"
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(user_code)
+
+file_path
+
 
