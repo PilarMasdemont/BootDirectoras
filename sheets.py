@@ -1,39 +1,39 @@
 import pandas as pd
-import requests
-from io import StringIO
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
-    sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
-    gid_map = {
-        "semana": "2036398995",
-        "trabajadores": "31094205",
-        "mensual": "1333792005"
+    url_map = {
+        "semana": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2036398995",
+        # añade aquí más si tienes otros tipos
     }
 
-    gid = gid_map.get(tipo)
-    if not gid:
-        raise ValueError(f"Tipo de hoja desconocido: '{tipo}'")
+    url = url_map.get(tipo)
+    if not url:
+        raise ValueError(f"Tipo de hoja desconocido: {tipo}")
 
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    print(f"🌐 Consultando Google Sheet: {url}")
-    
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Error al descargar: {response.status_code}")
+    df = pd.read_csv(url, dtype=str)  # leer como texto por seguridad
 
-    df = pd.read_csv(StringIO(response.text))
-    df.columns = df.columns.str.lower().str.strip()
+    # Eliminar filas sin valores clave
+    df = df.dropna(subset=["year", "nsemana", "codsalon"])
 
-    # Aplicar filtros si existen
-    if year is not None and 'year' in df.columns:
-        df = df[df['year'] == year]
-    if nsemana is not None and 'nsemana' in df.columns:
-        df = df[df['nsemana'] == nsemana]
-    if codsalon is not None and 'codsalon' in df.columns:
-        df = df[df['codsalon'] == codsalon]
+    # Convertir identificadores a enteros
+    df["year"] = df["year"].astype(int)
+    df["nsemana"] = df["nsemana"].astype(int)
+    df["codsalon"] = df["codsalon"].astype(int)
 
-    print("📊 Columnas:", df.columns.tolist())
-    print("📈 Filas tras filtros:", len(df))
-    print(df.head())  # Log para revisar los datos
+    # Convertir columnas numéricas
+    numeric_cols = ["facturacionsiva", "ticketmedio", "horasfichadas", "ratiogeneral",
+                    "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # Aplicar filtros
+    if year is not None:
+        df = df[df["year"] == year]
+    if nsemana is not None:
+        df = df[df["nsemana"] == nsemana]
+    if codsalon is not None:
+        df = df[df["codsalon"] == codsalon]
+
+    print(f"📊 Filas tras filtros: {len(df)}")
     return df
