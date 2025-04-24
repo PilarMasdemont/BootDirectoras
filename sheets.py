@@ -154,4 +154,3 @@ def analizar_salon(df):
         raise
 
 
-
