@@ -15,23 +15,25 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     hoja_id = HOJAS[tipo]
     url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
     print(f"🌐 Consultando Google Sheet: {url}")
-
     df = pd.read_csv(url)
+    
     df.columns = [col.lower() for col in df.columns]
+    print(f"📄 Columnas leídas: {df.columns.tolist()}")
+    
     df = df.replace("(en blanco)", pd.NA)
 
-    # Convertir columnas clave a numérico
+    # Reemplazar comas por puntos en TODAS las columnas
+    df = df.apply(lambda x: x.astype(str).str.replace(",", ".", regex=False))
+
+    # Convertir columnas específicas a valores numéricos
     for col in ["year", "nsemana", "codsalon"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     columnas_utiles = [c for c in df.columns if c in COLUMNAS_UTILES]
     df = df[columnas_utiles]
-
-    # 🔍 Mostrar combinaciones únicas para ayudar al debug
-    print("📊 Combinaciones disponibles (year, nsemana, codsalon):")
-    print(df[["year", "nsemana", "codsalon"]].dropna().drop_duplicates())
-
-    # Aplicar filtros si se pasan
+    
+    # Filtros
+    print(f"🔎 Filtros aplicados: year={year}, nsemana={nsemana}, codsalon={codsalon}")
     if year is not None:
         df = df[df["year"] == year]
     if nsemana is not None:
@@ -40,31 +42,24 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
         df = df[df["codsalon"] == codsalon]
 
     print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
+    print(df.head())
     return df
 
 def analizar_salon(df):
     if df.empty:
         return {
-            "ratiogeneral": None,
-            "impacto_total": None,
-            "positivos": [],
-            "negativos": [],
-            "mejoras": [],
+            "ratiogeneral": None, 
+            "impacto_total": 0.0,
+            "positivos": [], 
+            "negativos": [], 
+            "mejoras": [], 
             "error": "No hay datos"
         }
 
     df = df.apply(pd.to_numeric, errors="coerce").dropna()
 
-    # Cálculos seguros
     ratiogeneral = df["ratiogeneral"].mean()
     impacto_total = df["facturacionsiva"].astype(float).sum()
-
-    # Manejo de valores no válidos para JSON
-    if pd.isna(ratiogeneral) or pd.isnull(ratiogeneral) or not pd.api.types.is_number(ratiogeneral):
-        ratiogeneral = None
-
-    if pd.isna(impacto_total) or pd.isnull(impacto_total) or not pd.api.types.is_number(impacto_total):
-        impacto_total = None
 
     return {
         "ratiogeneral": ratiogeneral,
@@ -73,3 +68,4 @@ def analizar_salon(df):
         "negativos": [],
         "mejoras": []
     }
+
