@@ -30,6 +30,9 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
         df = df[df["nsemana"] == nsemana]
     if codsalon is not None:
         df = df[df["codsalon"] == codsalon]
+        print("📦 DataFrame después de filtros:")
+        print(df.head())
+        print("🔢 Número de filas:", len(df))
 
     return df
 
