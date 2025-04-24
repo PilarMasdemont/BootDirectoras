@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
-from sheets import leer_kpis
+from sheets import leer_kpis, analizar_trabajadores, analizar_salon
 import traceback
 
 app = FastAPI()
@@ -14,10 +14,41 @@ def obtener_kpis(
 ):
     try:
         data = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo=tipo)
-        return {"kpis": data}
+        return {"kpis": data.to_dict(orient="records")}
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"error": str(e), "trace": traceback.format_exc()}
         )
 
+@app.get("/kpis/trabajadores/analisis")
+def analisis_trabajadores(
+    year: int = Query(...),
+    nsemana: int = Query(...),
+    codsalon: int = Query(...)
+):
+    try:
+        df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo="trabajadores")
+        resultado = analizar_trabajadores(df)
+        return {"analisis": resultado}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "trace": traceback.format_exc()}
+        )
+
+@app.get("/kpis/salon/analisis")
+def analisis_salon(
+    year: int = Query(...),
+    nsemana: int = Query(...),
+    codsalon: int = Query(...)
+):
+    try:
+        df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo="semana")
+        resultado = analizar_salon(df)
+        return {"analisis": resultado}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "trace": traceback.format_exc()}
+        )
