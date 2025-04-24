@@ -3,13 +3,23 @@ import requests
 from io import StringIO
 import numpy as np
 
-def leer_kpis(year=None, nsemana=None, codsalon=None):
-    # ✅ Datos de la hoja
+def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
+    # ID general del documento
     sheet_id = "1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0"
-    gid = "2036398995"  # Hoja "KPIsSemanaS"
+    
+    # Diccionario de tipos con sus respectivos GIDs
+    gid_map = {
+        "semana": "2036398995",       # KPIs por semana y salón
+        "trabajadores": "31094205",   # KPIs por semana y trabajador
+        "mensual": "1333792005"       # KPIs mensuales por salón
+    }
 
+    if tipo not in gid_map:
+        raise ValueError(f"Tipo de hoja desconocido: '{tipo}'")
+
+    gid = gid_map[tipo]
     SHEET_URL = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    print(f"🌐 Consultando Google Sheet: {SHEET_URL}")
+    print(f"🌐 Consultando Google Sheet ({tipo}): {SHEET_URL}")
 
     response = requests.get(SHEET_URL)
     print(f"📥 Estado de la respuesta: {response.status_code}")
@@ -22,22 +32,16 @@ def leer_kpis(year=None, nsemana=None, codsalon=None):
     df.columns = df.columns.str.strip().str.lower()
     print("🔎 Columnas detectadas:", df.columns.tolist())
 
-    columnas_requeridas = ['year', 'nsemana', 'codsalon']
-    for col in columnas_requeridas:
-        if col not in df.columns:
-            raise KeyError(f"❌ Columna esperada no encontrada: '{col}'. Columnas disponibles: {df.columns.tolist()}")
-
-    # Conversión a numérico
-    for col in columnas_requeridas:
+    # Filtros dinámicos según columnas presentes
+    columnas_filtro = [col for col in ['year', 'nsemana', 'codsalon'] if col in df.columns]
+    for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Filtros
-    print(f"🔍 Filtros aplicados - year: {year}, nsemana: {nsemana}, codsalon: {codsalon}")
-    if year is not None:
+    if year is not None and 'year' in df.columns:
         df = df[df['year'] == year]
-    if nsemana is not None:
+    if nsemana is not None and 'nsemana' in df.columns:
         df = df[df['nsemana'] == nsemana]
-    if codsalon is not None:
+    if codsalon is not None and 'codsalon' in df.columns:
         df = df[df['codsalon'] == codsalon]
 
     print(f"📊 Filas tras aplicar filtros: {len(df)}")
