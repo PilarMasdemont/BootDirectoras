@@ -1,52 +1,60 @@
 import pandas as pd
-import requests
-from io import StringIO
+import numpy as np
 
-# Diccionario con las URLs de los documentos de Google Sheets
-GOOGLE_SHEETS = {
+URLS = {
     "semana": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2036398995",
-    "trabajadores": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=1333321633",
-    "mensual": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=902950106"
+    # Puedes añadir otros si lo necesitas
 }
 
-def leer_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> pd.DataFrame:
-    """
-    Carga datos desde una hoja de Google Sheets según el tipo ('semana', 'trabajadores', 'mensual'),
-    y los filtra por año, semana y código de salón.
-    """
-    url = GOOGLE_SHEETS.get(tipo)
-    if not url:
-        raise ValueError(f"Tipo de hoja no reconocido: {tipo}")
+def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
+    url = URLS[tipo]
+    df = pd.read_csv(url)
 
-    print(f"🌐 Consultando Google Sheet: {url}")
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Error al obtener datos: {response.status_code}")
+    # Limpieza básica
+    df = df.replace('(en blanco)', np.nan)
+    df = df.dropna(subset=["year", "nsemana", "codsalon"])
+    
+    df["year"] = df["year"].astype(int)
+    df["nsemana"] = df["nsemana"].astype(int)
+    df["codsalon"] = df["codsalon"].astype(int)
 
-    df = pd.read_csv(StringIO(response.text))
+    if year is not None:
+        df = df[df["year"] == year]
+    if nsemana is not None:
+        df = df[df["nsemana"] == nsemana]
+    if codsalon is not None:
+        df = df[df["codsalon"] == codsalon]
 
-    print("📊 Columnas:", list(df.columns))
+    return df
 
-    # Normalizar nombres de columnas si es necesario (opcional)
-    df.columns = df.columns.str.strip().str.lower()
+def analizar_salon(df):
+    resultado = {
+        "ratiogeneral": None,
+        "impacto_total": None,
+        "positivos": [],
+        "negativos": [],
+        "mejoras": []
+    }
 
-    # Convertimos codsalon a numérico (filtrando errores como '(en blanco)')
-    if "codsalon" in df.columns:
-        df["codsalon"] = pd.to_numeric(df["codsalon"], errors="coerce")
-    if "nsemana" in df.columns:
-        df["nsemana"] = pd.to_numeric(df["nsemana"], errors="coerce")
-    if "year" in df.columns:
-        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+    if df.empty:
+        return resultado
 
-    df = df.dropna(subset=["codsalon", "nsemana", "year"])
-    df = df.astype({"codsalon": int, "nsemana": int, "year": int})
+    try:
+        ratiogeneral = df["ratiogeneral"].mean()
+        resultado["ratiogeneral"] = float(np.round(ratiogeneral, 4))
 
-    df_filtrado = df[
-        (df["year"] == year) &
-        (df["nsemana"] == nsemana) &
-        (df["codsalon"] == codsalon)
-    ]
+        # Impacto: Ejemplo usando facturación sin IVA * ratio general
+        impacto = df["facturacionsiva"].astype(float) * df["ratiogeneral"].astype(float)
+        resultado["impacto_total"] = float(np.round(impacto.sum(), 2))
 
-    print(f"📈 Filas tras filtros: {len(df_filtrado)}")
-    return df_filtrado
+        # Puedes definir umbrales personalizados
+        for _, row in df.iterrows():
+            if row["ratiogeneral"] > 2:
+                resultado["positivos"].append(f"Alto rendimiento en semana {int(row['nsemana'])}")
+            elif row["ratiogeneral"] < 1:
+                resultado["negativos"].append(f"Bajo rendimiento en semana {int(row['nsemana'])}")
 
+    except Exception as e:
+        resultado["error"] = str(e)
+
+    return resultado
