@@ -34,7 +34,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     for col in columnas_filtro:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Limpiar todos los valores con símbolos y convertir a float
+    # Limpiar y convertir todos los valores relevantes a numérico
     for col in df.columns:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).apply(lambda x: re.sub(r'[%€]', '', x).strip())
@@ -72,7 +72,8 @@ def analizar_trabajadores(df):
         mejoras = []
 
         for kpi, peso in coeficientes.items():
-            valor = row[kpi] if pd.notnull(row[kpi]) else 0
+            valor = pd.to_numeric(row.get(kpi), errors='coerce')
+            valor = valor if pd.notnull(valor) else 0
             impacto_kpi = valor * peso
             impacto_total += impacto_kpi
 
@@ -83,8 +84,8 @@ def analizar_trabajadores(df):
                 positivos.append(kpi)
 
         resultado = {
-            "codempleado": int(row["codempleado"]),
-            "ratiogeneral": round(row["ratiogeneral"], 2) if pd.notnull(row["ratiogeneral"]) else None,
+            "codempleado": int(row.get("codempleado", -1)),
+            "ratiogeneral": round(pd.to_numeric(row.get("ratiogeneral"), errors='coerce') or 0, 2),
             "impacto_total": round(impacto_total, 2),
             "prioridad": None,
             "positivos": positivos,
@@ -108,27 +109,36 @@ def analizar_salon(df):
         "horasfichadas": -0.04
     }
 
-    promedio = df.mean(numeric_only=True)
-    impacto_total = 0
-    positivos = []
-    negativos = []
-    mejoras = []
+    try:
+        df = df.copy()
+        for kpi in coeficientes:
+            df[kpi] = pd.to_numeric(df[kpi], errors='coerce')
 
-    for kpi, peso in coeficientes.items():
-        valor = promedio.get(kpi, 0)
-        impacto_kpi = valor * peso
-        impacto_total += impacto_kpi
+        promedio = df.mean(numeric_only=True)
+        impacto_total = 0
+        positivos = []
+        negativos = []
+        mejoras = []
 
-        if peso < 0 and valor > 0.2:
-            negativos.append(kpi)
-            mejoras.append({"kpi": kpi, "impacto": round(impacto_kpi, 2)})
-        elif peso < 0 and valor <= 0.2:
-            positivos.append(kpi)
+        for kpi, peso in coeficientes.items():
+            valor = promedio.get(kpi, 0)
+            impacto_kpi = valor * peso
+            impacto_total += impacto_kpi
 
-    return {
-        "ratiogeneral": round(promedio.get("ratiogeneral", 0), 2),
-        "impacto_total": round(impacto_total, 2),
-        "positivos": positivos,
-        "negativos": negativos,
-        "mejoras": mejoras
-    }
+            if peso < 0 and valor > 0.2:
+                negativos.append(kpi)
+                mejoras.append({"kpi": kpi, "impacto": round(impacto_kpi, 2)})
+            elif peso < 0 and valor <= 0.2:
+                positivos.append(kpi)
+
+        return {
+            "ratiogeneral": round(promedio.get("ratiogeneral", 0), 2),
+            "impacto_total": round(impacto_total, 2),
+            "positivos": positivos,
+            "negativos": negativos,
+            "mejoras": mejoras
+        }
+    except Exception as e:
+        print(f"\u26a0\ufe0f Error en analizar_salon: {e}")
+        raise
+
