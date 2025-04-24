@@ -1,71 +1,50 @@
-import pandas as pd
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+from sheets import (
+    leer_kpis,
+    analizar_salon,
+    explicar_kpi,
+    explicar_variacion,
+    analizar_trabajadores,
+    sugerencias_mejora,
+)
 
-# Configuración de hojas de Google Sheets
-URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
-HOJAS = {
-    "semana": 2036398995,
-}
+app = FastAPI()
 
-COLUMNAS_UTILES = [
-    "year", "nsemana", "codsalon", "facturacionsiva", "ticketmedio", "horasfichadas",
-    "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"
-]
+@app.get("/")
+def home():
+    return {"mensaje": "🟢 API Boot Directora funcionando correctamente"}
 
-def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
-    hoja_id = HOJAS[tipo]
-    url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
-    print(f"🌐 Consultando Google Sheet: {url}")
-    df = pd.read_csv(url)
-    
-    df.columns = [col.lower() for col in df.columns]
-    print(f"📄 Columnas leídas: {df.columns.tolist()}")
-    
-    df = df.replace("(en blanco)", pd.NA)
+@app.get("/kpis")
+def obtener_kpis(year: int = Query(...), nsemana: int = Query(...), codsalon: int = Query(...)):
+    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
+    return df.to_dict(orient="records")
 
-    # Reemplazar comas por puntos en TODAS las columnas
-    df = df.apply(lambda x: x.astype(str).str.replace(",", ".", regex=False))
+@app.get("/kpis/salon/analisis")
+def analisis_salon(year: int, nsemana: int, codsalon: int):
+    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
+    resultado = analizar_salon(df)
+    return {"analisis": resultado}
 
-    # Convertir columnas específicas a valores numéricos
-    for col in ["year", "nsemana", "codsalon"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+@app.get("/kpis/explicar")
+def explicacion_kpi(nombre: str = Query(...)):
+    return {"kpi": nombre, "explicacion": explicar_kpi(nombre)}
 
-    columnas_utiles = [c for c in df.columns if c in COLUMNAS_UTILES]
-    df = df[columnas_utiles]
-    
-    # Filtros
-    print(f"🔎 Filtros aplicados: year={year}, nsemana={nsemana}, codsalon={codsalon}")
-    if year is not None:
-        df = df[df["year"] == year]
-    if nsemana is not None:
-        df = df[df["nsemana"] == nsemana]
-    if codsalon is not None:
-        df = df[df["codsalon"] == codsalon]
+@app.get("/kpis/variacion")
+def comparar_semanas(year: int, nsemana_actual: int, nsemana_anterior: int, codsalon: int):
+    df_actual = leer_kpis(year=year, nsemana=nsemana_actual, codsalon=codsalon)
+    df_anterior = leer_kpis(year=year, nsemana=nsemana_anterior, codsalon=codsalon)
+    resultado = explicar_variacion(df_actual, df_anterior)
+    return {"variacion": resultado}
 
-    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
-    print(df.head())
-    return df
+@app.get("/kpis/trabajadores")
+def analisis_trabajadores(year: int, nsemana: int, codsalon: int):
+    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
+    resultado = analizar_trabajadores(df)
+    return {"trabajadores": resultado}
 
-def analizar_salon(df):
-    if df.empty:
-        return {
-            "ratiogeneral": None, 
-            "impacto_total": 0.0,
-            "positivos": [], 
-            "negativos": [], 
-            "mejoras": [], 
-            "error": "No hay datos"
-        }
-
-    df = df.apply(pd.to_numeric, errors="coerce").dropna()
-
-    ratiogeneral = df["ratiogeneral"].mean()
-    impacto_total = df["facturacionsiva"].astype(float).sum()
-
-    return {
-        "ratiogeneral": ratiogeneral,
-        "impacto_total": impacto_total,
-        "positivos": [],
-        "negativos": [],
-        "mejoras": []
-    }
-
+@app.get("/kpis/sugerencias")
+def sugerencias(year: int, nsemana: int, codsalon: int):
+    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
+    resultado = sugerencias_mejora(df)
+    return resultado
