@@ -6,14 +6,16 @@ import traceback
 app = FastAPI()
 
 @app.get("/kpis")
-def obtener_kpis(
-    year: int = Query(None),
-    nsemana: int = Query(None),
-    codsalon: int = Query(None),
-    tipo: str = Query("semana")
+def obtener_datos_crudos(
+    year: int = Query(...),
+    nsemana: int = Query(...),
+    codsalon: int = Query(...)
 ):
     try:
-        df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo=tipo)
+        df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon, tipo="semana")
         return {"datos": df.to_dict(orient="records")}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "trace": traceback.format_exc()}
+        )
