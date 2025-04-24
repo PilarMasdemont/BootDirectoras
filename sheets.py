@@ -1,19 +1,38 @@
 import pandas as pd
-import numpy as np
+import requests
+import json
+from io import StringIO
 
+# URL de los distintos tipos de hojas
 URLS = {
     "semana": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2036398995",
-    # Puedes añadir otros si lo necesitas
+    "trabajadores": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2131808853",
+    "mensual": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=1281961409"
 }
+
+def safe_json(obj):
+    try:
+        return json.loads(json.dumps(obj, allow_nan=False))
+    except (ValueError, TypeError) as e:
+        return {"error": str(e)}
 
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     url = URLS[tipo]
-    df = pd.read_csv(url)
+    print(f"\U0001F310 Consultando Google Sheet: {url}")
+    resp = requests.get(url)
+    print(f"\U0001F4CA Columnas: {resp.status_code}")
 
-    # Limpieza básica
-    df = df.replace('(en blanco)', np.nan)
+    df = pd.read_csv(StringIO(resp.text))
+
+    # Reemplazar ',' por '.' para columnas numéricas
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].str.replace(',', '.', regex=False)
+
+    # Eliminar filas con valores faltantes en las columnas clave
     df = df.dropna(subset=["year", "nsemana", "codsalon"])
-    
+
+    # Convertir tipos
     df["year"] = df["year"].astype(int)
     df["nsemana"] = df["nsemana"].astype(int)
     df["codsalon"] = df["codsalon"].astype(int)
@@ -25,6 +44,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None:
         df = df[df["codsalon"] == codsalon]
 
+    print(f"\U0001F4C8 Filas tras filtros: {len(df)}")
     return df
 
 def analizar_salon(df):
@@ -35,26 +55,11 @@ def analizar_salon(df):
         "negativos": [],
         "mejoras": []
     }
-
-    if df.empty:
-        return resultado
-
     try:
-        ratiogeneral = df["ratiogeneral"].mean()
-        resultado["ratiogeneral"] = float(np.round(ratiogeneral, 4))
-
-        # Impacto: Ejemplo usando facturación sin IVA * ratio general
-        impacto = df["facturacionsiva"].astype(float) * df["ratiogeneral"].astype(float)
-        resultado["impacto_total"] = float(np.round(impacto.sum(), 2))
-
-        # Puedes definir umbrales personalizados
-        for _, row in df.iterrows():
-            if row["ratiogeneral"] > 2:
-                resultado["positivos"].append(f"Alto rendimiento en semana {int(row['nsemana'])}")
-            elif row["ratiogeneral"] < 1:
-                resultado["negativos"].append(f"Bajo rendimiento en semana {int(row['nsemana'])}")
-
+        df = df.copy()
+        df = df.apply(pd.to_numeric, errors='coerce')  # asegúrate de que todo es numérico
+        resultado["ratiogeneral"] = df["ratiogeneral"].mean()
     except Exception as e:
         resultado["error"] = str(e)
-
     return resultado
+
