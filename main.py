@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
-from sheets import leer_kpis, analizar_trabajadores, analizar_salon, safe_json
+from sheets import leer_kpis, analizar_trabajadores, analizar_salon
 import traceback
 
 app = FastAPI()
