@@ -1,39 +1,52 @@
 import pandas as pd
+import requests
+from io import StringIO
 
-def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
-    url_map = {
-        "semana": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2036398995",
-        # añade aquí más si tienes otros tipos
-    }
+# Diccionario con las URLs de los documentos de Google Sheets
+GOOGLE_SHEETS = {
+    "semana": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=2036398995",
+    "trabajadores": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=1333321633",
+    "mensual": "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv&gid=902950106"
+}
 
-    url = url_map.get(tipo)
+def leer_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> pd.DataFrame:
+    """
+    Carga datos desde una hoja de Google Sheets según el tipo ('semana', 'trabajadores', 'mensual'),
+    y los filtra por año, semana y código de salón.
+    """
+    url = GOOGLE_SHEETS.get(tipo)
     if not url:
-        raise ValueError(f"Tipo de hoja desconocido: {tipo}")
+        raise ValueError(f"Tipo de hoja no reconocido: {tipo}")
 
-    df = pd.read_csv(url, dtype=str)  # leer como texto por seguridad
+    print(f"🌐 Consultando Google Sheet: {url}")
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Error al obtener datos: {response.status_code}")
 
-    # Eliminar filas sin valores clave
-    df = df.dropna(subset=["year", "nsemana", "codsalon"])
+    df = pd.read_csv(StringIO(response.text))
 
-    # Convertir identificadores a enteros
-    df["year"] = df["year"].astype(int)
-    df["nsemana"] = df["nsemana"].astype(int)
-    df["codsalon"] = df["codsalon"].astype(int)
+    print("📊 Columnas:", list(df.columns))
 
-    # Convertir columnas numéricas
-    numeric_cols = ["facturacionsiva", "ticketmedio", "horasfichadas", "ratiogeneral",
-                    "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"]
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+    # Normalizar nombres de columnas si es necesario (opcional)
+    df.columns = df.columns.str.strip().str.lower()
 
-    # Aplicar filtros
-    if year is not None:
-        df = df[df["year"] == year]
-    if nsemana is not None:
-        df = df[df["nsemana"] == nsemana]
-    if codsalon is not None:
-        df = df[df["codsalon"] == codsalon]
+    # Convertimos codsalon a numérico (filtrando errores como '(en blanco)')
+    if "codsalon" in df.columns:
+        df["codsalon"] = pd.to_numeric(df["codsalon"], errors="coerce")
+    if "nsemana" in df.columns:
+        df["nsemana"] = pd.to_numeric(df["nsemana"], errors="coerce")
+    if "year" in df.columns:
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
 
-    print(f"📊 Filas tras filtros: {len(df)}")
-    return df
+    df = df.dropna(subset=["codsalon", "nsemana", "year"])
+    df = df.astype({"codsalon": int, "nsemana": int, "year": int})
+
+    df_filtrado = df[
+        (df["year"] == year) &
+        (df["nsemana"] == nsemana) &
+        (df["codsalon"] == codsalon)
+    ]
+
+    print(f"📈 Filas tras filtros: {len(df_filtrado)}")
+    return df_filtrado
+
