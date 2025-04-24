@@ -1,4 +1,5 @@
-
+# Creamos el contenido completo del archivo main.py ajustado
+main_py_code = '''
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 from sheets import leer_kpis, analizar_trabajadores, analizar_salon, safe_json
@@ -53,3 +54,11 @@ def analisis_salon(
             status_code=500,
             content={"error": str(e), "trace": traceback.format_exc()}
         )
+'''
+
+# Guardamos el archivo main.py actualizado
+main_file_path = "/mnt/data/main_actualizado.py"
+with open(main_file_path, "w", encoding="utf-8") as f:
+    f.write(main_py_code)
+
+main_file_path
