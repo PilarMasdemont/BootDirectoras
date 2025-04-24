@@ -14,7 +14,8 @@ COLUMNAS_UTILES = [
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     hoja_id = HOJAS[tipo]
     url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
-    df = pd.read_csv(url)
+    df = pd.read_csv(url, decimal=',')
+
 
     print("📄 Columnas leídas:", df.columns.tolist())
     print(df.head())
