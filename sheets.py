@@ -1,50 +1,79 @@
-from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse
-from sheets import (
-    leer_kpis,
-    analizar_salon,
-    explicar_kpi,
-    explicar_variacion,
-    analizar_trabajadores,
-    sugerencias_mejora,
-)
+import pandas as pd
 
-app = FastAPI()
+URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
+HOJAS = {"semana": 2036398995}
 
-@app.get("/")
-def home():
-    return {"mensaje": "🟢 API Boot Directora funcionando correctamente"}
+COLUMNAS_UTILES = [
+    "year", "nsemana", "codsalon", "facturacionsiva", "ticketmedio", "horasfichadas",
+    "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"
+]
 
-@app.get("/kpis")
-def obtener_kpis(year: int = Query(...), nsemana: int = Query(...), codsalon: int = Query(...)):
-    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
-    return df.to_dict(orient="records")
+def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
+    hoja_id = HOJAS[tipo]
+    url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
+    df = pd.read_csv(url)
+    df.columns = [col.lower() for col in df.columns]
+    df = df.replace("(en blanco)", pd.NA)
+    
+    for col in ["year", "nsemana", "codsalon"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    
+    df = df[[c for c in df.columns if c in COLUMNAS_UTILES]]
+    
+    if year: df = df[df["year"] == year]
+    if nsemana: df = df[df["nsemana"] == nsemana]
+    if codsalon: df = df[df["codsalon"] == codsalon]
+    
+    return df.dropna()
 
-@app.get("/kpis/salon/analisis")
-def analisis_salon(year: int, nsemana: int, codsalon: int):
-    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
-    resultado = analizar_salon(df)
-    return {"analisis": resultado}
+def explicar_kpi(nombre_kpi):
+    explicaciones = {
+        "ratiogeneral": "Mide la facturación por hora trabajada.",
+        "ticketmedio": "Promedio de facturación por ticket.",
+        "horasfichadas": "Horas que han sido registradas por el personal.",
+        "ratioticketsinferior20": "Proporción de tickets con importe menor a 20€.",
+        # Puedes ampliar aquí...
+    }
+    return explicaciones.get(nombre_kpi.lower(), "No tengo una explicación aún para este KPI.")
 
-@app.get("/kpis/explicar")
-def explicacion_kpi(nombre: str = Query(...)):
-    return {"kpi": nombre, "explicacion": explicar_kpi(nombre)}
+def analizar_salon(df):
+    if df.empty:
+        return {"ratiogeneral": None, "impacto_total": None, "error": "No hay datos"}
+    
+    ratiogeneral = df["ratiogeneral"].mean()
+    impacto_total = df["facturacionsiva"].sum()
 
-@app.get("/kpis/variacion")
-def comparar_semanas(year: int, nsemana_actual: int, nsemana_anterior: int, codsalon: int):
-    df_actual = leer_kpis(year=year, nsemana=nsemana_actual, codsalon=codsalon)
-    df_anterior = leer_kpis(year=year, nsemana=nsemana_anterior, codsalon=codsalon)
-    resultado = explicar_variacion(df_actual, df_anterior)
-    return {"variacion": resultado}
+    return {"ratiogeneral": ratiogeneral, "impacto_total": impacto_total}
 
-@app.get("/kpis/trabajadores")
-def analisis_trabajadores(year: int, nsemana: int, codsalon: int):
-    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
-    resultado = analizar_trabajadores(df)
-    return {"trabajadores": resultado}
+def explicar_variacion(df_actual, df_anterior):
+    try:
+        variacion = df_actual["ratiogeneral"].mean() - df_anterior["ratiogeneral"].mean()
+        return {
+            "variacion": variacion,
+            "interpretacion": "El ratio general ha " + ("subido" if variacion > 0 else "bajado") + f" en {variacion:.2f} puntos."
+        }
+    except Exception:
+        return {"error": "No se pudo calcular la variación entre semanas."}
 
-@app.get("/kpis/sugerencias")
-def sugerencias(year: int, nsemana: int, codsalon: int):
-    df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
-    resultado = sugerencias_mejora(df)
-    return resultado
+def analizar_trabajadores(df):
+    if "codempleado" not in df.columns:
+        return {"error": "No hay datos por trabajador."}
+    
+    resumen = df.groupby("codempleado").agg({
+        "facturacionsiva": "sum",
+        "ratiogeneral": "mean",
+        "horasfichadas": "sum"
+    }).reset_index()
+
+    return resumen.to_dict(orient="records")
+
+def sugerencias_mejora(df):
+    sugerencias = []
+
+    if df["ratiotiempoindirecto"].mean() > 0.3:
+        sugerencias.append("Reducir el tiempo indirecto por debajo del 30%.")
+    
+    if df["ratioticketsinferior20"].mean() > 0.25:
+        sugerencias.append("Mejorar la estrategia de upselling para tickets bajos.")
+
+    return {"mejoras": sugerencias}
