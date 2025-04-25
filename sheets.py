@@ -1,7 +1,15 @@
+from pathlib import Path
+
+# Código corregido con mejoras en la limpieza y conversión de datos
+sheets_code = """
 import pandas as pd
 
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
-HOJAS = {"semana": 2036398995}
+HOJAS = {
+    "semana": 2036398995,
+    "trabajadores": 1059972214,
+    "mensual": 953186733,
+}
 
 COLUMNAS_UTILES = [
     "year", "nsemana", "codsalon", "facturacionsiva", "ticketmedio", "horasfichadas",
@@ -11,69 +19,69 @@ COLUMNAS_UTILES = [
 def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     hoja_id = HOJAS[tipo]
     url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
+    print(f"🌐 Consultando Google Sheet: {url}")
     df = pd.read_csv(url)
-    df.columns = [col.lower() for col in df.columns]
-    df = df.replace("(en blanco)", pd.NA)
-    
-    for col in ["year", "nsemana", "codsalon"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    
-    df = df[[c for c in df.columns if c in COLUMNAS_UTILES]]
-    
-    if year: df = df[df["year"] == year]
-    if nsemana: df = df[df["nsemana"] == nsemana]
-    if codsalon: df = df[df["codsalon"] == codsalon]
-    
-    return df.dropna()
 
-def explicar_kpi(nombre_kpi):
-    explicaciones = {
-        "ratiogeneral": "Mide la facturación por hora trabajada.",
-        "ticketmedio": "Promedio de facturación por ticket.",
-        "horasfichadas": "Horas que han sido registradas por el personal.",
-        "ratioticketsinferior20": "Proporción de tickets con importe menor a 20€.",
-        # Puedes ampliar aquí...
-    }
-    return explicaciones.get(nombre_kpi.lower(), "No tengo una explicación aún para este KPI.")
+    # Normaliza nombres de columnas
+    df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
+
+    # Limpieza básica
+    df = df.replace(["(en blanco)", "", "NA", "n/a"], pd.NA)
+
+    # Conversión robusta de columnas numéricas
+    for col in df.columns:
+        if col in COLUMNAS_UTILES:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(",", ".", regex=False)
+                .str.strip()
+            )
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Filtrado por columnas útiles
+    df = df[[c for c in df.columns if c in COLUMNAS_UTILES]]
+
+    # Aplicar filtros
+    if year is not None:
+        df = df[df["year"] == year]
+    if nsemana is not None:
+        df = df[df["nsemana"] == nsemana]
+    if codsalon is not None:
+        df = df[df["codsalon"] == codsalon]
+
+    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
+    print(df.head())
+
+    return df.dropna(how="any")
 
 def analizar_salon(df):
     if df.empty:
-        return {"ratiogeneral": None, "impacto_total": None, "error": "No hay datos"}
-    
+        return {
+            "ratiogeneral": None,
+            "impacto_total": None,
+            "positivos": [],
+            "negativos": [],
+            "mejoras": [],
+            "error": "No hay datos"
+        }
+
+    df = df.apply(pd.to_numeric, errors="coerce").dropna()
+
     ratiogeneral = df["ratiogeneral"].mean()
     impacto_total = df["facturacionsiva"].sum()
 
-    return {"ratiogeneral": ratiogeneral, "impacto_total": impacto_total}
+    return {
+        "ratiogeneral": ratiogeneral,
+        "impacto_total": impacto_total,
+        "positivos": [],
+        "negativos": [],
+        "mejoras": []
+    }
+"""
 
-def explicar_variacion(df_actual, df_anterior):
-    try:
-        variacion = df_actual["ratiogeneral"].mean() - df_anterior["ratiogeneral"].mean()
-        return {
-            "variacion": variacion,
-            "interpretacion": "El ratio general ha " + ("subido" if variacion > 0 else "bajado") + f" en {variacion:.2f} puntos."
-        }
-    except Exception:
-        return {"error": "No se pudo calcular la variación entre semanas."}
+# Guardar el archivo actualizado
+output_path = Path("/mnt/data/sheets_actualizado.py")
+output_path.write_text(sheets_code)
 
-def analizar_trabajadores(df):
-    if "codempleado" not in df.columns:
-        return {"error": "No hay datos por trabajador."}
-    
-    resumen = df.groupby("codempleado").agg({
-        "facturacionsiva": "sum",
-        "ratiogeneral": "mean",
-        "horasfichadas": "sum"
-    }).reset_index()
-
-    return resumen.to_dict(orient="records")
-
-def sugerencias_mejora(df):
-    sugerencias = []
-
-    if df["ratiotiempoindirecto"].mean() > 0.3:
-        sugerencias.append("Reducir el tiempo indirecto por debajo del 30%.")
-    
-    if df["ratioticketsinferior20"].mean() > 0.25:
-        sugerencias.append("Mejorar la estrategia de upselling para tickets bajos.")
-
-    return {"mejoras": sugerencias}
+output_path.name
