@@ -39,7 +39,8 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None:
         df = df[df["codsalon"] == codsalon]
 
-    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
+    print(f"📦 Columnas tras limpieza: {df.columns.tolist()}")
+    print(f"📊 Total filas tras filtros: {len(df)}")
     print(df.head())
 
     return df.dropna(how="any")
@@ -71,13 +72,15 @@ def explicar_variacion(df_actual, df_anterior):
             "variacion": variacion,
             "interpretacion": "El ratio general ha " + ("subido" if variacion > 0 else "bajado") + f" en {variacion:.2f} puntos."
         }
-    except Exception:
-        return {"error": "No se pudo calcular la variación entre semanas."}
-        
+    except Exception as e:
+        return {"error": f"No se pudo calcular la variación entre semanas. ({e})"}
 
 def analizar_trabajadores(df):
+    if df.empty:
+        return {"error": "El DataFrame está vacío tras filtrado."}
+
     if "codempleado" not in df.columns:
-        return {"error": "No hay datos por trabajador."}
+        return {"error": "No hay datos por trabajador (columna 'codempleado' no encontrada)."}
 
     resumen = df.groupby("codempleado").agg({
         "facturacionsiva": "sum",
@@ -85,6 +88,7 @@ def analizar_trabajadores(df):
         "horasfichadas": "sum"
     }).reset_index()
 
+    print("✅ Resumen por trabajador generado")
     return resumen.to_dict(orient="records")
 
 def sugerencias_mejora(df):
@@ -94,3 +98,4 @@ def sugerencias_mejora(df):
     if "ratioticketsinferior20" in df.columns and df["ratioticketsinferior20"].mean() > 0.25:
         sugerencias.append("Mejorar la estrategia de upselling para tickets bajos.")
     return {"mejoras": sugerencias}
+
