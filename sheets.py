@@ -3,7 +3,7 @@ import pandas as pd
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
 HOJAS = {
     "semana": 2036398995,
-    "trabajadores": 1059972214,
+    "trabajadores": 31094205,
     "mensual": 953186733,
 }
 
