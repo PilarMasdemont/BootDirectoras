@@ -1,7 +1,3 @@
-from pathlib import Path
-
-# Código corregido con mejoras en la limpieza y conversión de datos
-sheets_code = """
 import pandas as pd
 
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
@@ -78,6 +74,3 @@ def analizar_salon(df):
         "negativos": [],
         "mejoras": []
     }
-"""
-
-output_path.name
