@@ -8,7 +8,7 @@ HOJAS = {
 }
 
 COLUMNAS_UTILES = [
-    "year", "nsemana", "codsalon", "facturacionsiva", "ticketmedio", "horasfichadas",
+    "year", "nsemana", "codsalon", "codempleado", "facturacionsiva", "ticketmedio", "horasfichadas",
     "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"
 ]
 
