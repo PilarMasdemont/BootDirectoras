@@ -74,7 +74,6 @@ def explicar_variacion(df_actual, df_anterior):
     except Exception:
         return {"error": "No se pudo calcular la variación entre semanas."}
         
-print(f"🧪 Columnas del DataFrame trabajadores: {df.columns.tolist()}")
 
 def analizar_trabajadores(df):
     if "codempleado" not in df.columns:
