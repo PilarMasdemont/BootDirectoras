@@ -80,8 +80,4 @@ def analizar_salon(df):
     }
 """
 
-# Guardar el archivo actualizado
-output_path = Path("/mnt/data/sheets_actualizado.py")
-output_path.write_text(sheets_code)
-
 output_path.name
