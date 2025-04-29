@@ -2,9 +2,14 @@ import pandas as pd
 
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
 HOJAS = {
-    "semana": 2036398995,
-    "trabajadores": 31094205,
-    "mensual": 953186733,
+   # HOJAS SIMPLIFICADAS
+HOJAS = {
+    "semana": 1549951584,               # KPIs_3Semanas
+    "trabajadores": 542959813,          # KPIsSemanaS-T
+    "mensual": 719145147,               # KPIsMesS
+    "mensual_comparado": 1657745862,    # KPIs_MesActual_vs_Anterior
+}
+
 }
 
 COLUMNAS_UTILES = [
