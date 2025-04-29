@@ -1,15 +1,14 @@
+# sheets.py corregido completamente
+
 import pandas as pd
 
 URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
-HOJAS = {
-   # HOJAS SIMPLIFICADAS
+
 HOJAS = {
     "semana": 1549951584,               # KPIs_3Semanas
-    "trabajadores": 542959813,          # KPIsSemanaS-T
-    "mensual": 719145147,               # KPIsMesS
-    "mensual_comparado": 1657745862,    # KPIs_MesActual_vs_Anterior
-}
-
+    "trabajadores": 542959813,           # KPIsSemanaS-T
+    "mensual": 719145147,                # KPIsMesS
+    "mensual_comparado": 1657745862      # KPIs_MesActual_vs_Anterior
 }
 
 COLUMNAS_UTILES = [
@@ -44,8 +43,7 @@ def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
     if codsalon is not None:
         df = df[df["codsalon"] == codsalon]
 
-    print(f"📦 Columnas tras limpieza: {df.columns.tolist()}")
-    print(f"📊 Total filas tras filtros: {len(df)}")
+    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
     print(df.head())
 
     return df.dropna(how="any")
@@ -77,15 +75,12 @@ def explicar_variacion(df_actual, df_anterior):
             "variacion": variacion,
             "interpretacion": "El ratio general ha " + ("subido" if variacion > 0 else "bajado") + f" en {variacion:.2f} puntos."
         }
-    except Exception as e:
-        return {"error": f"No se pudo calcular la variación entre semanas. ({e})"}
+    except Exception:
+        return {"error": "No se pudo calcular la variación entre semanas."}
 
 def analizar_trabajadores(df):
-    if df.empty:
-        return {"error": "El DataFrame está vacío tras filtrado."}
-
     if "codempleado" not in df.columns:
-        return {"error": "No hay datos por trabajador (columna 'codempleado' no encontrada)."}
+        return {"error": "No hay datos por trabajador."}
 
     resumen = df.groupby("codempleado").agg({
         "facturacionsiva": "sum",
@@ -93,7 +88,6 @@ def analizar_trabajadores(df):
         "horasfichadas": "sum"
     }).reset_index()
 
-    print("✅ Resumen por trabajador generado")
     return resumen.to_dict(orient="records")
 
 def sugerencias_mejora(df):
@@ -103,4 +97,3 @@ def sugerencias_mejora(df):
     if "ratioticketsinferior20" in df.columns and df["ratioticketsinferior20"].mean() > 0.25:
         sugerencias.append("Mejorar la estrategia de upselling para tickets bajos.")
     return {"mejoras": sugerencias}
-
