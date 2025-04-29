@@ -40,3 +40,12 @@ def sugerencias(year: int = None, nsemana: int = None, codsalon: int = None):
     df = leer_kpis(year=year, nsemana=nsemana, codsalon=codsalon)
     return sugerencias_mejora(df)
 
+@app.get("/kpis/mensual_comparado")
+def consultar_kpis_mensual_comparado(
+    year: int = None,
+    codsalon: int = None
+):
+    df = leer_kpis(year=year, codsalon=codsalon, tipo="mensual_comparado")
+    return df.to_dict(orient="records")
+
+
