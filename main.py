@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from openai import OpenAI
 import os
 import time
+import traceback
 from sheets import (
     leer_kpis,
     analizar_salon,
@@ -67,41 +68,52 @@ async def chat_handler(request: Request):
             return JSONResponse(status_code=400, content={"error": "No se proporcionó ningún mensaje."})
 
         start_time = time.time()
+        print("🟢 Mensaje recibido:", mensaje_usuario)
 
-        # Crear nuevo hilo de conversación
+        print("📌 Creando nuevo hilo...")
         thread = client.beta.threads.create()
 
-        # Añadir el mensaje del usuario
+        print("📤 Enviando mensaje al hilo...")
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=mensaje_usuario
         )
 
-        # Ejecutar Assistant
+        print("⚙️ Iniciando ejecución del assistant...")
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=os.environ["ASSISTANT_ID"],
             instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería."
         )
 
-        # Esperar a que termine
+        print("⏳ Esperando respuesta...")
+        max_espera = 60  # segundos
+        inicio = time.time()
+
         while True:
             run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
             if run_status.status == "completed":
+                print("✅ Ejecución completada.")
                 break
             elif run_status.status in ["failed", "cancelled"]:
+                print(f"❌ Error del assistant: {run_status.status}")
                 return JSONResponse(status_code=500, content={"error": f"Error en ejecución del assistant: {run_status.status}"})
+            elif time.time() - inicio > max_espera:
+                print("⏱️ Tiempo de espera agotado.")
+                return JSONResponse(status_code=504, content={"error": "Tiempo de espera agotado."})
             time.sleep(1)
 
-        # Obtener la respuesta
+        print("📥 Recuperando respuesta...")
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         respuesta = messages.data[0].content[0].text.value if messages.data else None
 
         duration = time.time() - start_time
-        print(f"⏱️ Tiempo total de respuesta: {duration:.2f}s")
+        print(f"🕒 Tiempo total de respuesta: {duration:.2f}s")
 
         return {"respuesta": respuesta}
 
     except Exception as e:
+        print("❌ Error inesperado:")
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
