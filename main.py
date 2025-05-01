@@ -1,110 +1,132 @@
+import os
 import time
 import json
 import logging
 import openai
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
 
-# Habilitar logging de debug en OpenAI y nivel de logging
+# ——— Logging de bajo nivel para OpenAI ———
 openai.log = "debug"
 logging.basicConfig(level=logging.DEBUG)
 
-# Inicializa el cliente con tu clave API
-API_KEY = "sk-proj-ExBq3SYCxiFgUkWpnOYVvD_TYh2yyzJ...KoyTjo_ZD_aygeT9aayNLTp4peu10XC5uV0yUuA_ZA9MZVV_BAgiWNyJeLcOsA"
+# ——— Carga de variables de entorno ———
+load_dotenv()
+API_KEY      = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
+
+if not API_KEY:
+    raise RuntimeError("Falta OPENAI_API_KEY")
+if not ASSISTANT_ID:
+    raise RuntimeError("Falta ASSISTANT_ID")
+
 openai.api_key = API_KEY
 client = openai.OpenAI()
 
-# Define tu Assistant ID
-assistant_id = "asst_4Nm4s1R16uypzT560FHvHzYj"
+app = FastAPI()
 
-# Función para consultar KPIs (simulación)
-def consultar_kpis(year, nsemana, codsalon, tipo):
+# ——— Tu función de ejemplo ———
+def consultar_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> str:
     return (
         f"🔍 Datos simulados para el salón {codsalon}, semana {nsemana}, año {year}, tipo '{tipo}'. "
-        f"Ingresos: 1.500€, Clientes: 90, Ticket medio: 16,66€."
+        "Ingresos: 1.500€, Clientes: 90, Ticket medio: 16,66€."
     )
 
-start = time.time()
-
-# Crea un hilo de conversación
-print("📌 Creando hilo...", flush=True)
-thread = client.beta.threads.create()
-print(f"→ Hilo creado: id={thread.id}", flush=True)
-
-# Envía el mensaje del usuario
-definir_mensaje = "Hola, ¿cómo fue la semana pasada en el salón 1?"
-print("📤 Enviando mensaje al hilo...", flush=True)
-client.beta.threads.messages.create(
-    thread_id=thread.id,
-    role="user",
-    content=definir_mensaje
-)
-print(f"→ Mensaje enviado: '{definir_mensaje}'", flush=True)
-
-# Ejecuta el Assistant con definición de funciones
-print("⚙️ Iniciando ejecución del Assistant...", flush=True)
-run = client.beta.threads.runs.create(
-    thread_id=thread.id,
-    assistant_id=assistant_id,
-    instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería.",
-    functions=[{
-        "name": "consultar_kpis",
-        "description": "Obtiene KPIs de la hoja de cálculo para un salón, semana y año dados",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "year":     {"type": "integer"},
-                "nsemana":  {"type": "integer"},
-                "codsalon": {"type": "integer"},
-                "tipo": {
-                    "type": "string",
-                    "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"]
+# ——— Registra la función en tu Assistant (solo al arrancar) ———
+# Esto hará que el Assistant «sepa» qué función puede invocar
+print("🔧 Registrando funciones en el Assistant…", flush=True)
+client.beta.assistants.update(
+    assistant_id=ASSISTANT_ID,
+    tools=[
+        {
+            "type": "function",
+            "function": {
+                "name": "consultar_kpis",
+                "description": "Obtiene KPIs de la hoja de cálculo para un salón, semana y año dados",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "year":     {"type": "integer"},
+                        "nsemana":  {"type": "integer"},
+                        "codsalon": {"type": "integer"},
+                        "tipo": {
+                            "type": "string",
+                            "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"]
+                        }
+                    },
+                    "required": ["year", "nsemana", "codsalon"]
                 }
-            },
-            "required": ["year", "nsemana", "codsalon"]
+            }
         }
-    }]
+    ]
 )
-print(f"→ Run creado: id={run.id}, estado inicial={getattr(run, 'status', 'desconocido')}" , flush=True)
+print("✅ Funciones registradas.", flush=True)
 
-# Espera hasta que se complete o requiera acción
-while True:
-    status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+@app.post("/chat")
+async def chat_handler(request: Request):
     try:
-        status_dict = status.to_dict()
-    except Exception:
-        status_dict = status.__dict__
-    print("↪ status completo:", json.dumps(status_dict, indent=2, default=str), flush=True)
+        body = await request.json()
+        mensaje_usuario = body.get("mensaje")
+        if not mensaje_usuario:
+            raise HTTPException(status_code=400, detail="No se proporcionó ningún mensaje.")
 
-    if status_dict.get('status') == "completed":
-        print("✅ Run completado", flush=True)
-        break
+        # 1) Crea hilo y envía mensaje
+        print("📌 Creando hilo…", flush=True)
+        thread = client.beta.threads.create()
+        print(f"→ Hilo creado: {thread.id}", flush=True)
 
-    if status_dict.get('status') == "requires_action":
-        print("→ El Assistant solicita llamar a una función", flush=True)
-        tool_calls = status.required_action.submit_tool_outputs.tool_calls
-        tool_outputs = []
-        for call in tool_calls:
-            if call.function.name == "consultar_kpis":
-                args = json.loads(call.function.arguments) if isinstance(call.function.arguments, str) else call.function.arguments
-                print(f"→ Llamando a consultar_kpis con args: {args}", flush=True)
-                result = consultar_kpis(**args)
-                tool_outputs.append({"tool_call_id": call.id, "output": result})
-        client.beta.threads.runs.submit_tool_outputs(
+        print("📤 Enviando mensaje al hilo…", flush=True)
+        client.beta.threads.messages.create(
             thread_id=thread.id,
-            run_id=run.id,
-            tool_outputs=tool_outputs
+            role="user",
+            content=mensaje_usuario
         )
 
-    if status_dict.get('status') in ["failed", "cancelled"]:
-        print(f"❌ Falló la ejecución: {status_dict.get('status')}", flush=True)
-        exit(1)
+        # 2) Lanza el run (sin 'functions', ya que la función está en el assistant)
+        print("⚙️ Iniciando ejecución del Assistant…", flush=True)
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID,
+            instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería."
+        )
+        print(f"→ Run creado: {run.id}", flush=True)
 
-    time.sleep(1)
+        # 3) Polling
+        while True:
+            status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+            st = status.to_dict() if hasattr(status, "to_dict") else status.__dict__
+            print("↪ status completo:", json.dumps(st, indent=2, default=str), flush=True)
 
-# Extrae y muestra la respuesta final
-messages = client.beta.threads.messages.list(thread_id=thread.id)
-if messages.data:
-    respuesta = messages.data[-1].content[0].text.value
-else:
-    respuesta = "No hubo respuesta del Assistant."
+            if st.get("status") == "completed":
+                break
 
-print(f"\n✅ RESPUESTA en {time.time() - start:.2f}s:\n{respuesta}", flush=True)
+            if st.get("status") == "requires_action":
+                print("→ El Assistant pide llamar a una función", flush=True)
+                for call in status.required_action.submit_tool_outputs.tool_calls:
+                    if call.function.name == "consultar_kpis":
+                        args = json.loads(call.function.arguments) if isinstance(call.function.arguments, str) else call.function.arguments
+                        print(f"→ Llamando a consultar_kpis con args: {args}", flush=True)
+                        result = consultar_kpis(**args)
+                        client.beta.threads.runs.submit_tool_outputs(
+                            thread_id=thread.id,
+                            run_id=run.id,
+                            tool_outputs=[{"tool_call_id": call.id, "output": result}]
+                        )
+            elif st.get("status") in ("failed", "cancelled"):
+                raise HTTPException(status_code=500, detail=f"Run terminó en '{st.get('status')}'")
+
+            time.sleep(1)
+
+        # 4) Recupera la respuesta final
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        respuesta = messages.data[-1].content[0].text.value if messages.data else "Sin respuesta."
+        print(f"✅ Respuesta final: {respuesta}", flush=True)
+        return {"respuesta": respuesta}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("❌ Error inesperado:", e, flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
