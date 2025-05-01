@@ -1,10 +1,15 @@
 import os
 import time
 import json
+import logging
 import openai
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+
+# Habilitar logging de debug en OpenAI y nivel de logging
+openai.log = "debug"
+logging.basicConfig(level=logging.DEBUG)
 
 # Carga variables de entorno
 load_dotenv()
@@ -37,17 +42,17 @@ async def chat_handler(request: Request):
         if not mensaje_usuario:
             raise HTTPException(status_code=400, detail="No se proporcionó ningún mensaje.")
 
-        print("📌 Creando hilo...")
+        print("📌 Creando hilo...", flush=True)
         thread = client.beta.threads.create()
 
-        print("📤 Enviando mensaje al hilo...")
+        print("📤 Enviando mensaje al hilo...", flush=True)
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=mensaje_usuario
         )
 
-        print("⚙️ Iniciando ejecución del Assistant...")
+        print("⚙️ Iniciando ejecución del Assistant...", flush=True)
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID,
@@ -70,23 +75,33 @@ async def chat_handler(request: Request):
                 }
             }]
         )
+        # Mostrar ID y estado inicial del run
+        try:
+            print(f"→ Run creado: id={run.id}, estado inicial={getattr(run, 'status', 'desconocido')}" , flush=True)
+        except Exception:
+            print(f"→ Run creado, pero no se pudo leer estado inicial", flush=True)
 
         # Esperar hasta que termine o solicite acción
         while True:
             status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-            print(f"Estado del run: {status.status}")
+            # Imprimir status completo
+            try:
+                status_dict = status.to_dict()
+            except Exception:
+                status_dict = status.__dict__
+            print("↪ status completo:", json.dumps(status_dict, indent=2, default=str), flush=True)
 
-            if status.status == "completed":
+            if status_dict.get('status') == "completed":
                 break
 
-            if status.status == "requires_action":
-                print("→ El Assistant solicita llamar a una función")
+            if status_dict.get('status') == "requires_action":
+                print("→ El Assistant solicita llamar a una función", flush=True)
                 tool_calls = status.required_action.submit_tool_outputs.tool_calls
                 outputs = []
                 for call in tool_calls:
                     if call.function.name == "consultar_kpis":
                         args = json.loads(call.function.arguments) if isinstance(call.function.arguments, str) else call.function.arguments
-                        print(f"→ Llamando a consultar_kpis con args: {args}")
+                        print(f"→ Llamando a consultar_kpis con args: {args}", flush=True)
                         result = consultar_kpis(**args)
                         outputs.append({"tool_call_id": call.id, "output": result})
                 client.beta.threads.runs.submit_tool_outputs(
@@ -95,21 +110,21 @@ async def chat_handler(request: Request):
                     tool_outputs=outputs
                 )
 
-            if status.status in ["failed", "cancelled"]:
-                raise HTTPException(status_code=500, detail=f"Error en ejecución: {status.status}")
+            if status_dict.get('status') in ["failed", "cancelled"]:
+                raise HTTPException(status_code=500, detail=f"Error en ejecución: {status_dict.get('status')}")
             time.sleep(1)
 
         # Obtener y devolver la respuesta final
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         respuesta = messages.data[-1].content[0].text.value if messages.data else "No hubo respuesta del Assistant."
-        print(f"✅ Respuesta: {respuesta}")
+        print(f"✅ Respuesta: {respuesta}", flush=True)
         return {"respuesta": respuesta}
 
     except openai.AuthenticationError as e:
-        print(f"❌ AuthenticationError: {e}")
+        print(f"❌ AuthenticationError: {e}", flush=True)
         raise HTTPException(status_code=500, detail="Error de autenticación con OpenAI. Verifica tu API key.")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error inesperado: {e}")
+        print(f"❌ Error inesperado: {e}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))
