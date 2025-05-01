@@ -3,7 +3,6 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from openai import OpenAI
-from openai.types.beta.threads import RunToolCall
 import json
 import requests
 
