@@ -40,27 +40,35 @@ async def chat_handler(request: Request):
         )
 
         print("⏳ Esperando respuesta...")
-        start = time.time()
         while True:
-            run_status = client.beta.threads.runs.retrieve(
-                thread_id=thread.id,
-                run_id=run.id
-            )
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
             if run_status.status == "completed":
                 break
+            elif run_status.status == "requires_action":
+                tool_call = run_status.required_action.submit_tool_outputs.tool_calls[0]
+                if tool_call.function.name == "consultar_kpis":
+                    args = json.loads(tool_call.function.arguments)
+                    resultado = consultar_kpis(**args)
+                    client.beta.threads.runs.submit_tool_outputs(
+                        thread_id=thread.id,
+                        run_id=run.id,
+                        tool_outputs=[{
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps(resultado)
+                        }]
+                    )
             elif run_status.status in ["failed", "cancelled"]:
                 return JSONResponse(status_code=500, content={"error": f"Error en ejecución del assistant: {run_status.status}"})
             time.sleep(1)
 
+        # Obtener mensaje de respuesta
         messages = client.beta.threads.messages.list(thread_id=thread.id)
-        respuesta = messages.data[0].content[0].text.value if messages.data else None
+        respuesta = messages.data[0].content[0].text.value if messages.data else "No se obtuvo respuesta."
 
-        print(f"✅ RESPUESTA en {time.time() - start:.2f}s")
         return {"respuesta": respuesta}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
 
 # Definición de la función que será usada como tool
 def consultar_kpis(year: int, codsalon: int, nsemana: int, tipo: str):
