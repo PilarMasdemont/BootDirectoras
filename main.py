@@ -66,44 +66,42 @@ async def chat_handler(request: Request):
         if not mensaje_usuario:
             return JSONResponse(status_code=400, content={"error": "No se proporcionó ningún mensaje."})
 
-        # Crear nuevo thread
+        start_time = time.time()
+
+        # Crear nuevo hilo de conversación
         thread = client.beta.threads.create()
 
-        # Añadir mensaje del usuario al thread
+        # Añadir el mensaje del usuario
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=mensaje_usuario
         )
 
-        # Lanzar ejecución con el Assistant ID
+        # Ejecutar Assistant
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=os.environ["ASSISTANT_ID"],
             instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería."
         )
 
-        return {"thread_id": thread.id, "run_id": run.id}
+        # Esperar a que termine
+        while True:
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+            if run_status.status == "completed":
+                break
+            elif run_status.status in ["failed", "cancelled"]:
+                return JSONResponse(status_code=500, content={"error": f"Error en ejecución del assistant: {run_status.status}"})
+            time.sleep(1)
 
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        # Obtener la respuesta
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        respuesta = messages.data[0].content[0].text.value if messages.data else None
 
-@app.get("/chat/respuesta")
-async def obtener_respuesta(thread_id: str, run_id: str):
-    try:
-        run_status = client.beta.threads.runs.retrieve(
-            thread_id=thread_id,
-            run_id=run_id
-        )
+        duration = time.time() - start_time
+        print(f"⏱️ Tiempo total de respuesta: {duration:.2f}s")
 
-        if run_status.status == "completed":
-            messages = client.beta.threads.messages.list(thread_id=thread_id)
-            respuesta = messages.data[0].content[0].text.value if messages.data else None
-            return {"respuesta": respuesta}
-        elif run_status.status in ["failed", "cancelled"]:
-            return JSONResponse(status_code=500, content={"error": f"Ejecución fallida o cancelada: {run_status.status}"})
-        else:
-            return {"status": run_status.status}
+        return {"respuesta": respuesta}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
