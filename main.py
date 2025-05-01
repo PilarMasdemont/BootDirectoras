@@ -1,5 +1,7 @@
-from fastapi import FastAPI
-from sheets import (
+from fastapi import FastAPI, Request
+from openai import OpenAI
+import os
+
     leer_kpis,
     analizar_salon,
     explicar_kpi,
@@ -49,3 +51,49 @@ def consultar_kpis_mensual_comparado(
     return df.to_dict(orient="records")
 
 
+cclient = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+@app.post("/chat")
+async def chat_handler(request: Request):
+    body = await request.json()
+    user_message = body.get("message", "")
+
+    response = client.chat.completions.create(
+        model="gpt-4",  # o el modelo que uses
+        messages=[
+            {
+                "role": "system",
+                "content": "Eres un asistente experto en KPIs de salones de peluquería."
+            },
+            {
+                "role": "user",
+                "content": user_message
+            }
+        ],
+        tools=[
+            {
+                "type": "function",
+                "function": {
+                    "name": "consultar_kpis",
+                    "description": "Consulta los KPIs del salón para una semana, mes o trabajador.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "year": {"type": "integer"},
+                            "nsemana": {"type": "integer"},
+                            "codsalon": {"type": "integer"},
+                            "tipo": {
+                                "type": "string",
+                                "enum": ["semana", "mensual", "trabajadores"]
+                            }
+                        },
+                        "required": ["year", "codsalon", "nsemana"]
+                    }
+                }
+            }
+        ],
+        tool_choice="auto"
+    )
+
+    return {"respuesta": response.choices[0].message.content}
