@@ -51,7 +51,7 @@ def consultar_kpis_mensual_comparado(
     return df.to_dict(orient="records")
 
 
-cclient = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 @app.post("/chat")
