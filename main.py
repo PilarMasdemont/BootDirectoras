@@ -1,11 +1,10 @@
 import os
 import time
 import json
+import openai
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from openai import OpenAI
-from openai.error import AuthenticationError
 
 # Carga variables de entorno
 load_dotenv()
@@ -17,8 +16,10 @@ if not API_KEY:
 if not ASSISTANT_ID:
     raise RuntimeError("La variable de entorno ASSISTANT_ID no está configurada.")
 
+# Configura el cliente de OpenAI
+client = openai.OpenAI(api_key=API_KEY)
+
 app = FastAPI()
-client = OpenAI(api_key=API_KEY)
 
 # Función de ejemplo registrada en el Assistant
 def consultar_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> str:
@@ -104,7 +105,7 @@ async def chat_handler(request: Request):
         print(f"✅ Respuesta: {respuesta}")
         return {"respuesta": respuesta}
 
-    except AuthenticationError as e:
+    except openai.AuthenticationError as e:
         print(f"❌ AuthenticationError: {e}")
         raise HTTPException(status_code=500, detail="Error de autenticación con OpenAI. Verifica tu API key.")
     except HTTPException:
