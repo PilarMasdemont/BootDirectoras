@@ -54,71 +54,55 @@ def consultar_kpis_mensual_comparado(
 
 
 # Inicializar cliente OpenAI con API Key desde variable de entorno
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 @app.post("/chat")
 async def chat_handler(request: Request):
     try:
         body = await request.json()
         mensaje_usuario = body.get("mensaje")
-        print("📩 Mensaje recibido:", mensaje_usuario)
 
         if not mensaje_usuario:
             return JSONResponse(status_code=400, content={"error": "No se proporcionó ningún mensaje."})
 
-        start_time = time.time()
-
-        print("📥 Creando thread...")
+        # Crear nuevo thread
         thread = client.beta.threads.create()
-        print("✅ Thread creado:", thread.id)
 
-        print("📝 Añadiendo mensaje del usuario...")
+        # Añadir mensaje del usuario al thread
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=mensaje_usuario
         )
-        print("✅ Mensaje añadido")
 
-        print("🚀 Lanzando run...")
-        assistant_id = os.environ.get("ASSISTANT_ID")
-        if not assistant_id:
-            return JSONResponse(status_code=500, content={"error": "ASSISTANT_ID no está definido en variables de entorno."})
-
+        # Lanzar ejecución con el Assistant ID
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
-            assistant_id=assistant_id,
-            instructions="Actúa como Mont Dirección, asesora experta en salones."
+            assistant_id=os.environ["ASSISTANT_ID"],
+            instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería."
         )
-        print("🕒 Run iniciado:", run.id)
 
-        max_wait = 60
-        waited = 0
-        while waited < max_wait:
-            run_status = client.beta.threads.runs.retrieve(
-                thread_id=thread.id,
-                run_id=run.id
-            )
-            print("⏳ Estado del run:", run_status.status)
-            if run_status.status == "completed":
-                break
-            elif run_status.status in ["failed", "cancelled"]:
-                return JSONResponse(status_code=500, content={"error": f"Error en ejecución del assistant: {run_status.status}"})
-            time.sleep(2)
-            waited += 2
-        else:
-            return JSONResponse(status_code=500, content={"error": "Timeout esperando la respuesta del assistant."})
-
-        print("📤 Obteniendo mensaje del assistant...")
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        respuesta = messages.data[0].content[0].text.value if messages.data else None
-
-        duration = time.time() - start_time
-        print(f"⏱️ Tiempo total de respuesta: {duration:.2f}s")
-        print("💬 Respuesta:", respuesta)
-
-        return {"respuesta": respuesta}
+        return {"thread_id": thread.id, "run_id": run.id}
 
     except Exception as e:
-        print("❌ Excepción capturada:", str(e))
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/chat/respuesta")
+async def obtener_respuesta(thread_id: str, run_id: str):
+    try:
+        run_status = client.beta.threads.runs.retrieve(
+            thread_id=thread_id,
+            run_id=run_id
+        )
+
+        if run_status.status == "completed":
+            messages = client.beta.threads.messages.list(thread_id=thread_id)
+            respuesta = messages.data[0].content[0].text.value if messages.data else None
+            return {"respuesta": respuesta}
+        elif run_status.status in ["failed", "cancelled"]:
+            return JSONResponse(status_code=500, content={"error": f"Ejecución fallida o cancelada: {run_status.status}"})
+        else:
+            return {"status": run_status.status}
+
+    except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
