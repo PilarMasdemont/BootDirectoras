@@ -1,5 +1,6 @@
-fastapi
-uvicorn
-pandas
-requests
-openai>=1.0.0
+fastapi==0.115.2
+uvicorn==0.34.2
+pandas==2.2.3
+requests==2.32.3
+openai==1.76.2
+python-dotenv==1.0.1
