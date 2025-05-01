@@ -53,13 +53,10 @@ def consultar_kpis_mensual_comparado(
     return df.to_dict(orient="records")
 
 
+# Inicializar cliente OpenAI con API Key desde variable de entorno
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-@app.get("/")
-def root():
-    return {"message": "Bienvenido a la API de BootDirectoras"}
+app = FastAPI()
 
 @app.post("/chat")
 async def chat_handler(request: Request):
@@ -70,38 +67,48 @@ async def chat_handler(request: Request):
         if not mensaje_usuario:
             return JSONResponse(status_code=400, content={"error": "No se proporcionó ningún mensaje."})
 
+        print("📩 Mensaje recibido:", mensaje_usuario)
+
+        assistant_id = os.getenv("ASSISTANT_ID")
+        if not assistant_id:
+            return JSONResponse(status_code=500, content={"error": "Variable ASSISTANT_ID no está definida."})
+        print("🧠 Assistant ID:", assistant_id)
+
         start_time = time.time()
 
-        # Crear nuevo thread
+        # Crear un nuevo thread
         thread = client.beta.threads.create()
+        print("📂 Thread creado:", thread.id)
 
-        # Añadir mensaje del usuario al thread
+        # Añadir mensaje del usuario
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=mensaje_usuario
         )
 
-        # Lanzar ejecución con el Assistant ID
+        # Ejecutar el Assistant
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
-            assistant_id=os.environ["ASSISTANT_ID"],
+            assistant_id=assistant_id,
             instructions="Actúa como Mont Dirección, una asesora experta en KPIs de salones de peluquería."
         )
+        print("🚀 Ejecutando run...")
 
-        # Esperar hasta que el run esté completo
+        # Esperar la respuesta
         while True:
             run_status = client.beta.threads.runs.retrieve(
                 thread_id=thread.id,
                 run_id=run.id
             )
             if run_status.status == "completed":
+                print("✅ Run completado.")
                 break
             elif run_status.status in ["failed", "cancelled"]:
                 return JSONResponse(status_code=500, content={"error": f"Error en ejecución del assistant: {run_status.status}"})
             time.sleep(1)
 
-        # Obtener la respuesta del asistente
+        # Obtener el mensaje de respuesta
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         respuesta = messages.data[0].content[0].text.value if messages.data else None
 
