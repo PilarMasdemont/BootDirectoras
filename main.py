@@ -56,8 +56,6 @@ def consultar_kpis_mensual_comparado(
 # Inicializar cliente OpenAI con API Key desde variable de entorno
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-app = FastAPI()
-
 @app.post("/chat")
 async def chat_handler(request: Request):
     try:
