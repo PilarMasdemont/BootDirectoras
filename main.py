@@ -3,7 +3,7 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from openai import OpenAI
-
+from openai.types.beta.threads import RunToolCall
 app = FastAPI()
 
 # Inicializar cliente OpenAI
@@ -60,3 +60,20 @@ async def chat_handler(request: Request):
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# Definición de la función que será usada como tool
+def consultar_kpis(year: int, codsalon: int, nsemana: int, tipo: str):
+    url = "https://bootdirectoras.onrender.com/kpis"
+    params = {
+        "year": year,
+        "codsalon": codsalon,
+        "nsemana": nsemana,
+        "tipo": tipo
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": f"No se pudo obtener datos. Status: {response.status_code}"}
+
