@@ -7,42 +7,55 @@ import openai
 openai.log = "debug"
 logging.basicConfig(level=logging.DEBUG)
 
-# DEFINICIÓN DIRECTA DE CREDENCIALES (para ejecución local)
-API_KEY = "TU_API_KEY_AQUI"
-ASSISTANT_ID = "TU_ASSISTANT_ID_AQUI"
+# --------------------------------------------------
+#  DEFINICIÓN DIRECTA DE CREDENCIALES (para ejecución local)
+#  ⚠️ IMPORTANTE: reemplaza los siguientes valores con tus credenciales reales
+API_KEY = "reemplaza_con_tu_api_key"
+ASSISTANT_ID = "reemplaza_con_tu_assistant_id"
+# --------------------------------------------------
 
-if not API_KEY or not ASSISTANT_ID:
-    raise RuntimeError("Debes definir API_KEY y ASSISTANT_ID al inicio del script.")
+if API_KEY == "reemplaza_con_tu_api_key" or ASSISTANT_ID == "reemplaza_con_tu_assistant_id":
+    raise RuntimeError(
+        "Debes reemplazar API_KEY y ASSISTANT_ID en las variables al inicio del script con tus valores reales."
+    )
 
 # Inicializar cliente con api_key explícito
-client = openai.OpenAI(api_key=API_KEY)
+try:
+    client = openai.OpenAI(api_key=API_KEY)
+except Exception as e:
+    print(f"❌ Error al inicializar OpenAI client: {e}")
+    raise
 
 # Registrar la función en el Assistant (solo una vez al arrancar)
 print("🔧 Registrando la función 'consultar_kpis' en el Assistant…", flush=True)
-client.beta.assistants.update(
-    assistant_id=ASSISTANT_ID,
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "consultar_kpis",
-            "description": "Obtiene KPIs de la hoja de cálculo para un salón, semana y año dados",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "year":     {"type": "integer"},
-                    "nsemana":  {"type": "integer"},
-                    "codsalon": {"type": "integer"},
-                    "tipo": {
-                        "type": "string",
-                        "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"]
-                    }
-                },
-                "required": ["year", "nsemana", "codsalon"]
+try:
+    client.beta.assistants.update(
+        assistant_id=ASSISTANT_ID,
+        tools=[{
+            "type": "function",
+            "function": {
+                "name": "consultar_kpis",
+                "description": "Obtiene KPIs de la hoja de cálculo para un salón, semana y año dados",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "year":     {"type": "integer"},
+                        "nsemana":  {"type": "integer"},
+                        "codsalon": {"type": "integer"},
+                        "tipo": {
+                            "type": "string",
+                            "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"]
+                        }
+                    },
+                    "required": ["year", "nsemana", "codsalon"]
+                }
             }
-        }
-    }]
-)
-print("✅ Función registrada.", flush=True)
+        }]
+    )
+    print("✅ Función registrada.", flush=True)
+except Exception as e:
+    print(f"❌ Falló registro de función: {e}")
+    raise
 
 # Definir la función simulada localmente
 def consultar_kpis(year, nsemana, codsalon, tipo="semana"):
