@@ -55,9 +55,6 @@ def consultar_kpis_mensual_comparado(
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-app = FastAPI()
-
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 @app.get("/")
