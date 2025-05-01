@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from openai import OpenAI
 import os
-
+from sheets import (
     leer_kpis,
     analizar_salon,
     explicar_kpi,
