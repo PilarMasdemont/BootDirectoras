@@ -4,6 +4,7 @@ import json
 import logging
 import openai
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
@@ -17,14 +18,22 @@ if not API_KEY:
 if not ASSISTANT_ID:
     raise RuntimeError("La variable de entorno ASSISTANT_ID no está configurada.")
 
-# Configuración de logging de OpenAI
+# Logging de depuración para OpenAI
 openai.log = "debug"
 logging.basicConfig(level=logging.DEBUG)
 
 # Inicializa cliente OpenAI
 client = openai.OpenAI(api_key=API_KEY)
 
+# Crea la app y habilita CORS para permitir peticiones desde tu frontend
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cambia "*" por el dominio de Crisp si quieres restringir
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Función de ejemplo registrada en el Assistant
 def consultar_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> str:
@@ -34,7 +43,7 @@ def consultar_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana")
         f"Ingresos: 1.500€, Clientes: 90, Ticket medio: 16,66€."
     )
 
-# Registra la función en el Assistant (solo al iniciar)
+# Registra la función en el Assistant al arrancar la aplicación
 @app.on_event("startup")
 def register_functions():
     tools = [{
@@ -71,7 +80,7 @@ async def chat_handler(request: Request):
     if not mensaje:
         raise HTTPException(status_code=400, detail="Debe enviar un campo 'mensaje'.")
 
-    # Crea hilo y envía prompt de usuario
+    # Crea hilo y envía el mensaje del usuario
     thread = client.beta.threads.create()
     client.beta.threads.messages.create(
         thread_id=thread.id,
@@ -79,7 +88,7 @@ async def chat_handler(request: Request):
         content=mensaje
     )
 
-    # Lanza ejecución del Assistant
+    # Inicia ejecución del Assistant
     run = client.beta.threads.runs.create(
         thread_id=thread.id,
         assistant_id=ASSISTANT_ID,
@@ -104,9 +113,8 @@ async def chat_handler(request: Request):
                     )
         time.sleep(1)
 
-    # Recupera respuesta final
+    # Recupera la respuesta final del thread
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     last = messages.data[-1] if messages.data else None
     respuesta = last.content[0].text.value if last and last.content else ""
     return {"respuesta": respuesta}
-
