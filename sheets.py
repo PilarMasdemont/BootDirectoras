@@ -1,99 +1,113 @@
-# sheets.py corregido completamente
+import os
+import time
+import json
+import logging
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import openai
 
-import pandas as pd
+# Cargar variables de entorno
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
 
-URL_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
+if not API_KEY or not ASSISTANT_ID:
+    raise RuntimeError("Faltan variables de entorno necesarias.")
 
-HOJAS = {
-    "semana": 1549951584,               # KPIs_3Semanas
-    "trabajadores": 542959813,           # KPIsSemanaS-T
-    "mensual": 719145147,                # KPIsMesS
-    "mensual_comparado": 1657745862      # KPIs_MesActual_vs_Anterior
-}
+# Configura logging y cliente
+openai.log = "debug"
+logging.basicConfig(level=logging.INFO)
+client = openai.OpenAI(api_key=API_KEY)
 
-COLUMNAS_UTILES = [
-    "year", "nsemana", "codsalon", "codempleado", "facturacionsiva", "ticketmedio", "horasfichadas",
-    "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto", "ratioticketsinferior20"
-]
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cambiar por tu dominio en producción
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def leer_kpis(year=None, nsemana=None, codsalon=None, tipo="semana"):
-    hoja_id = HOJAS[tipo]
-    url = f"{URL_GOOGLE_SHEET}&gid={hoja_id}"
-    print(f"🌐 Consultando Google Sheet: {url}")
-    df = pd.read_csv(url)
+# Simulación de función (puede venir de un módulo externo)
+def consultar_kpis(year: int, nsemana: int, codsalon: int, tipo: str = "semana") -> str:
+    return (
+        f"🔍 Datos simulados para el salón {codsalon}, semana {nsemana}, año {year}, tipo '{tipo}'. "
+        f"Ingresos: 1.500€, Clientes: 90, Ticket medio: 16,66€."
+    )
 
-    df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
-    df = df.replace(["(en blanco)", "", "NA", "n/a"], pd.NA)
-
-    for col in df.columns:
-        if col in COLUMNAS_UTILES:
-            df[col] = (
-                df[col].astype(str)
-                .str.replace(",", ".", regex=False)
-                .str.strip()
-            )
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    df = df[[c for c in df.columns if c in COLUMNAS_UTILES]]
-
-    if year is not None:
-        df = df[df["year"] == year]
-    if nsemana is not None:
-        df = df[df["nsemana"] == nsemana]
-    if codsalon is not None:
-        df = df[df["codsalon"] == codsalon]
-
-    print(f"📦 DataFrame después de filtros (filas: {len(df)}):")
-    print(df.head())
-
-    return df.dropna(how="any")
-
-def explicar_kpi(nombre_kpi):
-    explicaciones = {
-        "ratiogeneral": "Mide la facturación por hora trabajada.",
-        "ticketmedio": "Promedio de facturación por ticket.",
-        "horasfichadas": "Horas registradas por el personal.",
-        "ratioticketsinferior20": "Porcentaje de tickets con importe menor a 20€.",
-        "ratiotiempoindirecto": "Proporción del tiempo no facturable.",
-        "ratiodesviaciontiempoteorico": "Desviación entre tiempo teórico y real."
-    }
-    return explicaciones.get(nombre_kpi.lower(), "No tengo una explicación aún para este KPI.")
-
-def analizar_salon(df):
-    if df.empty:
-        return {"ratiogeneral": None, "impacto_total": None, "error": "No hay datos"}
-
-    ratiogeneral = df["ratiogeneral"].mean()
-    impacto_total = df["facturacionsiva"].sum()
-
-    return {"ratiogeneral": ratiogeneral, "impacto_total": impacto_total}
-
-def explicar_variacion(df_actual, df_anterior):
-    try:
-        variacion = df_actual["ratiogeneral"].mean() - df_anterior["ratiogeneral"].mean()
-        return {
-            "variacion": variacion,
-            "interpretacion": "El ratio general ha " + ("subido" if variacion > 0 else "bajado") + f" en {variacion:.2f} puntos."
+@app.on_event("startup")
+def registrar_funciones():
+    logging.info("Registrando función 'consultar_kpis'...")
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "consultar_kpis",
+                "description": "Obtiene KPIs de la hoja de cálculo para un salón, semana y año dados",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "year": {"type": "integer"},
+                        "nsemana": {"type": "integer"},
+                        "codsalon": {"type": "integer"},
+                        "tipo": {
+                            "type": "string",
+                            "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"],
+                        },
+                    },
+                    "required": ["year", "nsemana", "codsalon"],
+                },
+            },
         }
-    except Exception:
-        return {"error": "No se pudo calcular la variación entre semanas."}
+    ]
+    client.beta.assistants.update(assistant_id=ASSISTANT_ID, tools=tools)
+    logging.info("✅ Función registrada correctamente.")
 
-def analizar_trabajadores(df):
-    if "codempleado" not in df.columns:
-        return {"error": "No hay datos por trabajador."}
+@app.post("/chat")
+async def chat_handler(request: Request):
+    try:
+        data = await request.json()
+        mensaje = data.get("mensaje")
+        if not mensaje:
+            raise HTTPException(status_code=400, detail="Falta el campo 'mensaje'.")
 
-    resumen = df.groupby("codempleado").agg({
-        "facturacionsiva": "sum",
-        "ratiogeneral": "mean",
-        "horasfichadas": "sum"
-    }).reset_index()
+        logging.info("➡️ Mensaje recibido: %s", mensaje)
 
-    return resumen.to_dict(orient="records")
+        thread = client.beta.threads.create()
+        client.beta.threads.messages.create(thread_id=thread.id, role="user", content=mensaje)
 
-def sugerencias_mejora(df):
-    sugerencias = []
-    if "ratiotiempoindirecto" in df.columns and df["ratiotiempoindirecto"].mean() > 0.3:
-        sugerencias.append("Reducir el tiempo indirecto por debajo del 30%.")
-    if "ratioticketsinferior20" in df.columns and df["ratioticketsinferior20"].mean() > 0.25:
-        sugerencias.append("Mejorar la estrategia de upselling para tickets bajos.")
-    return {"mejoras": sugerencias}
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID,
+            instructions="Actúa como Mont Dirección, experta en KPIs de salones de peluquería."
+        )
+
+        while True:
+            status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+            if status.status == "completed":
+                break
+            if status.status == "requires_action":
+                tool_calls = status.required_action.submit_tool_outputs.tool_calls
+                outputs = []
+                for call in tool_calls:
+                    args = json.loads(call.function.arguments)
+                    logging.info("🛠 Ejecutando función: consultar_kpis con %s", args)
+                    output = consultar_kpis(**args)
+                    outputs.append({"tool_call_id": call.id, "output": output})
+                client.beta.threads.runs.submit_tool_outputs(thread_id=thread.id, run_id=run.id, tool_outputs=outputs)
+            time.sleep(1)
+
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        for m in reversed(messages.data):
+            if m.role == "assistant":
+                respuesta = m.content[0].text.value
+                break
+        else:
+            respuesta = "⚠️ No se obtuvo respuesta del asistente."
+
+        return {"respuesta": respuesta}
+
+    except Exception as e:
+        logging.exception("❌ Error en la ejecución del asistente")
+        raise HTTPException(status_code=500, detail="Error al procesar la solicitud.")
