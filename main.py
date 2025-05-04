@@ -135,5 +135,13 @@ async def chat_handler(request: Request):
 
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     last = messages.data[-1] if messages.data else None
-    respuesta = last.content[0].text.value if last and last.content else ""
-    return {"respuesta": respuesta}
+
+    respuesta = ""
+    if last and last.content:
+        for item in last.content:
+            if item.type == "text":
+                respuesta = item.text.value
+                break
+
+    print("MENSAJE FINAL DEL BOT:", respuesta)  # Debug útil en logs
+    return {"respuesta": respuesta or "No se recibió respuesta del asistente."}
