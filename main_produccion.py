@@ -2,12 +2,25 @@ import os
 import time
 import json
 import logging
-import openai
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+import openai
 
-# Importa tus funciones
+# === Cargar variables de entorno ===
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
+
+if not API_KEY or not ASSISTANT_ID:
+    raise RuntimeError("Faltan variables de entorno necesarias.")
+
+# === Cliente y logging ===
+openai.log = "debug"
+logging.basicConfig(level=logging.INFO)
+client = openai.OpenAI(api_key=API_KEY)
+
+# === Importar funciones ===
 from funciones.kpis import consultar_kpis
 from funciones.analizar_salon import analizar_salon
 from funciones.analizar_trabajadores import analizar_trabajadores
@@ -15,42 +28,31 @@ from funciones.explicar_kpi import explicar_kpi
 from funciones.explicar_variacion import explicar_variacion
 from funciones.sugerencias_mejora import sugerencias_mejora
 
-# Carga variables de entorno
-load_dotenv()
-API_KEY = os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = os.getenv("ASSISTANT_ID")
-
-if not API_KEY or not ASSISTANT_ID:
-    raise RuntimeError("❌ Faltan las variables OPENAI_API_KEY o ASSISTANT_ID")
-
-# Configuración de logging
-openai.log = "debug"
-logging.basicConfig(level=logging.INFO)
-client = openai.OpenAI(api_key=API_KEY)
-
-# App FastAPI + CORS
+# === FastAPI setup ===
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Usa tu dominio real en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registro de funciones al iniciar
+# === Registrar funciones ===
 @app.on_event("startup")
 def registrar_funciones():
+    logging.info("Registrando funciones...")
+    tools = []
     funciones = [
         consultar_kpis,
         analizar_salon,
         analizar_trabajadores,
         explicar_kpi,
         explicar_variacion,
-        sugerencias_mejora
+        sugerencias_mejora,
     ]
-    tools = [
-        {
+    for fn in funciones:
+        tools.append({
             "type": "function",
             "function": {
                 "name": fn.__name__,
@@ -69,18 +71,17 @@ def registrar_funciones():
                     "required": ["year", "nsemana", "codsalon"]
                 }
             }
-        }
-        for fn in funciones
-    ]
+        })
+
     client.beta.assistants.update(assistant_id=ASSISTANT_ID, tools=tools)
     logging.info("✅ Funciones registradas correctamente.")
 
-# Endpoint principal
+# === Endpoint principal del asistente ===
 @app.post("/chat")
 async def chat_handler(request: Request):
     try:
-        body = await request.json()
-        mensaje = body.get("mensaje")
+        data = await request.json()
+        mensaje = data.get("mensaje")
         if not mensaje:
             raise HTTPException(status_code=400, detail="Falta el campo 'mensaje'.")
 
@@ -92,15 +93,7 @@ async def chat_handler(request: Request):
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID,
-            instructions=(
-                "Contesta siempre con un saludo, y presentándote: Soy Mont Dirección.\n\n"
-                "Eres un asistente especializado en ayudar a directoras de salones de peluquería. "
-                "Tu función es ayudarles a entender cómo mejorar su negocio.\n\n"
-                "Después de llamar a una función y recibir su respuesta, escribe siempre una respuesta explicativa "
-                "para la directora del salón en español claro y directo.\n\n"
-                "⚠️ Usa los nombres de los parámetros exactamente como están definidos en las funciones: 'year', 'nsemana', 'codsalon', etc.\n\n"
-                "🗓️ Asume que el año actual es 2025 salvo que se indique lo contrario. Interpreta frases como 'esta semana', 'el mes pasado', etc."
-            )
+            instructions="Actúa como Mont Dirección, experta en KPIs de salones de peluquería."
         )
 
         while True:
@@ -108,34 +101,39 @@ async def chat_handler(request: Request):
             if status.status == "completed":
                 break
             if status.status == "requires_action":
+                tool_calls = status.required_action.submit_tool_outputs.tool_calls
                 outputs = []
-                for call in status.required_action.submit_tool_outputs.tool_calls:
-                    args = json.loads(call.function.arguments)
+                for call in tool_calls:
                     nombre_funcion = call.function.name
-                    logging.info("🛠 Ejecutando %s con argumentos %s", nombre_funcion, args)
+                    args = json.loads(call.function.arguments)
+                    logging.info(f"🛠 Ejecutando: {nombre_funcion} con {args}")
 
+                    # Ejecutar la función correspondiente
                     if nombre_funcion == "consultar_kpis":
-                        resultado = consultar_kpis(**args)
+                        result = consultar_kpis(**args)
                     elif nombre_funcion == "analizar_salon":
-                        resultado = analizar_salon(**args)
+                        result = analizar_salon(**args)
                     elif nombre_funcion == "analizar_trabajadores":
-                        resultado = analizar_trabajadores(**args)
+                        result = analizar_trabajadores(**args)
                     elif nombre_funcion == "explicar_kpi":
-                        resultado = explicar_kpi(**args)
+                        result = explicar_kpi(**args)
                     elif nombre_funcion == "explicar_variacion":
-                        resultado = explicar_variacion(**args)
+                        result = explicar_variacion(**args)
                     elif nombre_funcion == "sugerencias_mejora":
-                        resultado = sugerencias_mejora(**args)
+                        result = sugerencias_mejora(**args)
                     else:
-                        resultado = "⚠️ Función no reconocida."
+                        result = f"⚠️ Función desconocida: {nombre_funcion}"
 
-                    outputs.append({"tool_call_id": call.id, "output": resultado})
+                    outputs.append({"tool_call_id": call.id, "output": result})
 
                 client.beta.threads.runs.submit_tool_outputs(
-                    thread_id=thread.id, run_id=run.id, tool_outputs=outputs
+                    thread_id=thread.id,
+                    run_id=run.id,
+                    tool_outputs=outputs
                 )
             time.sleep(1)
 
+        # Obtener la respuesta del asistente
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         for m in reversed(messages.data):
             if m.role == "assistant":
@@ -143,5 +141,5 @@ async def chat_handler(request: Request):
         return {"respuesta": "⚠️ No se obtuvo respuesta del asistente."}
 
     except Exception as e:
-        logging.exception("❌ Error en el procesamiento del asistente")
-        raise HTTPException(status_code=500, detail="Error interno al procesar la solicitud.")
+        logging.exception("❌ Error al procesar el mensaje")
+        raise HTTPException(status_code=500, detail="Error interno del servidor.")
