@@ -116,4 +116,6 @@ def get_kpis_30dias(codsalon: str):
         return datos_filtrados.to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+from explicar_ratio_diario import router as debug_router
+app.include_router(debug_router)
 
