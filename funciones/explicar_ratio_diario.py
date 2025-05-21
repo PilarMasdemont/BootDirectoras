@@ -1,69 +1,85 @@
-"""
-Explica por qué el Ratio General fue alto, medio o bajo en un día concreto para un salón,
-basándose en otros KPIs diarios de la hoja 'KPIs_30Dias'.
-"""
 
-import pandas as pd
-from datetime import datetime
-from sheets import cargar_hoja
-
-GID_KPIS_30DIAS = "1882861530"
+from funciones.utils import formatear_porcentaje
+from funciones.sheets import cargar_hoja
 
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
-    # Cargar los datos de la hoja
-    df = cargar_hoja(gid=GID_KPIS_30DIAS)
-
-    # Asegurar que la columna fecha esté en formato datetime.date
-    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce").dt.date
-    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
-
-    # Filtrar por salón y fecha
-    fila = df[
-        (df["codsalon"].astype(str) == codsalon) &
-        (df["fecha"] == fecha_dt)
-    ]
+    df = cargar_hoja("KPIs_30Dias")
+    df['fecha'] = df['fecha'].astype(str)
+    fila = df[(df['codsalon'].astype(str) == str(codsalon)) & (df['fecha'] == fecha)]
 
     if fila.empty:
-        return f"No se encontraron datos para el salón {codsalon} el día {fecha}."
+        return f"Soy Mont Dirección. No hay registros disponibles para el salón {codsalon} en la fecha {fecha}. Por favor, revisa si hay datos registrados ese día."
 
     fila = fila.iloc[0]
 
-    # Convertir ratios a porcentaje
-    ratio = float(fila["ratiogeneral"]) * 100
-    desviacion = float(fila["ratiodesviaciontiempoteorico"]) * 100
-    tiempo_indirecto = float(fila["ratiotiempoindirecto"]) * 100
-    tickets_bajos = float(fila["ratioticketsinferior20"]) * 100
+    # Cargar los valores y convertir a porcentajes cuando corresponda
+    ratiogeneral = fila['ratiogeneral'] * 100
+    facturacion = fila['facturacionsiva']
+    horas = fila['horasfichadas']
+    desviacion = fila['ratiodesviaciontiempoteorico'] * 100
+    tiempo_indirecto = fila['ratiotiempoindirecto'] * 100
+    ratio_tickets = fila['ratioticketsinferior20'] * 100
+    ticket_medio = fila['ticketsivamedio']
 
-    # Clasificación del ratio general
-    if ratio >= 200:
-        calificacion = "excelente"
-    elif ratio >= 130:
-        calificacion = "aceptable"
+    explicacion = []
+
+    # Clasificación del Ratio General según umbrales del informe
+    if ratiogeneral < 160:
+        resumen = f"📊 El Ratio General fue del {formatear_porcentaje(ratiogeneral)}, lo cual se considera BAJO."
+    elif 160 <= ratiogeneral <= 200:
+        resumen = f"📊 El Ratio General fue del {formatear_porcentaje(ratiogeneral)}, lo cual se considera ACEPTABLE."
     else:
-        calificacion = "bajo"
+        resumen = f"📊 El Ratio General fue del {formatear_porcentaje(ratiogeneral)}, lo cual se considera EXCELENTE."
 
-    # Causas detectadas
-    causas = []
+    # Coeficientes del modelo de regresión lineal
+    pesos = {
+        'facturacionsiva': 0.000456213,
+        'horasfichadas': -0.01289895,
+        'ratiodesviaciontiempoteorico': -1.365456474,
+        'ratiotiempoindirecto': -1.897589684,
+        'ratioticketsinferior20': -0.103354958,
+        'ticketsivamedio': 0.015937312
+    }
 
-    if tickets_bajos > 40:
-        causas.append(f"{tickets_bajos:.0f}% de tickets inferiores a 20 €")
-    if tiempo_indirecto > 20:
-        causas.append(f"{tiempo_indirecto:.0f}% de tiempo indirecto")
-    if desviacion < 0:
-        causas.append(f"una desviación negativa de la agenda de {desviacion:.1f}%")
+    # Construir el diccionario con los valores normalizados
+    valores = {
+        'facturacionsiva': facturacion,
+        'horasfichadas': horas,
+        'ratiodesviaciontiempoteorico': desviacion,
+        'ratiotiempoindirecto': tiempo_indirecto,
+        'ratioticketsinferior20': ratio_tickets,
+        'ticketsivamedio': ticket_medio
+    }
 
-    # Redacción del mensaje
-    if causas:
-        resumen = "Esto se debe principalmente a " + ", ".join(causas[:-1])
-        if len(causas) > 1:
-            resumen += " y " + causas[-1]
-        else:
-            resumen = "Esto se debe principalmente a " + causas[0]
-        resumen += "."
-    else:
-        resumen = "No se detectan causas claras en los indicadores asociados."
+    impacto = {}
+    for kpi, coef in pesos.items():
+        impacto[kpi] = coef * valores[kpi]
 
-    return (
-        f"📅 El {fecha}, el Ratio General del salón fue del {ratio:.0f}%, lo que se considera {calificacion}. "
+    causas_negativas = sorted(impacto.items(), key=lambda x: x[1])[:3]
+
+    for kpi, valor in causas_negativas:
+        if valor < -0.1:
+            if kpi == 'ratiodesviaciontiempoteorico':
+                explicacion.append("📅 Hubo una desviación significativa respecto al tiempo teórico previsto en agenda.")
+            elif kpi == 'ratiotiempoindirecto':
+                explicacion.append("🧍‍♂️ Se dedicó un tiempo elevado a  indirectas.")
+            elif kpi == 'ratioticketsinferior20':
+                explicacion.append("🎟️ Muchos tickets fueron de menos de 20€, reduciendo la rentabilidad.")
+            elif kpi == 'horasfichadas':
+                explicacion.append("⏱️ Se ficharon muchas horas en relación con los ingresos obtenidos.")
+            elif kpi == 'facturacionsiva':
+                explicacion.append("💰 La facturación fue baja en comparación con otras jornadas.")
+            elif kpi == 'ticketsivamedio':
+                explicacion.append("💳 El ticket medio fue más bajo de lo habitual.")
+
+    if not explicacion:
+        explicacion.append("✅ No se detectan desviaciones relevantes en los KPIs clave para ese día.")
+
+    return f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}.
+
+" + resumen + "
+
+" + "
+".join(explicacion)
         + resumen
     )
