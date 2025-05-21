@@ -1,20 +1,14 @@
 import os
 import json
-import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Funciones propias
-from funciones.kpis import consultar_kpis
-from funciones.analizar_salon import analizar_salon
-from funciones.analizar_trabajadores import analizar_trabajadores
-from funciones.explicar_kpi import explicar_kpi
-from funciones.explicar_variacion import explicar_variacion
-from funciones.sugerencias_mejora import sugerencias_mejora
+# Función real que explica la página 2 del informe
+from funciones.explicar_ratio_diario import explicar_ratio_diario
 
-# Carga claves
+# Cargar clave de API
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
@@ -22,39 +16,33 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# Funciones expuestas a GPT
+# Registrar funciones disponibles para el asistente
 function_schema = [
     {
-        "name": fn.__name__,
-        "description": fn.__doc__ or fn.__name__,
+        "name": "explicar_ratio_diario",
+        "description": "Explica por qué el Ratio General fue alto, medio o bajo en un día concreto para un salón, basándose en otros KPIs diarios.",
         "parameters": {
             "type": "object",
             "properties": {
-                "year": {"type": "integer"},
-                "nsemana": {"type": "integer"},
-                "codsalon": {"type": "integer"},
-                "tipo": {
+                "codsalon": {
                     "type": "string",
-                    "enum": ["semana", "trabajadores", "mensual", "mensual_comparado"]
+                    "description": "Código único del salón que aparece en los datos de Google Sheets"
+                },
+                "fecha": {
+                    "type": "string",
+                    "description": "Fecha en formato 'YYYY-MM-DD' correspondiente al día que se quiere analizar"
                 }
             },
-            "required": ["year", "nsemana", "codsalon"]
+            "required": ["codsalon", "fecha"]
         }
-    } for fn in [
-        consultar_kpis,
-        analizar_salon,
-        analizar_trabajadores,
-        explicar_kpi,
-        explicar_variacion,
-        sugerencias_mejora
-    ]
+    }
 ]
 
-# App FastAPI
+# Crear la aplicación FastAPI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Cambiar por el dominio del frontend en producción
+    allow_origins=["*"],  # En producción, reemplaza con el dominio real del frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,13 +61,10 @@ async def chat_handler(request: Request):
         "Eres un asistente especializado en ayudar a directoras de salones de peluquería. "
         "Tu función es ayudarles a entender cómo mejorar su negocio.\n\n"
         "Después de llamar a una función y recibir su respuesta, escribe siempre una respuesta explicativa "
-        "para la directora del salón en español claro y directo.\n\n"
-        "⚠️ Usa los nombres de los parámetros exactamente como están definidos en las funciones: year, nsemana, codsalon, tipo.\n\n"
-        "🗓️ Siempre asume que el año actual es 2025, salvo que la directora indique explícitamente otro año. "
-        "Interpreta correctamente expresiones como 'esta semana', 'el mes pasado', o 'la semana 14'."
+        "para la directora del salón en español claro y directo."
     )
 
-    # Primera llamada
+    # Primera llamada al asistente
     res = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -92,7 +77,7 @@ async def chat_handler(request: Request):
 
     msg = res.choices[0].message
 
-    # Si llama a función
+    # Si llama a una función
     if msg.function_call:
         nombre = msg.function_call.name
         args = json.loads(msg.function_call.arguments)
@@ -116,5 +101,5 @@ async def chat_handler(request: Request):
         )
         return {"respuesta": follow.choices[0].message.content}
 
-    # Si no llama función
+    # Si responde directamente sin función
     return {"respuesta": msg.content}
