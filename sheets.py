@@ -1,5 +1,3 @@
-# sheets.py limpio: solo función para cargar hoja por GID
-
 import pandas as pd
 
 BASE_URL = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
@@ -25,11 +23,9 @@ def cargar_hoja(gid):
             .str.replace(",", ".", regex=False)
             .str.strip()
         )
-       try:
-    df[col] = pd.to_numeric(df[col])
-except Exception:
-    pass
-
+        try:
+            df[col] = pd.to_numeric(df[col])
+        except Exception:
+            pass
 
     return df
-
