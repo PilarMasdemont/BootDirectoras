@@ -1,4 +1,3 @@
-
 from funciones.utils import formatear_porcentaje
 from sheets import cargar_hoja
 
@@ -42,7 +41,6 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         'ticketsivamedio': 0.015937312
     }
 
-    # Construir el diccionario con los valores normalizados
     valores = {
         'facturacionsiva': facturacion,
         'horasfichadas': horas,
@@ -52,10 +50,7 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         'ticketsivamedio': ticket_medio
     }
 
-    impacto = {}
-    for kpi, coef in pesos.items():
-        impacto[kpi] = coef * valores[kpi]
-
+    impacto = {k: coef * valores[k] for k, coef in pesos.items()}
     causas_negativas = sorted(impacto.items(), key=lambda x: x[1])[:3]
 
     for kpi, valor in causas_negativas:
@@ -71,14 +66,13 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
             elif kpi == 'facturacionsiva':
                 explicacion.append("💰 La facturación fue baja en comparación con otras jornadas.")
             elif kpi == 'ticketsivamedio':
-                explicacion.append("💳 El ticket medio fue más bajo de lo habitual.")
+                explicacion.append("💳 El ticket medio fue más bajo de lo habitual, limitando ingresos por cliente.")
 
     if not explicacion:
         explicacion.append("✅ No se detectan desviaciones relevantes en los KPIs clave para ese día.")
 
-    return f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}."
-
-" + resumen + "
-
-" + "
-".join(explicacion)"
+    return (
+        f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}.\n\n"
+        f"{resumen}\n\n"
+        + "\n".join(explicacion)
+    )
