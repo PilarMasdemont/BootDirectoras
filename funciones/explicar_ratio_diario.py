@@ -48,3 +48,15 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         explicacion += "Muchos tickets fueron inferiores a 20€.\n"
 
     return explicacion.strip()
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/debug/columnas")
+def columnas_disponibles():
+    try:
+        from sheets import cargar_hoja
+        df = cargar_hoja("1882861530")
+        return {"columnas": list(df.columns)}
+    except Exception as e:
+        return {"error": str(e)}
