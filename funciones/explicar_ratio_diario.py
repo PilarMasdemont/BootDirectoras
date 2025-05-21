@@ -28,13 +28,13 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
     fila = fila.iloc[0]
 
-    # Convertir ratio a porcentaje
+    # Convertir ratios a porcentaje
     ratio = float(fila["ratiogeneral"]) * 100
-    desviacion = float(fila["ratiodesviaciontiempoteorico"])
-    tiempo_indirecto = float(fila["ratiotiempoindirecto"])
-    tickets_bajos = float(fila["ratioticketsinferior20"])
+    desviacion = float(fila["ratiodesviaciontiempoteorico"]) * 100
+    tiempo_indirecto = float(fila["ratiotiempoindirecto"]) * 100
+    tickets_bajos = float(fila["ratioticketsinferior20"]) * 100
 
-    # Clasificación
+    # Clasificación del ratio general
     if ratio >= 200:
         calificacion = "excelente"
     elif ratio >= 130:
@@ -42,15 +42,17 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     else:
         calificacion = "bajo"
 
+    # Causas detectadas
     causas = []
 
     if tickets_bajos > 40:
-        causas.append(f"un {tickets_bajos:.0f}% de tickets inferiores a 20 €")
+        causas.append(f"{tickets_bajos:.0f}% de tickets inferiores a 20 €")
     if tiempo_indirecto > 20:
         causas.append(f"{tiempo_indirecto:.0f}% de tiempo indirecto")
     if desviacion < 0:
         causas.append(f"una desviación negativa de la agenda de {desviacion:.1f}%")
 
+    # Redacción del mensaje
     if causas:
         resumen = "Esto se debe principalmente a " + ", ".join(causas[:-1])
         if len(causas) > 1:
