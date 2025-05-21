@@ -3,8 +3,9 @@ Explica por qué el Ratio General fue alto, medio o bajo en un día concreto par
 basándose en otros KPIs diarios de la hoja 'KPIs_30Dias'.
 """
 
+import pandas as pd
+from datetime import datetime
 from sheets import cargar_hoja
-
 
 GID_KPIS_30DIAS = "1882861530"
 
@@ -12,10 +13,14 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     # Cargar los datos de la hoja
     df = cargar_hoja(gid=GID_KPIS_30DIAS)
 
+    # Asegurar que la columna fecha esté en formato datetime.date
+    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce").dt.date
+    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+
     # Filtrar por salón y fecha
     fila = df[
         (df["codsalon"].astype(str) == codsalon) &
-        (df["fecha"] == fecha)
+        (df["fecha"] == fecha_dt)
     ]
 
     if fila.empty:
