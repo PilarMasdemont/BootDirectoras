@@ -62,7 +62,7 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
             if kpi == 'ratiodesviaciontiempoteorico':
                 explicacion.append("📅 Hubo una desviación significativa respecto al tiempo teórico previsto en agenda.")
             elif kpi == 'ratiotiempoindirecto':
-                explicacion.append("🧍‍♂️ Se dedicó un tiempo elevado a  indirectas.")
+                explicacion.append("🧍‍♂️ Se dedicó un tiempo elevado a tareas no productivas o indirectas.")
             elif kpi == 'ratioticketsinferior20':
                 explicacion.append("🎟️ Muchos tickets fueron de menos de 20€, reduciendo la rentabilidad.")
             elif kpi == 'horasfichadas':
@@ -81,5 +81,3 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
 " + "
 ".join(explicacion)
-        + resumen
-    )
