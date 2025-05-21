@@ -28,7 +28,8 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
     fila = fila.iloc[0]
 
-    ratio = float(fila["ratiogeneral"])
+    # Convertir ratio a porcentaje
+    ratio = float(fila["ratiogeneral"]) * 100
     desviacion = float(fila["ratiodesviaciontiempoteorico"])
     tiempo_indirecto = float(fila["ratiotiempoindirecto"])
     tickets_bajos = float(fila["ratioticketsinferior20"])
