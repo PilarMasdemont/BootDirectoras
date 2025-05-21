@@ -48,6 +48,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/kpis/30dias")
+async def obtener_kpis_30dias(codsalon: str):
+    try:
+        df = cargar_hoja("KPIs_30Dias")
+        df_salon = df[df["cod_salon"] == codsalon]
+
+        if df_salon.empty:
+            raise HTTPException(status_code=404, detail=f"No hay datos para el salón {codsalon}")
+
+        registros = df_salon.to_dict(orient="records")
+        return JSONResponse(content={"datos": registros})
+
+    except Exception as e:
+        logger.exception("❌ Error al obtener KPIs desde Google Sheets")
+        raise HTTPException(status_code=500, detail=f"Error al obtener KPIs: {e}")
+
 @app.post("/chat")
 async def chat_handler(request: Request):
     data = await request.json()
