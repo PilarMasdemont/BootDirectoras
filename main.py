@@ -48,21 +48,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import JSONResponse
+from sheets import cargar_hoja
+
 @app.get("/kpis/30dias")
-async def obtener_kpis_30dias(codsalon: str):
+async def kpis_30dias(codsalon: str):
+    """
+    Devuelve los KPIs de los últimos 30 días para un salón específico.
+    """
     try:
-        df = cargar_hoja("KPIs_30Dias")
-        df_salon = df[df["cod_salon"] == codsalon]
+        df = cargar_hoja("1882861530")  # GID de la hoja "KPIs_30Dias"
+        df = df[df['codsalon'].astype(str) == str(codsalon)]
 
-        if df_salon.empty:
-            raise HTTPException(status_code=404, detail=f"No hay datos para el salón {codsalon}")
+        if df.empty:
+            return JSONResponse(status_code=404, content={"error": f"No hay datos para el salón {codsalon}"})
 
-        registros = df_salon.to_dict(orient="records")
-        return JSONResponse(content={"datos": registros})
+        # Convertir fechas a string por compatibilidad JSON
+        if "fecha" in df.columns:
+            df["fecha"] = df["fecha"].astype(str)
 
+        return df.to_dict(orient="records")
     except Exception as e:
-        logger.exception("❌ Error al obtener KPIs desde Google Sheets")
-        raise HTTPException(status_code=500, detail=f"Error al obtener KPIs: {e}")
+        logger.exception("❌ Error al cargar datos KPIs 30 días")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/chat")
 async def chat_handler(request: Request):
