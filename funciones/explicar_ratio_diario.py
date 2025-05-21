@@ -1,6 +1,7 @@
 
 from funciones.utils import formatear_porcentaje
-from funciones.sheets import cargar_hoja
+from sheets import cargar_hoja
+
 
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     df = cargar_hoja("KPIs_30Dias")
