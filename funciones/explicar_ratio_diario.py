@@ -80,4 +80,4 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 " + resumen + "
 
 " + "
-".join(explicacion)
+".join(explicacion)"
