@@ -59,7 +59,8 @@ async def chat_handler(request: Request):
     if not codsalon or not fecha:
         raise HTTPException(400, "Faltan los campos 'codsalon' o 'fecha'.")
 
-    mensaje = f"[codsalon={codsalon}]
+  mensaje = f"[codsalon={codsalon}]\n[fecha={fecha}]\n{mensaje_usuario}"
+
 [fecha={fecha}]
 {mensaje_usuario}"
 
