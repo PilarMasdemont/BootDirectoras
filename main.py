@@ -4,14 +4,34 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI
-from funciones.explicar_ratio_diario import explicar_ratio_diario
-from sheets import cargar_hoja
-from typing import Optional
+import pandas as pd
 
+# --- CONFIGURACIÓN ---
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("OPENAI_API_KEY no está configurado.")
+
+GID_KPIS_30DIAS = 1882861530  # GID hoja KPIs_30Dias
+from sheets import cargar_hoja
+from funciones.explicar_ratio_diario import explicar_ratio_diario
+
+client = OpenAI(api_key=API_KEY)
+
+function_schema = [
+    {
+        "name": "explicar_ratio_diario",
+        "description": "Explica por qué el Ratio General fue alto, medio o bajo en un día concreto para un salón, basándose en otros KPIs diarios.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "fecha":    {"type": "string"}
+            },
+            "required": ["codsalon", "fecha"]
+        }
+    }
+]
 
 app = FastAPI()
 app.add_middleware(
@@ -22,92 +42,91 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# —————————————————————————————————————————————————————————————————————————————————————————
-# Endpoint de depuración: devuelve TODO el contenido de la hoja KPIs_30Dias (o filtrado por salón)
-# —————————————————————————————————————————————————————————————————————————————————————————
-@app.get("/kpis/30dias")
-async def kpis_30dias(codsalon: Optional[str] = None):
-    """
-    Devuelve los registros de la pestaña KPIs_30Dias.
-    Si se pasa codsalon, filtra solo ese salón.
-    """
-    # cargar_hoja internally hace pd.read_csv desde tu Google Sheets export URL
-    df = cargar_hoja("KPIs_30Dias")
-    # Asegúrate de que codsalon sea string en el DataFrame
-    df["codsalon"] = df["codsalon"].astype(str)
-
-    if codsalon:
-        df = df[df["codsalon"] == str(codsalon)]
-
-    # Serializamos a JSON
-    return df.to_dict(orient="records")
-
-
-# —————————————————————————————————————————————————————————————————————————————————————————
-# Chat handler (igual que antes, pero ya lee fecha del body y fuerza inyección de tags)
-# —————————————————————————————————————————————————————————————————————————————————————————
-client = OpenAI(api_key=API_KEY)
-function_schema = [
-    {
-        "name": "explicar_ratio_diario",
-        "description": "Explica por qué el Ratio General fue alto, medio o bajo en un día concreto...",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "fecha":    {"type": "string", "description": "YYYY-MM-DD"}
-            },
-            "required": ["codsalon", "fecha"]
-        }
-    }
-]
-
+# --- ENDPOINT /chat ---
 @app.post("/chat")
 async def chat_handler(request: Request):
     data = await request.json()
     mensaje_usuario = data.get("mensaje")
-    codsalon        = data.get("codsalon")
-    fecha           = data.get("fecha")
+    codsalon       = data.get("codsalon")
+    fecha          = data.get("fecha")
 
     if not mensaje_usuario or not codsalon or not fecha:
-        raise HTTPException(400, "Debes enviar 'mensaje', 'codsalon' y 'fecha' en el body.")
+        raise HTTPException(400, "Faltan campos obligatorios: mensaje, codsalon o fecha.")
 
-    system_prompt = (
-        "Actúa como Mont Dirección. "
-        "Contesta siempre con un saludo, y presentándote: Soy Mont Dirección.\n\n"
-        "Cuando la directora pregunte por un KPI de un día concreto, debes invocar "
-        "la función explicar_ratio_diario con los parámetros codsalon y fecha en formato YYYY-MM-DD, "
-        "esperar su respuesta, y luego generar tú el texto explicativo en español claro y directo."
+    # Inyectar tags para guiar la llamada a función
+    mensaje = (
+        f"[codsalon={codsalon}]\n"
+        f"[fecha={fecha}]\n"
+        f"{mensaje_usuario}"
     )
 
-    # Inyectamos tags para ayudar al modelo
-    injected = f"[codsalon={codsalon}]\n[fecha={fecha}]\n{mensaje_usuario}"
+    system_prompt = (
+        "Actúa como Mont Dirección. Siempre comienza saludando: 'Hola, soy Mont Dirección.'\n\n"
+        "Eres una asistente experta en KPIs de salones de peluquería.\n\n"
+        "Cuando el usuario pregunte por un KPI en un día concreto, "
+        "debes invocar la función `explicar_ratio_diario` con parámetros "
+        "{ 'codsalon': <valor>, 'fecha': 'YYYY-MM-DD' }.\n\n"
+        "Estos valores siempre vendrán inyectados en el mensaje como:\n"
+        "[codsalon=1]\n[fecha=2025-04-26]\n\n"
+        "Después de ejecutar la función, responde con una explicación clara en español."
+    )
 
+    # Primera pasada: forzar function calling
     res = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": injected}
+            {"role": "user",   "content": mensaje}
         ],
         functions=function_schema,
         function_call="auto"
     )
-
     msg = res.choices[0].message
-    # Si no lo llama GPT, lo hacemos nosotros
-    if not msg.function_call or msg.function_call.name != "explicar_ratio_diario":
-        resultado = explicar_ratio_diario(codsalon, fecha)
-        return {"respuesta": f"¡Hola! Soy Mont Dirección.\n\n{resultado}"}
 
-    # Si GPT genera correctamente la llamada:
-    args = json.loads(msg.function_call.arguments)
-    resultado = explicar_ratio_diario(**args)
-    follow = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": injected},
-            {"role": "function", "name": "explicar_ratio_diario", "content": resultado}
-        ]
-    )
-    return {"respuesta": follow.choices[0].message.content}
+    # Si GPT decide llamar a la función...
+    if msg.function_call:
+        args = json.loads(msg.function_call.arguments)
+        try:
+            resultado = explicar_ratio_diario(**args)
+        except Exception as e:
+            resultado = f"⚠️ Error al ejecutar la función: {e}"
+
+        # Segunda pasada: GPT envuelve la salida de la función
+        follow = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system",  "content": system_prompt},
+                {"role": "user",    "content": mensaje},
+                {"role": "function","name": msg.function_call.name, "content": resultado}
+            ]
+        )
+        return {"respuesta": follow.choices[0].message.content}
+
+    # Fallback (no se invocó la función)
+    return {"respuesta": msg.content}
+
+
+# --- ENDPOINT /kpis/30dias ---
+@app.get("/kpis/30dias")
+async def get_kpis_30dias(codsalon: int):
+    """
+    Devuelve los registros de los últimos 30 días para el salón indicado.
+    Parámetro: codsalon (int)
+    """
+    try:
+        df = cargar_hoja(GID_KPIS_30DIAS)
+    except Exception as e:
+        raise HTTPException(500, f"Error cargando datos desde Google Sheets: {e}")
+
+    # Asegurarse de que la columna existe y filtrar
+    if 'codsalon' not in df.columns:
+        raise HTTPException(500, "La hoja no contiene la columna 'codsalon'.")
+
+    # Normalizar tipos y filtrar
+    df['codsalon'] = pd.to_numeric(df['codsalon'], errors="coerce")
+    filtrado = df[df['codsalon'] == codsalon]
+
+    # Convertir a JSON
+    records = filtrado.to_dict(orient="records")
+    return {"codsalon": codsalon, "datos": records}
+
