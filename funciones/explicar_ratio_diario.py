@@ -19,8 +19,15 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     if faltantes:
         return f"⚠️ Faltan columnas necesarias en los datos: {', '.join(faltantes)}"
 
+    # Asegurar que las fechas sean tipo datetime y se comparen solo por fecha (sin hora)
+    df["fecha"] = pd.to_datetime(df["fecha"]).dt.date
+    try:
+        fecha_consulta = pd.to_datetime(fecha).date()
+    except Exception as e:
+        return f"⚠️ Fecha no válida: {fecha}"
+
     df = df[df["codsalon"].astype(str) == str(codsalon)]
-    df = df[df["fecha"] == fecha]
+    df = df[df["fecha"] == fecha_consulta]
 
     if df.empty:
         return f"⚠️ No se encontraron datos para el salón {codsalon} en la fecha {fecha}."
@@ -31,7 +38,7 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     if ratio is None or pd.isna(ratio):
         return "⚠️ No se encuentra el valor del Ratio General para esa fecha."
 
-    explicacion = f"El Ratio General fue {ratio:.2f} el día {fecha}.\n"
+    explicacion = f"El Ratio General fue {ratio:.2f} el día {fecha_consulta}.\n"
 
     if fila["ratiodesviaciontiempoteorico"] > 1:
         explicacion += "Hubo desviación en el tiempo teórico previsto.\n"
@@ -41,17 +48,3 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         explicacion += "Muchos tickets fueron inferiores a 20€.\n"
 
     return explicacion.strip()
-
-
-# Endpoint opcional para depurar columnas disponibles en la hoja de cálculo
-from fastapi import APIRouter
-router = APIRouter()
-
-@router.get("/debug/columnas")
-def columnas_disponibles():
-    try:
-        df = cargar_hoja("1882861530")
-        return {"columnas": list(df.columns)}
-    except Exception as e:
-        return {"error": str(e)}
-
