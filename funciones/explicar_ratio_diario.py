@@ -1,14 +1,25 @@
 from funciones.utils import formatear_porcentaje
 from sheets import cargar_hoja
 
-
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
+    print("🔍 DEBUG | Fecha recibida:", fecha)
+    print("🔍 DEBUG | Codsalon recibido:", codsalon)
+
     df = cargar_hoja("KPIs_30Dias")
     df['fecha'] = df['fecha'].astype(str)
-    fila = df[(df['codsalon'].astype(str) == str(codsalon)) & (df['fecha'] == fecha)]
+    df['codsalon'] = df['codsalon'].astype(str)
+
+    print("🔍 DEBUG | Primeras filas del DataFrame:")
+    print(df.head(3).to_string())
+
+    fila = df[(df['codsalon'] == str(codsalon)) & (df['fecha'] == fecha)]
+
+    print("🔍 DEBUG | Coincidencias encontradas:", len(fila))
 
     if fila.empty:
         return f"Soy Mont Dirección. No hay registros disponibles para el salón {codsalon} en la fecha {fecha}. Por favor, revisa si hay datos registrados ese día."
+
+    # ... resto de tu función (sin cambios) ...
 
     fila = fila.iloc[0]
 
