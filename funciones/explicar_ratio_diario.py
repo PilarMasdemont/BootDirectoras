@@ -75,7 +75,7 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     if not explicacion:
         explicacion.append("✅ No se detectan desviaciones relevantes en los KPIs clave para ese día.")
 
-    return f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}.
+    return f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}."
 
 " + resumen + "
 
