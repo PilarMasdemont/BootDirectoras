@@ -1,145 +1,119 @@
 import os
 import json
-import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI
+import pandas as pd
 
+# Función real que explica la página 2 del informe
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 
-# ————— Configuración de logging —————
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s %(levelname)s %(name)s | %(message)s",
-)
-logger = logging.getLogger("bootdirectoras")
-
-# Carga de la clave
-load_dotenv()
+# Cargar clave de API
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path)
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
-    logger.error("OPENAI_API_KEY no está configurado en el entorno")
     raise RuntimeError("OPENAI_API_KEY no está configurado.")
 
 client = OpenAI(api_key=API_KEY)
 
-function_schema = [
+# Definición de la función para el LLM
+default_schema = [
     {
         "name": "explicar_ratio_diario",
-        "description": "...",
+        "description": "Explica por qué el Ratio General fue alto, medio o bajo en un día concreto para un salón, basándose en otros KPIs diarios.",
         "parameters": {
             "type": "object",
             "properties": {
-                "codsalon": {"type": "string"},
-                "fecha":    {"type": "string"}
+                "codsalon": {"type": "string", "description": "Código único del salón que aparece en los datos de Google Sheets"},
+                "fecha": {"type": "string", "description": "Fecha en formato 'YYYY-MM-DD' correspondiente al día que se quiere analizar"}
             },
             "required": ["codsalon", "fecha"]
         }
     }
 ]
 
+# Crear la aplicación FastAPI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Ajustar en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from fastapi.responses import JSONResponse
-from sheets import cargar_hoja
-
-@app.get("/kpis/30dias")
-async def kpis_30dias(codsalon: str):
-    """
-    Devuelve los KPIs de los últimos 30 días para un salón específico.
-    """
-    try:
-        df = cargar_hoja("1882861530")  # GID de la hoja "KPIs_30Dias"
-        df = df[df['codsalon'].astype(str) == str(codsalon)]
-
-        if df.empty:
-            return JSONResponse(status_code=404, content={"error": f"No hay datos para el salón {codsalon}"})
-
-        # Convertir fechas a string por compatibilidad JSON
-        if "fecha" in df.columns:
-            df["fecha"] = df["fecha"].astype(str)
-
-        return df.to_dict(orient="records")
-    except Exception as e:
-        logger.exception("❌ Error al cargar datos KPIs 30 días")
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
 @app.post("/chat")
 async def chat_handler(request: Request):
     data = await request.json()
-    logger.debug(f"➡️  /chat payload recibido: {data!r}")
-
     mensaje_usuario = data.get("mensaje")
-    codsalon        = data.get("codsalon")
-    fecha           = data.get("fecha")
+    codsalon = data.get("codsalon")
+    fecha = data.get("fecha")
 
     if not mensaje_usuario or not codsalon or not fecha:
-        logger.warning("Faltan campos en la petición")
-        raise HTTPException(
-            400,
-            "Faltan campos en la petición. Envíame 'mensaje', 'codsalon' y 'fecha'."
-        )
+        raise HTTPException(400, "Faltan campos obligatorios: 'mensaje', 'codsalon' o 'fecha'.")
 
-    # Construir prompt forzado
-    prompt_user = f"[codsalon={codsalon}]\n[fecha={fecha}]\n{mensaje_usuario}"
-    logger.debug(f"📝 prompt_user:\n{prompt_user}")
+    # Inyectar contexto en el mensaje para guiar al LLM
+    mensaje = f"[codsalon={codsalon}]\n[fecha={fecha}]\n{mensaje_usuario}"
 
+    # Prompt del sistema reforzado para llamadas a función\  
     system_prompt = (
-        "Actúa como Mont Dirección...\n"
-        "Si el usuario pregunta por un KPI en día concreto, invoca explicar_ratio_diario..."
+        "Actúa como Mont Dirección. Siempre comienza tus respuestas saludando, por ejemplo: 'Hola, soy Mont Dirección.'\n\n"
+        "Eres una asistente experta en KPIs de salones de peluquería.\n\n"
+        "Cuando el usuario haga una pregunta sobre un KPI en un día concreto, deberás invocar la función `explicar_ratio_diario`"
+        " con los parámetros: { \"codsalon\": <valor>, \"fecha\": \"YYYY-MM-DD\" }.\n\n"
+        "Estos valores siempre vendrán inyectados en el mensaje del usuario con etiquetas como:\n"
+        "[codsalon=1]\n[fecha=2025-04-26]\n\n"
+        "Tras recibir el resultado de la función, responde con una explicación clara en español, en tono profesional pero accesible."
     )
 
-    logger.debug("🔄 Llamando a OpenAI.chat.completions.create (primera pasada)")
-    res = client.chat.completions.create(
+    # Primera llamada al LLM
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": prompt_user}
+            {"role": "user", "content": mensaje}
         ],
-        functions=function_schema,
+        functions=default_schema,
         function_call="auto"
     )
-    logger.debug(f"✅ Respuesta OpenAI primera pasada: {res.choices[0].message!r}")
 
-    msg = res.choices[0].message
+    mensaje_llm = response.choices[0].message
 
-    if msg.function_call:
-        nombre = msg.function_call.name
-        args   = json.loads(msg.function_call.arguments)
-        logger.info(f"🔧 Modelo invocó función {nombre} con args {args}")
-
+    # Si el modelo invocó la función
+    if mensaje_llm.function_call:
+        func_name = mensaje_llm.function_call.name
+        func_args = json.loads(mensaje_llm.function_call.arguments)
         try:
-            resultado_fn = globals()[nombre](**args)
-            logger.debug(f"✅ Resultado función {nombre}: {resultado_fn!r}")
+            result = globals()[func_name](**func_args)
         except Exception as e:
-            logger.exception("❌ Error al ejecutar la función")
-            resultado_fn = f"⚠️ Error interno al ejecutar la función: {e}"
+            result = f"⚠️ Error al ejecutar la función {func_name}: {str(e)}"
 
-        logger.debug("🔄 Llamando a OpenAI.chat.completions.create (segunda pasada)")
+        # Llamada de seguimiento para generar respuesta final\  
         follow = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system",   "content": system_prompt},
-                {"role": "user",     "content": prompt_user},
-                {"role": "function", "name": nombre, "content": resultado_fn}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": mensaje},
+                {"role": "function", "name": func_name, "content": result}
             ]
         )
-        respuesta = follow.choices[0].message.content
-        logger.debug(f"✅ Respuesta final GPT con función: {respuesta!r}")
-        return {"respuesta": respuesta}
+        return {"respuesta": follow.choices[0].message.content}
 
-    # Fallback: invocar directamente
-    logger.warning("⚠️ GPT no invocó la función, uso fallback directo")
-    resultado_directo = explicar_ratio_diario(codsalon, fecha)
-    respuesta = f"¡Hola! Soy Mont Dirección.\n\n{resultado_directo}"
-    logger.debug(f"✅ Respuesta fallback directo: {respuesta!r}")
-    return {"respuesta": respuesta}
+    # Fallback: invocar la función directamente
+    fallback = explicar_ratio_diario(codsalon, fecha)
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{fallback}"}
+
+# Nuevo endpoint: /kpis/30dias
+from sheets import cargar_hoja
+
+@app.get("/kpis/30dias")
+def get_kpis_30dias(codsalon: str):
+    try:
+        df = cargar_hoja("1882861530")  # GID real de la hoja KPIs_30Dias
+        datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
+        return datos_filtrados.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
