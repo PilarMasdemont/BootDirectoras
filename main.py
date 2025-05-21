@@ -1,3 +1,4 @@
+
 import os
 import json
 from fastapi import FastAPI, Request, HTTPException
@@ -5,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# Función real que explica la página 2 del informe
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 
 # Cargar clave de API
@@ -15,6 +17,7 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
+# Registrar funciones disponibles para el asistente
 function_schema = [
     {
         "name": "explicar_ratio_diario",
@@ -36,6 +39,7 @@ function_schema = [
     }
 ]
 
+# Crear la aplicación FastAPI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -50,29 +54,26 @@ async def chat_handler(request: Request):
     data = await request.json()
     mensaje_usuario = data.get("mensaje")
     codsalon = data.get("codsalon")
+    fecha = data.get("fecha")
 
-    if not mensaje_usuario:
-        raise HTTPException(400, "Falta el campo 'mensaje'.")
-    if not codsalon:
-        raise HTTPException(400, "Falta el campo 'codsalon'.")
+    if not codsalon or not fecha:
+        raise HTTPException(400, "Faltan los campos 'codsalon' o 'fecha'.")
 
-    # Inyectar el codsalon como contexto implícito en el mensaje
-    mensaje = (
-        f"[codsalon={codsalon}]\n"
-        f"{mensaje_usuario}"
-    )
+    mensaje = f"[codsalon={codsalon}]
+[fecha={fecha}]
+{mensaje_usuario}"
 
     system_prompt = (
-        "Actúa como Mont Dirección.\n"
-        "Contesta siempre con un saludo, y presentándote: Soy Mont Dirección.\n\n"
-        "Eres un asistente especializado en ayudar a directoras de salones de peluquería. "
-        "Tu función es ayudarles a entender cómo mejorar su negocio.\n\n"
-        "Si ves un mensaje como [codsalon=1], significa que debes usar ese código de salón aunque la directora no lo mencione en su mensaje.\n"
-        "Después de llamar a una función y recibir su respuesta, escribe siempre una respuesta explicativa "
-        "para la directora del salón en español claro y directo."
+        "Actúa como Mont Dirección. Siempre comienza tus respuestas saludando, por ejemplo: 'Hola, soy Mont Dirección.'\n\n"
+        "Eres una asistente experta en KPIs de salones de peluquería.\n\n"
+        "Cuando el usuario haga una pregunta sobre un KPI en un día concreto, deberás invocar la función "
+        "`explicar_ratio_diario` con los parámetros:\n"
+        '{ "codsalon": <valor>, "fecha": "YYYY-MM-DD" }\n\n'
+        "Estos valores siempre vendrán inyectados en el mensaje del usuario con etiquetas como:\n"
+        "[codsalon=1]\n[fecha=2025-04-26]\n\n"
+        "Después de recibir el resultado de la función, responde con una explicación clara en español, en tono profesional pero accesible."
     )
 
-    # Llamada inicial al modelo
     res = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -99,14 +100,12 @@ async def chat_handler(request: Request):
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": mensaje},
-                {
-                    "role": "function",
-                    "name": nombre,
-                    "content": resultado
-                }
+                {"role": "function", "name": nombre, "content": resultado}
             ]
         )
         return {"respuesta": follow.choices[0].message.content}
 
-    return {"respuesta": msg.content}
+    # Fallback: ejecuta tú mismo si el modelo no llamó a la función
+    resultado = explicar_ratio_diario(codsalon, fecha)
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
