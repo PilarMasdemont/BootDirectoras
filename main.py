@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Función real que explica la página 2 del informe
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 
 # Cargar clave de API
@@ -16,7 +15,6 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# Registrar funciones disponibles para el asistente
 function_schema = [
     {
         "name": "explicar_ratio_diario",
@@ -38,11 +36,10 @@ function_schema = [
     }
 ]
 
-# Crear la aplicación FastAPI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, reemplaza con el dominio real del frontend
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,20 +48,31 @@ app.add_middleware(
 @app.post("/chat")
 async def chat_handler(request: Request):
     data = await request.json()
-    mensaje = data.get("mensaje")
-    if not mensaje:
+    mensaje_usuario = data.get("mensaje")
+    codsalon = data.get("codsalon")
+
+    if not mensaje_usuario:
         raise HTTPException(400, "Falta el campo 'mensaje'.")
+    if not codsalon:
+        raise HTTPException(400, "Falta el campo 'codsalon'.")
+
+    # Inyectar el codsalon como contexto implícito en el mensaje
+    mensaje = (
+        f"[codsalon={codsalon}]\n"
+        f"{mensaje_usuario}"
+    )
 
     system_prompt = (
-        "Actúa como Mont Dirección. "
+        "Actúa como Mont Dirección.\n"
         "Contesta siempre con un saludo, y presentándote: Soy Mont Dirección.\n\n"
         "Eres un asistente especializado en ayudar a directoras de salones de peluquería. "
         "Tu función es ayudarles a entender cómo mejorar su negocio.\n\n"
+        "Si ves un mensaje como [codsalon=1], significa que debes usar ese código de salón aunque la directora no lo mencione en su mensaje.\n"
         "Después de llamar a una función y recibir su respuesta, escribe siempre una respuesta explicativa "
         "para la directora del salón en español claro y directo."
     )
 
-    # Primera llamada al asistente
+    # Llamada inicial al modelo
     res = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -77,7 +85,6 @@ async def chat_handler(request: Request):
 
     msg = res.choices[0].message
 
-    # Si llama a una función
     if msg.function_call:
         nombre = msg.function_call.name
         args = json.loads(msg.function_call.arguments)
@@ -101,5 +108,5 @@ async def chat_handler(request: Request):
         )
         return {"respuesta": follow.choices[0].message.content}
 
-    # Si responde directamente sin función
     return {"respuesta": msg.content}
+
