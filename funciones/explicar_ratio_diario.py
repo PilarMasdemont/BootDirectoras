@@ -3,7 +3,8 @@ Explica por qué el Ratio General fue alto, medio o bajo en un día concreto par
 basándose en otros KPIs diarios de la hoja 'KPIs_30Dias'.
 """
 
-from funciones.sheets import cargar_hoja
+from sheets import cargar_hoja
+
 
 GID_KPIS_30DIAS = "1882861530"
 
