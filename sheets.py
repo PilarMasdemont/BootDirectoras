@@ -25,7 +25,11 @@ def cargar_hoja(gid):
             .str.replace(",", ".", regex=False)
             .str.strip()
         )
-        df[col] = pd.to_numeric(df[col], errors="ignore")
+       try:
+    df[col] = pd.to_numeric(df[col])
+except Exception:
+    pass
+
 
     return df
 
