@@ -1,4 +1,3 @@
-
 from funciones.utils import formatear_porcentaje
 from sheets import cargar_hoja
 import pandas as pd
@@ -27,21 +26,15 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     ratio_tickets = fila['ratioticketsinferior20'] * 100
     ticket_medio = fila['ticketsivamedio']
 
-    explicacion = f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}."
-
-"
-    explicacion += f"📊 El Ratio General fue del {formatear_porcentaje(ratiogeneral)}."
-"
+    explicacion = f"¡Hola! Soy Mont Dirección. Vamos a analizar el desempeño del salón {codsalon} el día {fecha}.\n"
+    explicacion += f"📊 El Ratio General fue del {formatear_porcentaje(ratiogeneral)}.\n"
 
     if ratiogeneral < 160:
-        explicacion += "Este valor se considera bajo. Vamos a ver por qué:"
-"
+        explicacion += "Este valor se considera bajo. Vamos a ver por qué:\n"
     elif ratiogeneral < 200:
-        explicacion += "Este valor se considera aceptable. Veamos qué lo ha influido:"
-"
+        explicacion += "Este valor se considera aceptable. Veamos qué lo ha influido:\n"
     else:
-        explicacion += "Este valor se considera excelente. Analicemos las razones:"
-"
+        explicacion += "Este valor se considera excelente. Analicemos las razones:\n"
 
     observaciones = []
 
