@@ -8,7 +8,6 @@ import os
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from sheets import cargar_hoja
-import json
 
 load_dotenv()
 
@@ -52,35 +51,6 @@ def columnas_disponibles():
     except Exception as e:
         return {"error": str(e)}
 
-# Definición de funciones para LLM como diccionarios estándar
-def function_llm_spec():
-    return [
-        {
-            "name": "explicar_ratio_diario",
-            "description": "Explica por qué el ratio fue alto en un día concreto de un salón.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_semanal",
-            "description": "Explica por qué el ratio fue alto en una semana concreta de un salón.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"},
-                },
-                "required": ["codsalon", "nsemana"]
-            }
-        }
-    ]
-
 # Endpoint principal para conversación
 @app.post("/chat")
 async def chat_handler(request: Request):
@@ -95,12 +65,14 @@ async def chat_handler(request: Request):
 
     system_prompt = """
     Eres Mont Dirección, un asistente experto en análisis de salones de belleza.
+    Trabajas exclusivamente con datos del año 2025.
     Ayudas a interpretar ratios de productividad, tiempo indirecto y tickets medios, basándote en datos diarios o semanales.
     Si necesitas datos adicionales pregunta a la directora antes de responder.
     """.strip()
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+    # Llamada al modelo con funciones definidas
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -108,7 +80,32 @@ async def chat_handler(request: Request):
             {"role": "user", "content": mensaje}
         ],
         function_call="auto",
-        functions=function_llm_spec()
+        functions=[
+            {
+                "name": "explicar_ratio_diario",
+                "description": "Explica por qué el ratio fue alto en un día concreto de un salón.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "codsalon": {"type": "string"},
+                        "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"}
+                    },
+                    "required": ["codsalon", "fecha"]
+                }
+            },
+            {
+                "name": "explicar_ratio_semanal",
+                "description": "Explica por qué el ratio fue alto en una semana concreta de un salón.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "codsalon": {"type": "string"},
+                        "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"}
+                    },
+                    "required": ["codsalon", "nsemana"]
+                }
+            }
+        ]
     )
 
     message = response.choices[0].message
@@ -125,7 +122,7 @@ async def chat_handler(request: Request):
 
         elif fn_name == "explicar_ratio_semanal":
             resultado = explicar_ratio_semanal(
-                arguments.get("codsalon"), arguments.get("nsemana")
+                arguments.get("codsalon"), arguments.get("nsemana"), 2025
             )
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
