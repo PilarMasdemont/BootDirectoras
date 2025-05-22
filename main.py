@@ -60,17 +60,16 @@ async def chat_handler(request: Request):
     )
 
     # Primera llamada al LLM
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": mensaje}
-        ],
-        functions=default_schema,
-        function_call="auto"
-    )
+ response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": mensaje}
+    ]
+)
 
-    mensaje_llm = response.choices[0].message
+
+
 
     # Si el modelo invocó la función
     if mensaje_llm.function_call:
