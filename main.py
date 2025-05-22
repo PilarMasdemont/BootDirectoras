@@ -8,6 +8,9 @@ import pandas as pd
 
 # Función real que explica la página 2 del informe
 from funciones.explicar_ratio_diario import explicar_ratio_diario
+# Función real que explica la página 3 del informe
+from funciones.explicar_ratio_semanal import explicar_ratio_semanal
+
 
 # Cargar clave de API
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
@@ -108,6 +111,7 @@ async def chat_handler(request: Request):
 # Nuevo endpoint: /kpis/30dias
 from sheets import cargar_hoja
 
+# Endpoint adicional para KPIs diarios (Hoja 2)
 @app.get("/kpis/30dias")
 def get_kpis_30dias(codsalon: str):
     try:
@@ -119,3 +123,12 @@ def get_kpis_30dias(codsalon: str):
 from funciones.explicar_ratio_diario import router as debug_router
 app.include_router(debug_router)
 
+# Endpoint adicional para KPIs semanales (Hoja 3)
+@app.get("/kpis/semanal")
+def get_kpis_semanales(codsalon: str):
+    try:
+        df = cargar_hoja("72617950")  # GID de la hoja de KPIs semanales
+        datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
+        return datos_filtrados.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
