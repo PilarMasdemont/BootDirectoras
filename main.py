@@ -80,28 +80,28 @@ async def chat_handler(request: Request):
     mensaje_llm = response.choices[0].message
     content = mensaje_llm.content or ""
 
-    # Lógica alternativa si queremos invocar funciones manualmente
-   if "ratio" in mensaje.lower() and "nsemana" not in body:
-    codsalon = body.get("codsalon")
-    fecha = body.get("fecha")
+     # Lógica alternativa si queremos invocar funciones manualmente
+    if "ratio" in mensaje.lower() and "nsemana" not in body:
+        codsalon = body.get("codsalon")
+        fecha = body.get("fecha")
 
-    if not codsalon:
-        return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
-    if not fecha:
-        return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
+        if not codsalon:
+            return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
+        if not fecha:
+            return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
 
-    resultado = explicar_ratio_diario(codsalon, fecha)
-    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        resultado = explicar_ratio_diario(codsalon, fecha)
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-  if "ratio" in mensaje.lower() and "nsemana" in body:
-    codsalon = body.get("codsalon")
-    nsemana = body.get("nsemana")
-    year = body.get("year", 2025)  # Puedes asumir un año por defecto
+    if "ratio" in mensaje.lower() and "nsemana" in body:
+        codsalon = body.get("codsalon")
+        nsemana = body.get("nsemana")
+        year = body.get("year", 2025)  # Puedes asumir un año por defecto
 
-    if not codsalon:
-        return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
-    if not nsemana:
-        return {"respuesta": "¿Qué número de semana quieres revisar?"}
+        if not codsalon:
+            return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
+        if not nsemana:
+            return {"respuesta": "¿Qué número de semana quieres revisar?"}
 
-    resultado = explicar_ratio_semanal(codsalon, int(nsemana), int(year))
-    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        resultado = explicar_ratio_semanal(codsalon, int(nsemana), int(year))
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
