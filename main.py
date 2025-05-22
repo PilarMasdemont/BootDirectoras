@@ -37,6 +37,21 @@ default_schema = [
     }
 ]
 
+{
+    "name": "explicar_ratio_semanal",
+    "description": "Explica por qué el Ratio General fue alto, medio o bajo en una semana concreta para un salón, basándose en otros KPIs semanales.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "codsalon": {"type": "string", "description": "Código del salón"},
+            "nsemana": {"type": "integer", "description": "Número de semana del año (1-52)"},
+            "year": {"type": "integer", "description": "Año en formato YYYY"}
+        },
+        "required": ["codsalon", "nsemana", "year"]
+    }
+}
+
+
 # Crear la aplicación FastAPI
 app = FastAPI()
 app.add_middleware(
