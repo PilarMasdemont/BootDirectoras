@@ -81,21 +81,27 @@ async def chat_handler(request: Request):
     content = mensaje_llm.content or ""
 
     # Lógica alternativa si queremos invocar funciones manualmente
-    if "ratio diario" in mensaje.lower():
-        codsalon = body.get("codsalon")
-        fecha = body.get("fecha")
-        if not codsalon or not fecha:
-            return {"respuesta": content}
-        resultado = explicar_ratio_diario(codsalon, fecha)
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+   if "ratio" in mensaje.lower() and "nsemana" not in body:
+    codsalon = body.get("codsalon")
+    fecha = body.get("fecha")
 
-    if "ratio semanal" in mensaje.lower():
-        codsalon = body.get("codsalon")
-        nsemana = body.get("nsemana")
-        year = body.get("year")
-        if not codsalon or not nsemana or not year:
-            return {"respuesta": content}
-        resultado = explicar_ratio_semanal(codsalon, int(nsemana), int(year))
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    if not codsalon:
+        return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
+    if not fecha:
+        return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
 
-    return {"respuesta": content}
+    resultado = explicar_ratio_diario(codsalon, fecha)
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+
+  if "ratio" in mensaje.lower() and "nsemana" in body:
+    codsalon = body.get("codsalon")
+    nsemana = body.get("nsemana")
+    year = body.get("year", 2025)  # Puedes asumir un año por defecto
+
+    if not codsalon:
+        return {"respuesta": "¿Podrías indicarme el código del salón que quieres analizar?"}
+    if not nsemana:
+        return {"respuesta": "¿Qué número de semana quieres revisar?"}
+
+    resultado = explicar_ratio_semanal(codsalon, int(nsemana), int(year))
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
