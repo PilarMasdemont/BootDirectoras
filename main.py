@@ -68,7 +68,6 @@ async def chat_handler(request: Request):
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    # Primera llamada al LLM
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -80,22 +79,24 @@ async def chat_handler(request: Request):
     mensaje_llm = response.choices[0].message
     content = mensaje_llm.content or ""
 
-         # Lógica para ratio diario
-if "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["día", "diario", "hoy", "ayer", "fecha"]):
-    codsalon = body.get("codsalon")
-    fecha = body.get("fecha")
-    if codsalon and fecha:
-        resultado = explicar_ratio_diario(codsalon, fecha)
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-    else:
-        return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
+    # Lógica para ratio diario
+    if "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["día", "diario", "hoy", "ayer", "fecha"]):
+        codsalon = body.get("codsalon")
+        fecha = body.get("fecha")
+        if codsalon and fecha:
+            resultado = explicar_ratio_diario(codsalon, fecha)
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        else:
+            return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
 
-# Lógica para ratio semanal
-elif "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["semana", "semanal", "nsemana"]):
-    codsalon = body.get("codsalon")
-    nsemana = body.get("nsemana")
-    if codsalon and nsemana:
-        resultado = explicar_ratio_semanal(codsalon, int(nsemana))
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-    else:
-        return {"respuesta": "¿Podrías indicarme el número de semana que quieres analizar?"}
+    # Lógica para ratio semanal
+    elif "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["semana", "semanal", "nsemana"]):
+        codsalon = body.get("codsalon")
+        nsemana = body.get("nsemana")
+        if codsalon and nsemana:
+            resultado = explicar_ratio_semanal(codsalon, int(nsemana))
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        else:
+            return {"respuesta": "¿Podrías indicarme el número de semana que quieres analizar?"}
+
+    return {"respuesta": content}
