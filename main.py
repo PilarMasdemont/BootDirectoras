@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import json
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
+from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from sheets import cargar_hoja
 
 load_dotenv()
@@ -22,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoint: KPIs diarios (últimos 30 días)
+# Endpoints de KPIs y debugging
 @app.get("/kpis/30dias")
 def get_kpis_diarios(codsalon: str):
     try:
@@ -32,7 +34,6 @@ def get_kpis_diarios(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint: KPIs semanales
 @app.get("/kpis/semanal")
 def get_kpis_semanales(codsalon: str):
     try:
@@ -42,7 +43,6 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint: Columnas disponibles (debug)
 @app.get("/debug/columnas")
 def columnas_disponibles():
     try:
@@ -51,7 +51,48 @@ def columnas_disponibles():
     except Exception as e:
         return {"error": str(e)}
 
-# Endpoint principal para conversación
+# Definiciones de funciones para el modelo
+function_llm_spec = [
+    {
+        "name": "explicar_ratio_diario",
+        "description": "Explica el valor del Ratio General en un día concreto.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
+            },
+            "required": ["codsalon", "fecha"]
+        },
+    },
+    {
+        "name": "explicar_ratio_semanal",
+        "description": "Explica el valor del Ratio General semanal de un salón.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "nsemana": {"type": "integer"},
+            },
+            "required": ["codsalon", "nsemana"]
+        },
+    },
+    {
+        "name": "explicar_ratio_mensual",
+        "description": "Explica el Ratio General mensual por empleado en un salón.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "mes": {"type": "integer"},
+                "codempleado": {"type": "string"},
+            },
+            "required": ["codsalon", "mes", "codempleado"]
+        },
+    },
+]
+
+# Chat principal
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
@@ -59,98 +100,42 @@ async def chat_handler(request: Request):
     codsalon = body.get("codsalon")
     fecha = body.get("fecha")
     nsemana = body.get("nsemana")
+    mes = body.get("mes")
+    codempleado = body.get("codempleado")
 
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
 
-    
-
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    system_prompt = """
-Eres Mont Dirección, una asistente especializada en análisis de salones de belleza.
 
-Tu misión es ayudar a las directoras a interpretar los resultados operativos, basándote en los siguientes KPIs:
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": mensaje}
+            ],
+            functions=function_llm_spec,
+            function_call="auto",
+        )
 
-- facturacionsiva: mide ingresos sin IVA.
-- ratiodesviaciontiempoteorico: mide desviación entre tiempo previsto en la agendado y trabajado.
-- ratiogeneral: mide eficiencia económica del salón (ingresos frente a coste en personal).
-- ratioticketsinferior20: mide % de tickets poco rentables.
-- ratiotiempoindirecto: mide tiempo no productivo del equipo (no atendiendo clientes).
+        msg = response.choices[0].message
 
-También puedes usar: ticketsivamedio, horasfichadas.
+        if msg.function_call:
+            nombre_funcion = msg.function_call.name
+            argumentos = json.loads(msg.function_call.arguments)
 
-Nunca hables de KPIs no mencionados arriba.
+            if nombre_funcion == "explicar_ratio_diario":
+                resultado = explicar_ratio_diario(**argumentos)
+            elif nombre_funcion == "explicar_ratio_semanal":
+                resultado = explicar_ratio_semanal(**argumentos)
+            elif nombre_funcion == "explicar_ratio_mensual":
+                resultado = explicar_ratio_mensual(**argumentos)
+            else:
+                raise HTTPException(status_code=400, detail="Función no reconocida")
 
-❗ Siempre trabajas con datos del año 2025.
-
-Puedes explicar KPIs en tres niveles:
-- Diario (requiere codsalon y fecha).
-- Semanal (requiere codsalon y número de semana).
-- Mensual (requiere codsalon, mes y código del empleado).
-
-Si falta un dato, pídelo amablemente antes de dar una respuesta.
-
-Invoca las funciones correctas si se requiere:
-- explicar_ratio_diario
-- explicar_ratio_semanal
-- explicar_ratio_mensual
-
-Utiliza los datos del mensaje o los parámetros recibidos. Nunca inventes. Tus respuestas deben ser claras, útiles y breves. Da recomendaciones basadas en los KPIs si detectas desviaciones o mejoras posibles.
-""".strip()
-
-    # Llamada al modelo con funciones definidas
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": mensaje}
-        ],
-        function_call="auto",
-        functions=[
-            {
-                "name": "explicar_ratio_diario",
-                "description": "Explica por qué el ratio fue alto en un día concreto de un salón.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "codsalon": {"type": "string"},
-                        "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"}
-                    },
-                    "required": ["codsalon", "fecha"]
-                }
-            },
-            {
-                "name": "explicar_ratio_semanal",
-                "description": "Explica por qué el ratio fue alto en una semana concreta de un salón.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "codsalon": {"type": "string"},
-                        "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"}
-                    },
-                    "required": ["codsalon", "nsemana"]
-                }
-            }
-        ]
-    )
-
-    message = response.choices[0].message
-
-    if message.function_call:
-        fn_name = message.function_call.name
-        arguments = json.loads(message.function_call.arguments)
-
-        if fn_name == "explicar_ratio_diario":
-            resultado = explicar_ratio_diario(
-                arguments.get("codsalon"), arguments.get("fecha")
-            )
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-        elif fn_name == "explicar_ratio_semanal":
-            resultado = explicar_ratio_semanal(
-                arguments.get("codsalon"), arguments.get("nsemana"), 2025
-            )
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
-    return {"respuesta": message.content or "No se pudo generar una respuesta."}
-
+    except Exception as e:
+        return {"error": str(e)}
