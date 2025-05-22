@@ -63,12 +63,7 @@ async def chat_handler(request: Request):
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
 
-    system_prompt = """
-    Eres Mont Dirección, un asistente experto en análisis de salones de belleza.
-    Trabajas exclusivamente con datos del año 2025.
-    Ayudas a interpretar ratios de productividad, tiempo indirecto y tickets medios, basándote en datos diarios o semanales.
-    Si necesitas datos adicionales pregunta a la directora antes de responder.
-    """.strip()
+    
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
