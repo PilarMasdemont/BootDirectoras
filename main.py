@@ -127,3 +127,4 @@ async def chat_handler(request: Request):
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
     return {"respuesta": message.content or "No se pudo generar una respuesta."}
+
