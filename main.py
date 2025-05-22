@@ -3,11 +3,13 @@ import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
+from openai.types.chat import FunctionDefinition
 from dotenv import load_dotenv
 import os
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from sheets import cargar_hoja
+import json
 
 load_dotenv()
 
@@ -22,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoint: KPIs diarios (últimos 30 días)
+# Endpoint: KPIs diarios (ultimos 30 dias)
 @app.get("/kpis/30dias")
 def get_kpis_diarios(codsalon: str):
     try:
@@ -42,7 +44,7 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint: Columnas disponibles (debug)
+# Endpoint: columnas disponibles (debug)
 @app.get("/debug/columnas")
 def columnas_disponibles():
     try:
@@ -51,19 +53,52 @@ def columnas_disponibles():
     except Exception as e:
         return {"error": str(e)}
 
-# Endpoint principal para conversación
+# Definicion de funciones para LLM
+function_llm_spec = [
+    FunctionDefinition(
+        name="explicar_ratio_diario",
+        description="Explica por que el ratio fue alto en un dia concreto de un salon.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
+            },
+            "required": ["codsalon", "fecha"]
+        }
+    ),
+    FunctionDefinition(
+        name="explicar_ratio_semanal",
+        description="Explica por que el ratio fue alto en una semana concreta de un salon.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "nsemana": {"type": "integer", "description": "Numero de semana del ano (1 a 53)"},
+                "year": {"type": "integer", "description": "Ano, por ejemplo 2025"},
+            },
+            "required": ["codsalon", "nsemana", "year"]
+        }
+    )
+]
+
+# Chat principal
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
     mensaje = body.get("mensaje", "")
+    codsalon = body.get("codsalon")
+    fecha = body.get("fecha")
+    nsemana = body.get("nsemana")
+    year = body.get("year")
 
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
 
     system_prompt = """
-    Eres Mont Dirección, un asistente experto en análisis de salones de belleza.
-    Ayudas a interpretar ratios de productividad, tiempo indirecto, y tickets medios, basándote en datos diarios y semanales.
-    Tus respuestas son claras, concisas y con recomendaciones si detectas problemas.
+    Eres Mont Direccion, un asistente experto en analisis de salones de belleza.
+    Ayudas a interpretar ratios de productividad, tiempo indirecto y tickets medios, basandote en datos diarios o semanales.
+    Si necesitas datos adicionales pregunta a la directora antes de responder.
     """.strip()
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -73,30 +108,27 @@ async def chat_handler(request: Request):
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": mensaje}
-        ]
+        ],
+        functions=function_llm_spec,
+        function_call="auto"
     )
 
-    mensaje_llm = response.choices[0].message
-    content = mensaje_llm.content or ""
+    message = response.choices[0].message
 
-    # Lógica para ratio diario
-    if "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["día", "diario", "hoy", "ayer", "fecha"]):
-        codsalon = body.get("codsalon")
-        fecha = body.get("fecha")
-        if codsalon and fecha:
-            resultado = explicar_ratio_diario(codsalon, fecha)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-        else:
-            return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
+    if message.function_call:
+        fn_name = message.function_call.name
+        arguments = json.loads(message.function_call.arguments)
 
-    # Lógica para ratio semanal
-    elif "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["semana", "semanal", "nsemana"]):
-        codsalon = body.get("codsalon")
-        nsemana = body.get("nsemana")
-        if codsalon and nsemana:
-            resultado = explicar_ratio_semanal(codsalon, int(nsemana))
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-        else:
-            return {"respuesta": "¿Podrías indicarme el número de semana que quieres analizar?"}
+        if fn_name == "explicar_ratio_diario":
+            resultado = explicar_ratio_diario(
+                arguments.get("codsalon"), arguments.get("fecha")
+            )
+            return {"respuesta": f"Hola, soy Mont Direccion.\n\n{resultado}"}
 
-    return {"respuesta": content}
+        elif fn_name == "explicar_ratio_semanal":
+            resultado = explicar_ratio_semanal(
+                arguments.get("codsalon"), arguments.get("nsemana"), arguments.get("year")
+            )
+            return {"respuesta": f"Hola, soy Mont Direccion.\n\n{resultado}"}
+
+    return {"respuesta": message.content or "No se pudo generar una respuesta."}
