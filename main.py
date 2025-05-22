@@ -21,34 +21,8 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# Declaración de funciones para el modelo LLM
-function_llm_spec = [
-    FunctionDefinition(
-        name="explicar_ratio_diario",
-        description="Explica por qué el ratio fue alto en un día concreto de un salón.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
-            },
-            "required": ["codsalon", "fecha"]
-        }
-    ),
-    FunctionDefinition(
-        name="explicar_ratio_semanal",
-        description="Explica por qué el ratio fue alto en una semana concreta de un salón.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"},
-                "year": {"type": "integer", "description": "Año de los datos (por ejemplo 2025)"},
-            },
-            "required": ["codsalon", "nsemana", "year"]
-        }
-    )
-]
+# Declaración de funciones para el modelo LLM, lo hemos eliminado porque daba errores, y parece que no es necesario
+
 
 
 # Crear la aplicación FastAPI
