@@ -3,7 +3,6 @@ import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
-from openai.types.chat import FunctionDefinition
 from dotenv import load_dotenv
 import os
 from funciones.explicar_ratio_diario import explicar_ratio_diario
@@ -24,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoint: KPIs diarios (ultimos 30 dias)
+# Endpoint: KPIs diarios (últimos 30 días)
 @app.get("/kpis/30dias")
 def get_kpis_diarios(codsalon: str):
     try:
@@ -44,7 +43,7 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint: columnas disponibles (debug)
+# Endpoint: Columnas disponibles (debug)
 @app.get("/debug/columnas")
 def columnas_disponibles():
     try:
@@ -53,36 +52,36 @@ def columnas_disponibles():
     except Exception as e:
         return {"error": str(e)}
 
-# Definicion de funciones para LLM
-function_llm_spec = [
-    FunctionDefinition(
-        name="explicar_ratio_diario",
-        description="Explica por que el ratio fue alto en un dia concreto de un salon.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
-            },
-            "required": ["codsalon", "fecha"]
+# Definición de funciones para LLM como diccionarios estándar
+def function_llm_spec():
+    return [
+        {
+            "name": "explicar_ratio_diario",
+            "description": "Explica por qué el ratio fue alto en un día concreto de un salón.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
+                },
+                "required": ["codsalon", "fecha"]
+            }
+        },
+        {
+            "name": "explicar_ratio_semanal",
+            "description": "Explica por qué el ratio fue alto en una semana concreta de un salón.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"},
+                },
+                "required": ["codsalon", "nsemana"]
+            }
         }
-    ),
-    FunctionDefinition(
-        name="explicar_ratio_semanal",
-        description="Explica por que el ratio fue alto en una semana concreta de un salon.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "nsemana": {"type": "integer", "description": "Numero de semana del ano (1 a 53)"},
-                "year": {"type": "integer", "description": "Ano, por ejemplo 2025"},
-            },
-            "required": ["codsalon", "nsemana", "year"]
-        }
-    )
-]
+    ]
 
-# Chat principal
+# Endpoint principal para conversación
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
@@ -90,14 +89,13 @@ async def chat_handler(request: Request):
     codsalon = body.get("codsalon")
     fecha = body.get("fecha")
     nsemana = body.get("nsemana")
-    year = body.get("year")
 
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
 
     system_prompt = """
-    Eres Mont Direccion, un asistente experto en analisis de salones de belleza.
-    Ayudas a interpretar ratios de productividad, tiempo indirecto y tickets medios, basandote en datos diarios o semanales.
+    Eres Mont Dirección, un asistente experto en análisis de salones de belleza.
+    Ayudas a interpretar ratios de productividad, tiempo indirecto y tickets medios, basándote en datos diarios o semanales.
     Si necesitas datos adicionales pregunta a la directora antes de responder.
     """.strip()
 
@@ -109,8 +107,8 @@ async def chat_handler(request: Request):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": mensaje}
         ],
-        functions=function_llm_spec,
-        function_call="auto"
+        function_call="auto",
+        functions=function_llm_spec()
     )
 
     message = response.choices[0].message
@@ -123,12 +121,12 @@ async def chat_handler(request: Request):
             resultado = explicar_ratio_diario(
                 arguments.get("codsalon"), arguments.get("fecha")
             )
-            return {"respuesta": f"Hola, soy Mont Direccion.\n\n{resultado}"}
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
         elif fn_name == "explicar_ratio_semanal":
             resultado = explicar_ratio_semanal(
-                arguments.get("codsalon"), arguments.get("nsemana"), arguments.get("year")
+                arguments.get("codsalon"), arguments.get("nsemana")
             )
-            return {"respuesta": f"Hola, soy Mont Direccion.\n\n{resultado}"}
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
     return {"respuesta": message.content or "No se pudo generar una respuesta."}
