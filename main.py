@@ -21,35 +21,34 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# Definición de la función para el LLM
-default_schema = [
-    {
-        "name": "explicar_ratio_diario",
-        "description": "Explica por qué el Ratio General fue alto, medio o bajo en un día concreto para un salón, basándose en otros KPIs diarios.",
-        "parameters": {
+# Declaración de funciones para el modelo LLM
+function_llm_spec = [
+    FunctionDefinition(
+        name="explicar_ratio_diario",
+        description="Explica por qué el ratio fue alto en un día concreto de un salón.",
+        parameters={
             "type": "object",
             "properties": {
-                "codsalon": {"type": "string", "description": "Código único del salón que aparece en los datos de Google Sheets"},
-                "fecha": {"type": "string", "description": "Fecha en formato 'YYYY-MM-DD' correspondiente al día que se quiere analizar"}
+                "codsalon": {"type": "string"},
+                "fecha": {"type": "string", "description": "Formato: YYYY-MM-DD"},
             },
             "required": ["codsalon", "fecha"]
         }
-    }
+    ),
+    FunctionDefinition(
+        name="explicar_ratio_semanal",
+        description="Explica por qué el ratio fue alto en una semana concreta de un salón.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "nsemana": {"type": "integer", "description": "Número de semana del año (1 a 53)"},
+                "year": {"type": "integer", "description": "Año de los datos (por ejemplo 2025)"},
+            },
+            "required": ["codsalon", "nsemana", "year"]
+        }
+    )
 ]
-
-{
-    "name": "explicar_ratio_semanal",
-    "description": "Explica por qué el Ratio General fue alto, medio o bajo en una semana concreta para un salón, basándose en otros KPIs semanales.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "codsalon": {"type": "string", "description": "Código del salón"},
-            "nsemana": {"type": "integer", "description": "Número de semana del año (1-52)"},
-            "year": {"type": "integer", "description": "Año en formato YYYY"}
-        },
-        "required": ["codsalon", "nsemana", "year"]
-    }
-}
 
 
 # Crear la aplicación FastAPI
