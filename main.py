@@ -80,20 +80,22 @@ async def chat_handler(request: Request):
     mensaje_llm = response.choices[0].message
     content = mensaje_llm.content or ""
 
-         # Lógica alternativa: determinar automáticamente si es ratio diario o semanal
-    if "ratio" in mensaje.lower():
-        if "semana" in mensaje.lower():
-            codsalon = body.get("codsalon")
-            nsemana = body.get("nsemana")
-            if not codsalon or not nsemana:
-                return {"respuesta": "¿Podrías indicarme el número de semana que quieres analizar?"}
-            resultado = explicar_ratio_semanal(codsalon, int(nsemana))
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+         # Lógica para ratio diario
+if "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["día", "diario", "hoy", "ayer", "fecha"]):
+    codsalon = body.get("codsalon")
+    fecha = body.get("fecha")
+    if codsalon and fecha:
+        resultado = explicar_ratio_diario(codsalon, fecha)
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    else:
+        return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
 
-        elif any(palabra in mensaje.lower() for palabra in ["día", "diario", "hoy", "ayer", "fecha"]):
-            codsalon = body.get("codsalon")
-            fecha = body.get("fecha")
-            if not codsalon or not fecha:
-                return {"respuesta": "¿Podrías decirme la fecha que quieres revisar? (Formato: AAAA-MM-DD)"}
-            resultado = explicar_ratio_diario(codsalon, fecha)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+# Lógica para ratio semanal
+elif "ratio" in mensaje.lower() and any(p in mensaje.lower() for p in ["semana", "semanal", "nsemana"]):
+    codsalon = body.get("codsalon")
+    nsemana = body.get("nsemana")
+    if codsalon and nsemana:
+        resultado = explicar_ratio_semanal(codsalon, int(nsemana))
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    else:
+        return {"respuesta": "¿Podrías indicarme el número de semana que quieres analizar?"}
