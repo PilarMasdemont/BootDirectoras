@@ -97,11 +97,19 @@ function_llm_spec = [
     },
 ]
 
+def detectar_kpi(texto):
+    texto = texto.lower()
+    for kpi in KPI_LIST:
+        if kpi in texto:
+            return kpi
+    return None
+
 # Chat principal
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
-    mensaje = body.get("mensaje", "")
+    mensaje = 
+    kpi_detectado = detectar_kpi(mensaje)body.get("mensaje", "")
     codsalon = body.get("codsalon")
     fecha = body.get("fecha")
     nsemana = body.get("nsemana")
