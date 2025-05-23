@@ -150,7 +150,7 @@ Tus respuestas deben ser claras, profesionales.
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-        try:
+    try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -162,7 +162,6 @@ Tus respuestas deben ser claras, profesionales.
         )
 
         msg = response.choices[0].message
-
 
         if msg.function_call:
             nombre_funcion = msg.function_call.name
