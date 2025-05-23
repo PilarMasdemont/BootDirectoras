@@ -13,6 +13,14 @@ from sheets import cargar_hoja
 
 load_dotenv()
 
+print("🗂 Directorio actual:", os.getcwd())
+print("📄 Archivos disponibles:", os.listdir())
+print("📁 Contenido funciones/:", os.listdir("./funciones"))
+
+
+
+
+
 app = FastAPI()
 
 # Middleware CORS
