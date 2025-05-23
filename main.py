@@ -13,6 +13,14 @@ from sheets import cargar_hoja
 
 load_dotenv()
 
+print("🗂 Directorio actual:", os.getcwd())
+print("📄 Archivos disponibles:", os.listdir())
+print("📁 Contenido funciones/:", os.listdir("./funciones"))
+
+
+
+
+
 app = FastAPI()
 
 # Middleware CORS
@@ -24,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Endpoints de KPIs y debugging
 @app.get("/kpis/30dias")
 def get_kpis_diarios(codsalon: str):
     try:
@@ -42,14 +51,17 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/debug/columnas")
-def columnas_disponibles():
+@app.get("/kpis/mensual")
+def get_kpis_mensuales(codsalon: str):
     try:
-        df = cargar_hoja("1882861530")
-        return {"columnas": list(df.columns)}
+        df = cargar_hoja("1194190690")  # GID actualizado para mensual
+        datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
+        return datos_filtrados.to_dict(orient="records")
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# Definiciones de funciones para el modelo
 function_llm_spec = [
     {
         "name": "explicar_ratio_diario",
@@ -75,21 +87,21 @@ function_llm_spec = [
             "required": ["codsalon", "nsemana"]
         },
     },
-    {
-        "name": "explicar_ratio_mensual",
-        "description": "Explica el Ratio General mensual por empleado en un salón.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "mes": {"type": "integer"},
-                "codempleado": {"type": "string"},
-            },
-            "required": ["codsalon", "mes", "codempleado"]
+  {
+    "name": "explicar_ratio_semanal",
+    "description": "Explica el valor del Ratio General semanal de un salón.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "codsalon": {"type": "string"},
+            "nsemana": {"type": "integer"},
         },
+        "required": ["codsalon", "nsemana"]
     },
+},
 ]
 
+# Chat principal
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
@@ -102,7 +114,6 @@ async def chat_handler(request: Request):
 
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
-
     system_prompt = """
 Eres Mont Dirección, una asistente especializada en el análisis de salones de belleza.
 
@@ -118,12 +129,12 @@ Tu objetivo es ayudar a las directoras a interpretar los resultados operativos, 
 
 Nunca menciones KPIs que no estén en esta lista.
 
-📅 Analizas datos del año 2025.
+📅 Analizas datos del **año 2025**.
 
 Puedes explicar KPIs en tres niveles:
-- Diario (requiere: codsalon y fecha).
-- Semanal (requiere: codsalon y número de semana).
-- Mensual (requiere: codsalon, mes y código del empleado).
+- 📌 Diario (requiere: codsalon y fecha).
+- 📆 Semanal (requiere: codsalon y número de semana).
+- 📊 Mensual (requiere: codsalon, mes y código del empleado).
 
 📌 Si falta un dato, solicita amablemente la información antes de responder.
 
@@ -139,8 +150,9 @@ Tus respuestas deben ser claras, profesionales.
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    try:
+      try:
         parametros_contexto = []
+
         if codsalon:
             parametros_contexto.append(f"codsalon: {codsalon}")
         if fecha:
@@ -167,6 +179,7 @@ Tus respuestas deben ser claras, profesionales.
 
         msg = response.choices[0].message
 
+
         if msg.function_call:
             nombre_funcion = msg.function_call.name
             argumentos = json.loads(msg.function_call.arguments)
@@ -180,11 +193,10 @@ Tus respuestas deben ser claras, profesionales.
             else:
                 raise HTTPException(status_code=400, detail="Función no reconocida")
 
-            return {"respuesta": f"Hola, soy Mont Dirección.}
-
-{resultado}"}
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
         return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
     except Exception as e:
         return {"error": str(e)}
+
