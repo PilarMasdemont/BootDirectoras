@@ -108,7 +108,7 @@ def detectar_kpi(texto):
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
-    mensaje = 
+    mensaje = body.get("mensaje", "")
     kpi_detectado = detectar_kpi(mensaje)body.get("mensaje", "")
     codsalon = body.get("codsalon")
     fecha = body.get("fecha")
