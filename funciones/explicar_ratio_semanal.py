@@ -1,41 +1,38 @@
 import pandas as pd
 from sheets import cargar_hoja
 
-def explicar_ratio_semanal(codsalon: str, nsemana: int, year: int) -> str:
+def explicar_ratio_semanal(codsalon: str, nsemana: int) -> str:
     try:
         df = cargar_hoja("72617950")  # GID de la hoja semanal
     except Exception as e:
-        return f"⚠️ Error al cargar datos desde Google Sheets: {e}"
+        return f"⚠️ Error al cargar datos: {e}"
 
-    columnas_utiles = [
+    columnas_requeridas = [
         "year", "nsemana", "codsalon", "facturacionsiva", "horasfichadas",
         "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto",
         "ratioticketsinferior20", "n_ticketsiva", "ticketsivamedio"
     ]
+    if any(col not in df.columns for col in columnas_requeridas):
+        return "⚠️ La hoja de datos no contiene todas las columnas necesarias."
 
-    faltantes = [col for col in columnas_utiles if col not in df.columns]
-    if faltantes:
-        return f"⚠️ Faltan columnas necesarias en los datos: {', '.join(faltantes)}"
+    df["codsalon"] = df["codsalon"].astype(str)
+    datos = df[(df["codsalon"] == codsalon) & (df["nsemana"] == nsemana)]
 
-    df = df[df["codsalon"].astype(str) == str(codsalon)]
-    df = df[(df["nsemana"] == nsemana) & (df["year"] == year)]
+    if datos.empty:
+        return f"⚠️ No se encontraron datos para el salón {codsalon} en la semana {nsemana}."
 
-    if df.empty:
-        return f"⚠️ No se encontraron datos para el salón {codsalon} en la semana {nsemana} del año {year}."
+    fila = datos.iloc[0]
+    ratio = fila["ratiogeneral"]
 
-    fila = df.iloc[0]
-    ratio = fila.get("ratiogeneral", None)
-
-    if ratio is None or pd.isna(ratio):
-        return "⚠️ No se encuentra el valor del Ratio General para esa semana."
-
-    explicacion = f"El Ratio General fue {ratio:.2f} en la semana {nsemana} del año {year}.\n"
+    resumen = [f"El ratio general en la semana {nsemana} fue {ratio:.2f}."]
 
     if fila["ratiodesviaciontiempoteorico"] > 1:
-        explicacion += "Hubo desviación en el tiempo teórico previsto.\n"
+        resumen.append("Hubo una desviación significativa entre el tiempo agendado y el trabajado.")
     if fila["ratiotiempoindirecto"] > 0.2:
-        explicacion += "El tiempo indirecto fue elevado.\n"
+        resumen.append("El tiempo indirecto fue elevado, lo que indica menor productividad.")
     if fila["ratioticketsinferior20"] > 0.3:
-        explicacion += "Muchos tickets fueron inferiores a 20€.\n"
+        resumen.append("Una proporción alta de tickets fueron inferiores a 20 €, lo que afecta la rentabilidad.")
+    if fila["facturacionsiva"] < 1000:
+        resumen.append("La facturación fue baja para lo esperado en una semana estándar.")
 
-    return explicacion.strip()
+    return "\n".join(resumen)
