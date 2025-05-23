@@ -87,19 +87,18 @@ function_llm_spec = [
             "required": ["codsalon", "nsemana"]
         },
     },
-    {
-        "name": "explicar_ratio_mensual",
-        "description": "Explica el Ratio General mensual por empleado en un salón.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "codsalon": {"type": "string"},
-                "mes": {"type": "integer"},
-                "codempleado": {"type": "string"},
-            },
-            "required": ["codsalon", "mes", "codempleado"]
+  {
+    "name": "explicar_ratio_semanal",
+    "description": "Explica el valor del Ratio General semanal de un salón.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "codsalon": {"type": "string"},
+            "nsemana": {"type": "integer"},
         },
+        "required": ["codsalon", "nsemana"]
     },
+},
 ]
 
 # Chat principal
