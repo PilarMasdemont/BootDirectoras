@@ -3,8 +3,8 @@ from sheets import cargar_hoja
 
 def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
     try:
-        # ID de la hoja mensual (asume que ya lo tienes)
-        hoja_id = "1194190690"  # Reemplazar con el ID real
+        # ID de la hoja mensual
+        hoja_id = "1194190690"  # Reemplazar con el ID real si cambia
         df = cargar_hoja(hoja_id)
 
         # Asegurarse que los tipos son correctos
@@ -13,7 +13,11 @@ def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
         df["mes"] = df["mes"].astype(int)
 
         # Filtrado por parámetros
-        datos = df[(df["codsalon"] == codsalon) & (df["codempleado"] == codempleado) & (df["mes"] == mes)]
+        datos = df[
+            (df["codsalon"] == codsalon) &
+            (df["codempleado"] == codempleado) &
+            (df["mes"] == mes)
+        ]
 
         if datos.empty:
             return f"No se encontraron datos para el empleado {codempleado} del salón {codsalon} en el mes {mes}."
@@ -43,8 +47,7 @@ def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
         if not resumen:
             resumen.append("Los indicadores clave se mantienen dentro de los valores aceptables para este mes.")
 
-    return f"Análisis mensual del empleado {codempleado} en el salón {codsalon} para el mes {mes}:\n- " + "\n- ".join(resumen)
-
+        return f"Análisis mensual del empleado {codempleado} en el salón {codsalon} para el mes {mes}:\n- " + "\n- ".join(resumen)
 
     except Exception as e:
         return f"Error al procesar la explicación mensual: {str(e)}"
