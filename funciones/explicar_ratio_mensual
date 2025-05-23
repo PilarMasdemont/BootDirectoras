@@ -4,7 +4,7 @@ from sheets import cargar_hoja
 def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
     try:
         # ID de la hoja mensual (asume que ya lo tienes)
-        hoja_id = "123456789"  # Reemplazar con el ID real
+        hoja_id = "1194190690"  # Reemplazar con el ID real
         df = cargar_hoja(hoja_id)
 
         # Asegurarse que los tipos son correctos
