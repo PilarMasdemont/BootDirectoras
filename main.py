@@ -97,6 +97,16 @@ function_llm_spec = [
     },
 ]
 
+KPI_LIST = [
+    "ratiogeneral",
+    "facturacionsiva",
+    "ratiodesviaciontiempoteorico",
+    "ratioticketsinferior20",
+    "ratiotiempoindirecto",
+    "ticketsivamedio",
+    "horasfichadas"
+]
+
 def detectar_kpi(texto):
     texto = texto.lower()
     for kpi in KPI_LIST:
@@ -108,7 +118,6 @@ def detectar_kpi(texto):
 @app.post("/chat")
 async def chat_handler(request: Request):
     body = await request.json()
-    mensaje = body.get("mensaje", "")
     mensaje = body.get("mensaje", "")
     kpi_detectado = detectar_kpi(mensaje)
     codsalon = body.get("codsalon")
