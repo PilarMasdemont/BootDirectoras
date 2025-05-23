@@ -196,7 +196,7 @@ try:
         else:
             raise HTTPException(status_code=400, detail="Función no reconocida")
 
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
     return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
