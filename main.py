@@ -51,6 +51,14 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/kpis/mensual")
+def get_kpis_mensuales(codsalon: str):
+    try:
+        df = cargar_hoja("312465473")  # GID actualizado para mensual
+        datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
+        return datos_filtrados.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Definiciones de funciones para el modelo
