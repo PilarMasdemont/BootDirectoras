@@ -113,6 +113,27 @@ KPI_LIST = [
     "horasfichadas"
 ]
 
+
+import re
+from datetime import datetime
+
+def extraer_fecha_desde_texto(texto):
+    meses = {
+        "enero": "01", "febrero": "02", "marzo": "03", "abril": "04", "mayo": "05",
+        "junio": "06", "julio": "07", "agosto": "08", "septiembre": "09",
+        "octubre": "10", "noviembre": "11", "diciembre": "12"
+    }
+
+    texto = texto.lower()
+    match = re.search(r"(\d{1,2})\s+de\s+([a-zñ]+)(?:\s+de\s+(\d{4}))?", texto)
+    if match:
+        dia = match.group(1).zfill(2)
+        mes = meses.get(match.group(2))
+        anio = match.group(3) or "2025"
+        if mes:
+            return f"{anio}-{mes}-{dia}"
+    return None
+
 def detectar_kpi(texto):
     texto = texto.lower()
     for kpi in KPI_LIST:
@@ -128,7 +149,7 @@ async def chat_handler(request: Request):
     mensaje = body.get("mensaje", "")
     kpi_detectado = detectar_kpi(mensaje)
     codsalon = body.get("codsalon") or user_context[client_ip].get("codsalon")
-    fecha = body.get("fecha") or user_context[client_ip].get("fecha")
+    fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje) or user_context[client_ip].get("fecha")
     nsemana = body.get("nsemana") or user_context[client_ip].get("nsemana")
     mes = body.get("mes") or user_context[client_ip].get("mes")
     codempleado = body.get("codempleado") or user_context[client_ip].get("codempleado")
