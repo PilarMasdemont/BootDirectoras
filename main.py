@@ -17,10 +17,6 @@ print("🗂 Directorio actual:", os.getcwd())
 print("📄 Archivos disponibles:", os.listdir())
 print("📁 Contenido funciones/:", os.listdir("./funciones"))
 
-
-
-
-
 app = FastAPI()
 
 # Middleware CORS
@@ -32,7 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoints de KPIs y debugging
+# Endpoints de KPIs
 @app.get("/kpis/30dias")
 def get_kpis_diarios(codsalon: str):
     try:
@@ -54,12 +50,11 @@ def get_kpis_semanales(codsalon: str):
 @app.get("/kpis/mensual")
 def get_kpis_mensuales(codsalon: str):
     try:
-        df = cargar_hoja("1194190690")  # GID actualizado para mensual
+        df = cargar_hoja("1194190690")
         datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
         return datos_filtrados.to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # Definiciones de funciones para el modelo
 function_llm_spec = [
@@ -87,18 +82,19 @@ function_llm_spec = [
             "required": ["codsalon", "nsemana"]
         },
     },
-  {
-    "name": "explicar_ratio_semanal",
-    "description": "Explica el valor del Ratio General semanal de un salón.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "codsalon": {"type": "string"},
-            "nsemana": {"type": "integer"},
+    {
+        "name": "explicar_ratio_mensual",
+        "description": "Explica el valor del Ratio General mensual de un salón.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "codsalon": {"type": "string"},
+                "mes": {"type": "string"},
+                "codempleado": {"type": "string"},
+            },
+            "required": ["codsalon", "mes", "codempleado"]
         },
-        "required": ["codsalon", "nsemana"]
     },
-},
 ]
 
 # Chat principal
@@ -114,6 +110,7 @@ async def chat_handler(request: Request):
 
     if not mensaje:
         raise HTTPException(status_code=400, detail="Mensaje no proporcionado")
+
     system_prompt = """
 Eres Mont Dirección, una asistente especializada en el análisis de salones de belleza.
 
@@ -153,50 +150,48 @@ Tus respuestas deben ser claras, profesionales.
     try:
         parametros_contexto = []
 
-    if codsalon:
-        parametros_contexto.append(f"codsalon: {codsalon}")
-    if fecha:
-        parametros_contexto.append(f"fecha: {fecha}")
-    if nsemana:
-        parametros_contexto.append(f"nsemana: {nsemana}")
-    if mes:
-        parametros_contexto.append(f"mes: {mes}")
-    if codempleado:
-        parametros_contexto.append(f"codempleado: {codempleado}")
+        if codsalon:
+            parametros_contexto.append(f"codsalon: {codsalon}")
+        if fecha:
+            parametros_contexto.append(f"fecha: {fecha}")
+        if nsemana:
+            parametros_contexto.append(f"nsemana: {nsemana}")
+        if mes:
+            parametros_contexto.append(f"mes: {mes}")
+        if codempleado:
+            parametros_contexto.append(f"codempleado: {codempleado}")
 
-    contexto_adicional = f"📎 Parámetros recibidos: {', '.join(parametros_contexto)}"
+        contexto_adicional = f"📎 Parámetros recibidos: {', '.join(parametros_contexto)}"
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "system", "content": contexto_adicional},
-            {"role": "user", "content": mensaje}
-        ],
-        functions=function_llm_spec,
-        function_call="auto",
-    )
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": contexto_adicional},
+                {"role": "user", "content": mensaje}
+            ],
+            functions=function_llm_spec,
+            function_call="auto",
+        )
 
-    msg = response.choices[0].message
+        msg = response.choices[0].message
 
+        if msg.function_call:
+            nombre_funcion = msg.function_call.name
+            argumentos = json.loads(msg.function_call.arguments)
 
-    if msg.function_call:
-        nombre_funcion = msg.function_call.name
-        argumentos = json.loads(msg.function_call.arguments)
+            if nombre_funcion == "explicar_ratio_diario":
+                resultado = explicar_ratio_diario(**argumentos)
+            elif nombre_funcion == "explicar_ratio_semanal":
+                resultado = explicar_ratio_semanal(**argumentos)
+            elif nombre_funcion == "explicar_ratio_mensual":
+                resultado = explicar_ratio_mensual(**argumentos)
+            else:
+                raise HTTPException(status_code=400, detail="Función no reconocida")
 
-        if nombre_funcion == "explicar_ratio_diario":
-            resultado = explicar_ratio_diario(**argumentos)
-        elif nombre_funcion == "explicar_ratio_semanal":
-            resultado = explicar_ratio_semanal(**argumentos)
-        elif nombre_funcion == "explicar_ratio_mensual":
-            resultado = explicar_ratio_mensual(**argumentos)
-        else:
-            raise HTTPException(status_code=400, detail="Función no reconocida")
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
-    return {"respuesta": msg.content or "No se recibió contenido del asistente."}
-
-except Exception as e:
-    return {"error": str(e)}
-
+    except Exception as e:
+        return {"error": str(e)}
