@@ -43,13 +43,7 @@ def get_kpis_semanales(codsalon: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/debug/columnas")
-def columnas_disponibles():
-    try:
-        df = cargar_hoja("1882861530")
-        return {"columnas": list(df.columns)}
-    except Exception as e:
-        return {"error": str(e)}
+
 
 # Definiciones de funciones para el modelo
 function_llm_spec = [
