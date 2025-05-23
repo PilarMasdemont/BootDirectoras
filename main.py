@@ -11,6 +11,12 @@ from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from sheets import cargar_hoja
 
+# Memoria temporal por IP
+from collections import defaultdict
+
+user_context = defaultdict(dict)
+
+
 load_dotenv()
 
 print("🗂 Directorio actual:", os.getcwd())
@@ -117,6 +123,23 @@ def detectar_kpi(texto):
 # Chat principal
 @app.post("/chat")
 async def chat_handler(request: Request):
+    client_ip = request.client.host
+    body = await request.json()
+    mensaje = body.get("mensaje", "")
+    kpi_detectado = detectar_kpi(mensaje)
+    codsalon = body.get("codsalon") or user_context[client_ip].get("codsalon")
+    fecha = body.get("fecha") or user_context[client_ip].get("fecha")
+    nsemana = body.get("nsemana") or user_context[client_ip].get("nsemana")
+    mes = body.get("mes") or user_context[client_ip].get("mes")
+    codempleado = body.get("codempleado") or user_context[client_ip].get("codempleado")
+
+    # Guardar en memoria temporal si se proporcionan
+    if codsalon: user_context[client_ip]["codsalon"] = codsalon
+    if fecha: user_context[client_ip]["fecha"] = fecha
+    if nsemana: user_context[client_ip]["nsemana"] = nsemana
+    if mes: user_context[client_ip]["mes"] = mes
+    if codempleado: user_context[client_ip]["codempleado"] = codempleado
+    if kpi_detectado: user_context[client_ip]["kpi"] = kpi_detectado
     body = await request.json()
     mensaje = body.get("mensaje", "")
     kpi_detectado = detectar_kpi(mensaje)
