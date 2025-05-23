@@ -43,7 +43,7 @@ def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
         if not resumen:
             resumen.append("Los indicadores clave se mantienen dentro de los valores aceptables para este mes.")
 
- return f"Análisis mensual del empleado {codempleado} en el salón {codsalon} para el mes {mes}:\n- " + "\n- ".join(resumen)
+    return f"Análisis mensual del empleado {codempleado} en el salón {codsalon} para el mes {mes}:\n- " + "\n- ".join(resumen)
 
 
     except Exception as e:
