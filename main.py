@@ -150,11 +150,27 @@ Tus respuestas deben ser claras, profesionales.
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    try:
+      try:
+        parametros_contexto = []
+
+        if codsalon:
+            parametros_contexto.append(f"codsalon: {codsalon}")
+        if fecha:
+            parametros_contexto.append(f"fecha: {fecha}")
+        if nsemana:
+            parametros_contexto.append(f"nsemana: {nsemana}")
+        if mes:
+            parametros_contexto.append(f"mes: {mes}")
+        if codempleado:
+            parametros_contexto.append(f"codempleado: {codempleado}")
+
+        contexto_adicional = f"📎 Parámetros recibidos: {', '.join(parametros_contexto)}"
+
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
+                {"role": "system", "content": contexto_adicional},
                 {"role": "user", "content": mensaje}
             ],
             functions=function_llm_spec,
@@ -162,6 +178,7 @@ Tus respuestas deben ser claras, profesionales.
         )
 
         msg = response.choices[0].message
+
 
         if msg.function_call:
             nombre_funcion = msg.function_call.name
