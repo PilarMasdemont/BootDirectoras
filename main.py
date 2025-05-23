@@ -183,22 +183,22 @@ try:
 
 
 
-        if msg.function_call:
-            nombre_funcion = msg.function_call.name
-            argumentos = json.loads(msg.function_call.arguments)
+    if msg.function_call:
+        nombre_funcion = msg.function_call.name
+        argumentos = json.loads(msg.function_call.arguments)
 
-            if nombre_funcion == "explicar_ratio_diario":
+        if nombre_funcion == "explicar_ratio_diario":
                 resultado = explicar_ratio_diario(**argumentos)
-            elif nombre_funcion == "explicar_ratio_semanal":
+        elif nombre_funcion == "explicar_ratio_semanal":
                 resultado = explicar_ratio_semanal(**argumentos)
-            elif nombre_funcion == "explicar_ratio_mensual":
+        elif nombre_funcion == "explicar_ratio_mensual":
                 resultado = explicar_ratio_mensual(**argumentos)
-            else:
-                raise HTTPException(status_code=400, detail="Función no reconocida")
+        else:
+            raise HTTPException(status_code=400, detail="Función no reconocida")
 
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
+    return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
-    except Exception as e:
-        return {"error": str(e)}
+except Exception as e:
+    return {"error": str(e)}
