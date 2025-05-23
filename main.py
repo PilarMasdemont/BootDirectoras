@@ -54,7 +54,7 @@ def get_kpis_semanales(codsalon: str):
 @app.get("/kpis/mensual")
 def get_kpis_mensuales(codsalon: str):
     try:
-        df = cargar_hoja("312465473")  # GID actualizado para mensual
+        df = cargar_hoja("1194190690")  # GID actualizado para mensual
         datos_filtrados = df[df['codsalon'].astype(str) == codsalon]
         return datos_filtrados.to_dict(orient="records")
     except Exception as e:
