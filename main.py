@@ -150,19 +150,19 @@ Tus respuestas deben ser claras, profesionales.
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    try:
-       response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": mensaje}
-    ],
-    functions=function_llm_spec,
-    function_call="auto",
-)
-
+        try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": mensaje}
+            ],
+            functions=function_llm_spec,
+            function_call="auto",
+        )
 
         msg = response.choices[0].message
+
 
         if msg.function_call:
             nombre_funcion = msg.function_call.name
