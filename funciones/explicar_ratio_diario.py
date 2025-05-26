@@ -51,8 +51,8 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
         mensaje = [f"📊 El Ratio General fue {ratio_pct}% el día {fecha}."]
 
-        positivos = sorted({k: v for k, v in contribuciones.items() if v > 0}.items(), key=lambda x: -x[1])
-        negativos = sorted({k: v for k, v in contribuciones.items() if v < 0}.items(), key=lambda x: x[1])
+        positivos = sorted([(k, v) for k, v in contribuciones.items() if v > 0], key=lambda x: -x[1])
+        negativos = sorted([(k, v) for k, v in contribuciones.items() if v < 0], key=lambda x: x[1])
 
         # Frase resumen inicial
         if delta >= 0 and positivos:
@@ -88,7 +88,7 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
         # Sugerencia final basada en el factor negativo más influyente
         if negativos:
-            peor = min(negativos.items(), key=lambda x: x[1])
+            peor = min(negativos, key=lambda x: x[1])
             mensaje.append(f"💡 Sugerencia: Revisar {causas[peor[0]]}, que fue el factor que más penalizó el ratio.")
 
         return "\n".join(mensaje)
