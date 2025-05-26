@@ -33,3 +33,11 @@ def extraer_fecha_desde_texto(texto):
         if mes:
             return f"{anio}-{mes}-{dia}"
     return None
+    import re
+
+def extraer_codempleado(texto: str):
+    texto = texto.lower()
+    match = re.search(r"empleado\s*(\d+)", texto)
+    if match:
+        return match.group(1)
+    return None
