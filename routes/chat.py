@@ -3,7 +3,8 @@ from config import openai_client
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
-from funciones.explicar_ratio import explicar_ratio  # ✅ Nuevo
+from funciones.explicar_ratio import explicar_ratio
+from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado_individual  # ✅ Nueva función
 from extractores import detectar_kpi, extraer_fecha_desde_texto
 from memory import user_context
 import json
@@ -58,6 +59,7 @@ Puedes explicar KPIs en tres niveles:
 - 📌 Diario (requiere: codsalon y fecha).
 - 📆 Semanal (requiere: codsalon y número de semana).
 - 📊 Mensual (requiere: codsalon, mes y código del empleado).
+- 👤 Empleado (requiere: codsalon, fecha y codempleado).
 
 📌 Si falta un dato, solicita amablemente la información antes de responder.
 
@@ -65,6 +67,7 @@ Puedes explicar KPIs en tres niveles:
 - explicar_ratio_diario
 - explicar_ratio_semanal
 - explicar_ratio_mensual
+- explicar_ratio_empleado_individual
 
 📎 Usa solo los datos proporcionados por el usuario o disponibles en los parámetros. No inventes información.
 
@@ -72,13 +75,13 @@ Tus respuestas deben ser claras, profesionales.
 """.strip()
 
     try:
-        # ✅ PREPROCESADO: si hay fecha y codsalon, intentamos respuesta directa
+        # Paso previo: detección manual rápida (mantiene compatibilidad previa)
         if codsalon and fecha:
             try:
                 respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
                 return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
             except Exception:
-                pass  # si algo falla, sigue con el flujo normal
+                pass
 
         response = openai_client.chat.completions.create(
             model="gpt-4o",
@@ -125,6 +128,19 @@ Tus respuestas deben ser claras, profesionales.
                         "required": ["codsalon", "mes", "codempleado"]
                     },
                 },
+                {
+                    "name": "explicar_ratio_empleado_individual",  # ✅ NUEVA
+                    "description": "Explica el Ratio General de un empleado específico en una fecha.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "codsalon": {"type": "string"},
+                            "fecha": {"type": "string"},
+                            "codempleado": {"type": "string"}
+                        },
+                        "required": ["codsalon", "fecha", "codempleado"]
+                    },
+                },
             ]
         )
 
@@ -139,6 +155,8 @@ Tus respuestas deben ser claras, profesionales.
                 resultado = explicar_ratio_semanal(**argumentos)
             elif nombre_funcion == "explicar_ratio_mensual":
                 resultado = explicar_ratio_mensual(**argumentos)
+            elif nombre_funcion == "explicar_ratio_empleado_individual":  # ✅ NUEVA
+                resultado = explicar_ratio_empleado_individual(**argumentos)
             else:
                 raise HTTPException(status_code=400, detail="Función no reconocida")
 
