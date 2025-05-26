@@ -9,6 +9,7 @@ from extractores import detectar_kpi, extraer_fecha_desde_texto
 from memory import user_context
 import json
 import re
+from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado
 
 router = APIRouter()
 
