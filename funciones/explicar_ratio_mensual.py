@@ -1,53 +1,79 @@
-import pandas as pd
-from sheets import cargar_hoja
 
-def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: str) -> str:
-    try:
-        # ID de la hoja mensual
-        hoja_id = "1194190690"  # Reemplazar con el ID real si cambia
-        df = cargar_hoja(hoja_id)
+def explicar_ratio_mensual(data, empleado, mes, cod_salon):
+    """
+    Genera una explicación sobre el Ratio General mensual de un empleado basado en un modelo de regresión lineal.
+    """
+    from datetime import datetime
+    mensaje = []
 
-        # Asegurarse que los tipos son correctos
-        df["codsalon"] = df["codsalon"].astype(str)
-        df["codempleado"] = df["codempleado"].astype(str)
-        df["mes"] = df["mes"].astype(int)
+    # Filtrado
+    fila = next((d for d in data if d["empleado"] == empleado and d["mes"] == mes and d["codsalon"] == cod_salon), None)
+    if not fila:
+        return f"⚠️ No se encontraron datos para el empleado {empleado}, salón {cod_salon} en el mes {mes}."
 
-        # Filtrado por parámetros
-        datos = df[
-            (df["codsalon"] == codsalon) &
-            (df["codempleado"] == codempleado) &
-            (df["mes"] == mes)
-        ]
+    # Variables relevantes
+    actual = fila["ratiogeneral"]
+    predicho = (
+        1.5705
+        - 0.0001358 * fila["facturacionsiva"]
+        - 0.01084 * fila["horasfichadas"]
+        - 0.2826 * fila["ratiodesviaciontiempoteorico"]
+        - 0.7724 * fila["ratiotiempoindirecto"]
+        - 1.1597 * fila["ratioticketsinferior20"]
+        + 0.01491 * fila["n_ticketsiva"]
+        + 0.01277 * fila["ticketsivamedio"]
+    )
+    delta = actual - predicho
 
-        if datos.empty:
-            return f"No se encontraron datos para el empleado {codempleado} del salón {codsalon} en el mes {mes}."
+    mensaje.append(f"📆 Informe mensual para el empleado {empleado} en el mes {mes}.")
+    mensaje.append(f"📊 El Ratio General fue {round(actual * 100)}%.")
 
-        fila = datos.iloc[0]
+    # Cálculo de impactos individuales
+    factores = {
+        "facturacionsiva": -0.0001358,
+        "horasfichadas": -0.01084,
+        "ratiodesviaciontiempoteorico": -0.2826,
+        "ratiotiempoindirecto": -0.7724,
+        "ratioticketsinferior20": -1.1597,
+        "n_ticketsiva": 0.01491,
+        "ticketsivamedio": 0.01277,
+    }
+    causas = {
+        "facturacionsiva": "facturación",
+        "horasfichadas": "exceso de horas fichadas",
+        "ratiodesviaciontiempoteorico": "desviación en la planificación del tiempo",
+        "ratiotiempoindirecto": "tiempo indirecto elevado",
+        "ratioticketsinferior20": "muchos tickets de importe bajo",
+        "n_ticketsiva": "número de tickets",
+        "ticketsivamedio": "ticket medio alto",
+    }
 
-        # Interpretación básica de KPIs
-        resumen = []
+    impactos = [(k, factores[k] * fila[k]) for k in factores]
+    positivos = [(k, v) for k, v in impactos if v > 0]
+    negativos = [(k, v) for k, v in impactos if v < 0]
 
-        if fila["ratiogeneral"] < 1.5:
-            resumen.append("El ratio general fue bajo, indicando baja rentabilidad relativa al coste laboral.")
-        elif fila["ratiogeneral"] > 2:
-            resumen.append("El ratio general fue alto, señal de muy buena rentabilidad.")
+    if delta >= 0:
+        if positivos:
+            mensaje.append("✅ Factores que contribuyeron positivamente:")
+            for k, v in sorted(positivos, key=lambda x: -x[1]):
+                mensaje.append(f"  ✅ {causas[k]} (+{round(v * 100)}%)")
+        if negativos:
+            mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+            for k, v in sorted(negativos, key=lambda x: x[1]):
+                mensaje.append(f"  🔻 {causas[k]} ({round(v * 100)}%)")
+    else:
+        if negativos:
+            mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+            for k, v in sorted(negativos, key=lambda x: x[1]):
+                mensaje.append(f"  🔻 {causas[k]} ({round(v * 100)}%)")
+        if positivos:
+            mensaje.append("✅ Factores que ayudaron a mejorar el resultado:")
+            for k, v in sorted(positivos, key=lambda x: -x[1]):
+                mensaje.append(f"  ✅ {causas[k]} (+{round(v * 100)}%)")
 
-        if fila["ratiotiempoindirecto"] > 0.25:
-            resumen.append("El tiempo indirecto fue elevado, lo que puede indicar ineficiencias o tiempos no productivos excesivos.")
+    # Sugerencia final
+    if negativos:
+        factor_principal = sorted(negativos, key=lambda x: x[1])[0][0]
+        mensaje.append(f"💡 Sugerencia: Revisar {causas[factor_principal]}, que fue el factor que más penalizó el ratio.")
 
-        if fila["ratiodesviaciontiempoteorico"] < -0.1:
-            resumen.append("Se observó una desviación negativa significativa entre el tiempo planificado y el trabajado.")
-
-        if fila["ratioticketsinferior20"] > 0.3:
-            resumen.append("Un alto porcentaje de tickets fueron inferiores a 20€, lo que puede afectar la rentabilidad.")
-
-        if fila["facturacionsiva"] < 1000:
-            resumen.append("La facturación mensual fue baja.")
-
-        if not resumen:
-            resumen.append("Los indicadores clave se mantienen dentro de los valores aceptables para este mes.")
-
-        return f"Análisis mensual del empleado {codempleado} en el salón {codsalon} para el mes {mes}:\n- " + "\n- ".join(resumen)
-
-    except Exception as e:
-        return f"Error al procesar la explicación mensual: {str(e)}"
+    return "\n".join(mensaje)
