@@ -1,10 +1,13 @@
 import pandas as pd
-from sheets import cargar_hoja
+import requests
 
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     try:
-        df = cargar_hoja("1882861530")
-        df = df[df["codsalon"] == int(codsalon)]
+        res = requests.get(f"https://bootdirectoras.onrender.com/kpis/30dias?codsalon={codsalon}")
+        if res.status_code != 200:
+            return f"❌ Error al obtener datos del servidor: {res.status_code}"
+        df = pd.DataFrame(res.json())
+
         if df.empty:
             return f"No se encontraron datos para el salón {codsalon}."
 
@@ -54,7 +57,6 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         positivos = sorted([(k, v) for k, v in contribuciones.items() if v > 0], key=lambda x: -x[1])
         negativos = sorted([(k, v) for k, v in contribuciones.items() if v < 0], key=lambda x: x[1])
 
-        # Frase resumen inicial
         if delta >= 0 and positivos:
             mensaje.append("El resultado se logró gracias al empuje de varios factores clave.")
         elif delta < 0 and negativos:
@@ -62,7 +64,6 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         else:
             mensaje.append("El día presentó un equilibrio entre elementos positivos y negativos.")
 
-        # Análisis detallado
         if delta >= 0:
             if positivos:
                 mensaje.append("✅ Factores que contribuyeron positivamente:\n")
@@ -86,7 +87,6 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
                     impacto = round(v * 100)
                     mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
 
-        # Sugerencia final basada en el factor negativo más influyente
         if negativos:
             peor = min(negativos, key=lambda x: x[1])
             mensaje.append(f"💡 Sugerencia: Revisar {causas[peor[0]]}, que fue el factor que más penalizó el ratio.")
