@@ -27,6 +27,15 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
             "ticketsivamedio": 0.015937312
         }
 
+        causas = {
+            "facturacionsiva": "facturación destacada",
+            "horasfichadas": "exceso de horas fichadas",
+            "ratiodesviaciontiempoteorico": "desviación en la planificación del tiempo",
+            "ratiotiempoindirecto": "tiempo indirecto elevado",
+            "ratioticketsinferior20": "muchos tickets de importe bajo",
+            "ticketsivamedio": "ticket medio alto"
+        }
+
         ratio_real = float(fila["ratiogeneral"])
         ratio_estimado = intercepto
         contribuciones = {}
@@ -41,42 +50,42 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         ratio_pct = round(ratio_real * 100)
         ratio_esp_pct = round(ratio_estimado * 100)
 
-        mensaje = [f"El Ratio General fue {ratio_pct}% el día {fecha}."]
+        mensaje = [f"📊 El Ratio General fue {ratio_pct}% el día {fecha}."]
 
         if abs(delta) < 0.1:
-            mensaje.append("Este valor fue muy similar a lo que esperábamos según el comportamiento habitual del salón.")
+            mensaje.append("Este valor fue similar al esperado según el modelo.")
         elif delta > 0.1:
-            mensaje.append(f"Este valor fue más alto de lo esperado (esperábamos {ratio_esp_pct}%).")
+            mensaje.append(f"Este valor fue más alto de lo esperado ({ratio_esp_pct}%).")
         else:
-            mensaje.append(f"Este valor fue más bajo de lo esperado (esperábamos {ratio_esp_pct}%).")
+            mensaje.append(f"Este valor fue más bajo de lo esperado ({ratio_esp_pct}%).")
 
-        positivos = {k: v for k, v in contribuciones.items() if v > 0}
-        negativos = {k: v for k, v in contribuciones.items() if v < 0}
+        positivos = sorted({k: v for k, v in contribuciones.items() if v > 0}.items(), key=lambda x: -x[1])
+        negativos = sorted({k: v for k, v in contribuciones.items() if v < 0}.items(), key=lambda x: x[1])
 
-        causas = {
-            "facturacionsiva": "una buena facturación",
-            "horasfichadas": "una alta cantidad de horas fichadas",
-            "ratiodesviaciontiempoteorico": "una desviación en la planificación del tiempo",
-            "ratiotiempoindirecto": "un tiempo indirecto elevado",
-            "ratioticketsinferior20": "muchos tickets de importe bajo",
-            "ticketsivamedio": "un ticket medio alto"
-        }
-
-        if delta > 0 and negativos:
-            mayor_neg = min(negativos.items(), key=lambda x: x[1])
-            mensaje.append(f"Aunque hubo factores negativos como {causas[mayor_neg[0]]}, predominaron los aspectos positivos que impulsaron el resultado.")
-        elif delta < 0 and positivos:
-            mayor_pos = max(positivos.items(), key=lambda x: x[1])
-            mensaje.append(f"A pesar de {causas[mayor_pos[0]]}, los factores negativos tuvieron más peso y redujeron el rendimiento.")
+        if delta >= 0:
+            if positivos:
+                mensaje.append("✅ Factores que contribuyeron positivamente:")
+                for k, v in positivos:
+                    impacto = round(v * 100)
+                    mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
+            if negativos:
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+                for k, v in negativos:
+                    impacto = round(v * 100)
+                    mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
         else:
-            principal = (
-                max(positivos.items(), key=lambda x: x[1]) if delta > 0 else
-                min(negativos.items(), key=lambda x: x[1])
-            )
-            efecto = "positivamente" if principal[1] > 0 else "negativamente"
-            mensaje.append(f"El principal factor que afectó el resultado fue {causas[principal[0]]}, que influyó {efecto} en el Ratio General.")
+            if negativos:
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+                for k, v in negativos:
+                    impacto = round(v * 100)
+                    mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
+            if positivos:
+                mensaje.append("✅ Factores que ayudaron a mejorar el resultado:")
+                for k, v in positivos:
+                    impacto = round(v * 100)
+                    mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
 
         return "\n".join(mensaje)
 
     except Exception as e:
-        return f"Error al analizar el Ratio General: {str(e)}"
+        return f"❌ Error al analizar el Ratio General: {str(e)}"
