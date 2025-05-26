@@ -48,20 +48,21 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
         delta = ratio_real - ratio_estimado
         ratio_pct = round(ratio_real * 100)
-        ratio_esp_pct = round(ratio_estimado * 100)
 
         mensaje = [f"📊 El Ratio General fue {ratio_pct}% el día {fecha}."]
-
-        if abs(delta) < 0.1:
-            mensaje.append("Este valor fue similar al esperado según el modelo.")
-        elif delta > 0.1:
-            mensaje.append(f"Este valor fue más alto de lo esperado ({ratio_esp_pct}%).")
-        else:
-            mensaje.append(f"Este valor fue más bajo de lo esperado ({ratio_esp_pct}%).")
 
         positivos = sorted({k: v for k, v in contribuciones.items() if v > 0}.items(), key=lambda x: -x[1])
         negativos = sorted({k: v for k, v in contribuciones.items() if v < 0}.items(), key=lambda x: x[1])
 
+        # Frase resumen inicial
+        if delta >= 0 and positivos:
+            mensaje.append("El resultado se logró gracias al empuje de varios factores clave.")
+        elif delta < 0 and negativos:
+            mensaje.append("El resultado estuvo condicionado por varios factores que redujeron el rendimiento.")
+        else:
+            mensaje.append("El día presentó un equilibrio entre elementos positivos y negativos.")
+
+        # Análisis detallado
         if delta >= 0:
             if positivos:
                 mensaje.append("✅ Factores que contribuyeron positivamente:")
@@ -84,6 +85,11 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
                 for k, v in positivos:
                     impacto = round(v * 100)
                     mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
+
+        # Sugerencia final basada en el factor negativo más influyente
+        if negativos:
+            peor = min(negativos.items(), key=lambda x: x[1])
+            mensaje.append(f"💡 Sugerencia: Revisar {causas[peor[0]]}, que fue el factor que más penalizó el ratio.")
 
         return "\n".join(mensaje)
 
