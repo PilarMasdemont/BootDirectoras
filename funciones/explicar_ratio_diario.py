@@ -17,7 +17,6 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
 
         fila = fila.iloc[0]
 
-        # Coeficientes del modelo
         intercepto = 1.7034
         pesos = {
             "facturacionsiva": 0.000456213,
@@ -41,17 +40,18 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         delta = ratio_real - ratio_estimado
         ratio_pct = round(ratio_real * 100)
         ratio_esp_pct = round(ratio_estimado * 100)
+
         mensaje = [f"El Ratio General fue {ratio_pct}% el día {fecha}."]
 
         if abs(delta) < 0.1:
             mensaje.append("Este valor fue muy similar a lo que esperábamos según el comportamiento habitual del salón.")
         elif delta > 0.1:
-            mensaje.append(f"Este valor fue más alto de lo esperado (esperábamos {ratio_esp_pct}%), lo cual es una buena noticia.")
+            mensaje.append(f"Este valor fue más alto de lo esperado (esperábamos {ratio_esp_pct}%).")
         else:
             mensaje.append(f"Este valor fue más bajo de lo esperado (esperábamos {ratio_esp_pct}%).")
 
-        # Detectamos factores principales que afectaron el ratio
-        factor_principal = max(contribuciones.items(), key=lambda x: abs(x[1]))
+        positivos = {k: v for k, v in contribuciones.items() if v > 0}
+        negativos = {k: v for k, v in contribuciones.items() if v < 0}
 
         causas = {
             "facturacionsiva": "una buena facturación",
@@ -62,8 +62,19 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
             "ticketsivamedio": "un ticket medio alto"
         }
 
-        efecto = "positivamente" if factor_principal[1] > 0 else "negativamente"
-        mensaje.append(f"El principal factor que afectó el resultado fue {causas[factor_principal[0]]}, que influyó {efecto} en el Ratio General.")
+        if delta > 0 and negativos:
+            mayor_neg = min(negativos.items(), key=lambda x: x[1])
+            mensaje.append(f"Aunque hubo factores negativos como {causas[mayor_neg[0]]}, predominaron los aspectos positivos que impulsaron el resultado.")
+        elif delta < 0 and positivos:
+            mayor_pos = max(positivos.items(), key=lambda x: x[1])
+            mensaje.append(f"A pesar de {causas[mayor_pos[0]]}, los factores negativos tuvieron más peso y redujeron el rendimiento.")
+        else:
+            principal = (
+                max(positivos.items(), key=lambda x: x[1]) if delta > 0 else
+                min(negativos.items(), key=lambda x: x[1])
+            )
+            efecto = "positivamente" if principal[1] > 0 else "negativamente"
+            mensaje.append(f"El principal factor que afectó el resultado fue {causas[principal[0]]}, que influyó {efecto} en el Ratio General.")
 
         return "\n".join(mensaje)
 
