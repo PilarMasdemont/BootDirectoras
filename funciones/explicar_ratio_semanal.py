@@ -1,45 +1,50 @@
-from sheets import cargar_hoja
+import requests
 
-def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: int) -> str:
+def explicar_ratio_semanal(codsalon: str, nsemana: int) -> str:
     causas = {
-        "facturacionsiva": "facturación",
+        "facturacionsiva": "facturación destacada",
         "horasfichadas": "exceso de horas fichadas",
         "ratiodesviaciontiempoteorico": "desviación en la planificación del tiempo",
         "ratiotiempoindirecto": "tiempo indirecto elevado",
-        "ratioticketsinferior20": "muchos tickets de importe bajo",
-        "n_ticketsiva": "número de tickets",
         "ticketsivamedio": "ticket medio alto",
     }
 
-    coef = {
-        "facturacionsiva": -0.000135794,
-        "horasfichadas": -0.010839812,
-        "ratiodesviaciontiempoteorico": -0.282636521,
-        "ratiotiempoindirecto": -0.772379074,
-        "ratioticketsinferior20": -1.159725965,
-        "n_ticketsiva": 0.01490913,
-        "ticketsivamedio": 0.012768938,
+    coeficientes = {
+        "facturacionsiva": 8.87484e-05,
+        "horasfichadas": -0.00271686,
+        "ratiodesviaciontiempoteorico": -0.9967235,
+        "ratiotiempoindirecto": -1.498131,
+        "ticketsivamedio": 0.014938,
     }
 
-    intercepto = 1.5705
+    intercepto = 1.6347
 
     try:
-        df = cargar_hoja("956701960")
-        df = df[(df["codsalon"] == int(codsalon)) & (df["mes"] == int(mes)) & (df["codempleado"] == int(codempleado))]
-        if df.empty:
-            return f"⚠️ No se encontraron datos para el salón {codsalon}, mes {mes}, empleado {codempleado}."
+        res = requests.get(f"https://bootdirectoras.onrender.com/kpis/semanal?codsalon={codsalon}")
+        if res.status_code != 200:
+            return f"❌ Error al obtener datos del servidor: {res.status_code}"
+        data = res.json()
+        fila = next((d for d in data if int(d['nsemana']) == int(nsemana)), None)
+        if not fila:
+            return f"⚠️ No se encontraron datos para la semana {nsemana} en el salón {codsalon}."
 
-        fila = df.iloc[0]
-        real = float(fila["ratiogeneral"])
-        estimado = intercepto + sum(fila[k] * coef[k] for k in coef)
-        delta = real - estimado
+        ratio_real = float(fila["ratiogeneral"])
+        ratio_estimado = intercepto + sum(float(fila[k]) * coef for k, coef in coeficientes.items())
 
-        mensaje = [f"📅 Informe mensual para el empleado {codempleado} (mes {mes}) en el salón {codsalon}."]
-        mensaje.append(f"📊 El Ratio General fue {round(real * 100)}%.")
+        delta = ratio_real - ratio_estimado
+        ratio_pct = round(ratio_real * 100)
 
-        impactos = [(k, coef[k] * fila[k]) for k in coef]
-        positivos = [(k, v) for k, v in impactos if v > 0]
-        negativos = [(k, v) for k, v in impactos if v < 0]
+        mensaje = [f"📊 El Ratio General fue {ratio_pct}% durante la semana {nsemana} en el salón {codsalon}."]
+
+        positivos = []
+        negativos = []
+
+        for k, coef in coeficientes.items():
+            impacto = coef * float(fila[k])
+            if impacto > 0:
+                positivos.append((k, impacto))
+            elif impacto < 0:
+                negativos.append((k, impacto))
 
         positivos.sort(key=lambda x: abs(x[1]), reverse=True)
         negativos.sort(key=lambda x: abs(x[1]), reverse=True)
@@ -64,10 +69,10 @@ def explicar_ratio_mensual(codsalon: str, mes: int, codempleado: int) -> str:
                     mensaje.append(f"  ✅ {causas[k]} (+{round(v * 100)}%)")
 
         if negativos:
-            principal = min(negativos, key=lambda x: x[1])[0]
-            mensaje.append(f"💡 Sugerencia: Revisar {causas[principal]}, que fue el factor que más penalizó el ratio.")
+            factor_peor = min(negativos, key=lambda x: x[1])[0]
+            mensaje.append(f"💡 Sugerencia: Revisar {causas[factor_peor]}, que fue el factor que más penalizó el ratio.")
 
         return "\n".join(mensaje)
 
     except Exception as e:
-        return f"❌ Error al analizar el Ratio General mensual: {str(e)}"
+        return f"❌ Error al analizar el Ratio General semanal: {str(e)}"
