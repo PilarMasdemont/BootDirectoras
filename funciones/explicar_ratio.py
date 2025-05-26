@@ -15,16 +15,26 @@ def explicar_ratio(codsalon: str, fecha: str, mensaje_usuario: str) -> str:
         mensaje = mensaje_usuario.lower()
         codempleado = extraer_codempleado(mensaje)
 
-        if codempleado:
-            return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+        # Refuerzo manual (defensivo)
+        if "los empleados" in mensaje or "trabajadores" in mensaje or "el personal" in mensaje:
+            tipo = "empleados"
+        elif "empleado" in mensaje and re.search(r"empleado\s*\d+", mensaje):
+            tipo = "empleado"
+        else:
+            tipo = clasificar_intencion(mensaje_usuario)
 
-        tipo = clasificar_intencion(mensaje_usuario)
+        print(f"🧠 Intención clasificada como: {tipo}")
 
-        if tipo == "individual":
+        if tipo == "empleado":
+            if codempleado:
+                return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+            else:
+                return "❗ Por favor, indica el código del empleado que deseas analizar."
+
+        if tipo == "empleados":
             return explicar_ratio_empleados(codsalon, fecha)
 
         return explicar_ratio_diario(codsalon, fecha)
 
     except Exception as e:
         return f"❌ Error al clasificar la intención del mensaje: {str(e)}"
-
