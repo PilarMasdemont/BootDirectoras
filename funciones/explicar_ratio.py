@@ -7,7 +7,6 @@ def explicar_ratio(codsalon: str, fecha: str, mensaje_usuario: str) -> str:
         tipo = clasificar_intencion(mensaje_usuario)
         if tipo == "individual":
             return explicar_ratio_empleados(codsalon, fecha)
-        else:
-            return explicar_ratio_diario(codsalon, fecha)
+        return explicar_ratio_diario(codsalon, fecha)
     except Exception as e:
         return f"❌ Error al clasificar la intención del mensaje: {str(e)}"
