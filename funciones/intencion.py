@@ -5,12 +5,13 @@ client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def clasificar_intencion(mensaje_usuario: str) -> str:
     prompt = (
-        "Clasifica el siguiente mensaje de una directora con una sola palabra: 'general' o 'individual'.\n\n"
+        "Clasifica este mensaje de una directora con una sola palabra: 'general', 'empleados' o 'empleado'.\n\n"
         f"Mensaje: '{mensaje_usuario}'\n\n"
         "Reglas:\n"
-        "- Devuelve 'general' si el mensaje pide una explicación agregada o global del salón, como 'cómo fue el día', 'resultado del salón', 'cómo fue el salón 1 el 23 de mayo'.\n"
-        "- Devuelve 'individual' si el mensaje se refiere a trabajadores, empleados, personal, nombres concretos, códigos de empleado, o usa frases como 'cada uno', 'por trabajador', 'los empleados', 'empleado 95', etc.\n\n"
-        "Respuesta:"
+        "- Devuelve 'general' si se pide un análisis global del salón, sin mención de personas ni códigos de empleado.\n"
+        "- Devuelve 'empleados' si se refiere al análisis de todos los trabajadores, como 'los empleados', 'el personal', 'cada uno', 'cómo lo hicieron todos'.\n"
+        "- Devuelve 'empleado' si menciona un trabajador concreto, por código (ej. 'empleado 42') o por nombre.\n\n"
+        "Tu respuesta debe ser únicamente una de estas tres palabras: general, empleados, empleado."
     )
 
     response = client.chat.completions.create(
