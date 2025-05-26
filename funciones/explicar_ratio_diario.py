@@ -8,6 +8,9 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         if df.empty:
             return f"No se encontraron datos para el salón {codsalon}."
 
+        df["fecha"] = pd.to_datetime(df["fecha"]).dt.date
+        fecha = pd.to_datetime(fecha).date()
+
         fila = df[df["fecha"] == fecha]
         if fila.empty:
             return f"No hay datos disponibles para la fecha {fecha} en el salón {codsalon}."
