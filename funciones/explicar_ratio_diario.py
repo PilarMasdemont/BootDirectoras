@@ -65,18 +65,21 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
         # Análisis detallado
         if delta >= 0:
             if positivos:
-                mensaje.append("✅ Factores que contribuyeron positivamente:")
+                mensaje.append("✅ Factores que contribuyeron positivamente:
+")
                 for k, v in positivos:
                     impacto = round(v * 100)
                     mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
             if negativos:
-                mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:
+")
                 for k, v in negativos:
                     impacto = round(v * 100)
                     mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
         else:
             if negativos:
-                mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:
+")
                 for k, v in negativos:
                     impacto = round(v * 100)
                     mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
