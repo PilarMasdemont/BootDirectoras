@@ -25,6 +25,19 @@ async def chat_handler(request: Request):
     client_ip = request.client.host
     body = await request.json()
     mensaje = body.get("mensaje", "")
+
+mensaje_limpio = mensaje.strip().lower()
+
+if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and user_context[client_ip].get("modo") == "empleados":
+    codsalon = user_context[client_ip].get("codsalon")
+    fecha = user_context[client_ip].get("fecha")
+    indice = user_context[client_ip].get("indice_empleado", 0)
+
+    if codsalon and fecha:
+        resultado = explicar_ratio_empleados(codsalon, fecha, indice)
+        user_context[client_ip]["indice_empleado"] = indice + 1
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+
     mensaje_limpio = mensaje.strip().lower()
 
     kpi_detectado = detectar_kpi(mensaje)
@@ -171,4 +184,3 @@ async def chat_handler(request: Request):
 
     except Exception as e:
         return {"error": str(e)}
-
