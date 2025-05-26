@@ -1,15 +1,17 @@
 import os
 import openai
 
-# Crea una instancia del cliente moderno
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def clasificar_intencion(mensaje_usuario: str) -> str:
     prompt = (
-        "Dado este mensaje de una directora:\n"
-        f"'{mensaje_usuario}'\n"
-        "Devuelve solo una palabra: 'general' si pide una explicación general del salón,\n"
-        "o 'individual' si quiere un desglose por trabajador."
+        "Eres una herramienta de clasificación de intención para mensajes de directoras de salón.\n"
+        "Dado el siguiente mensaje:\n"
+        f"'{mensaje_usuario}'\n\n"
+        "Clasifica con una sola palabra:\n"
+        "- Devuelve 'general' si piden una explicación del resultado global del salón (por ejemplo, 'resultado del día', 'cómo fue el día', 'salón 1').\n"
+        "- Devuelve 'individual' si el mensaje menciona trabajadores, empleados, nombres concretos, o se interesa por el rendimiento de una persona (por ejemplo, 'empleado 8', 'Sandra', 'cada trabajador').\n\n"
+        "Tu respuesta debe ser SOLO una palabra: 'general' o 'individual'."
     )
 
     response = client.chat.completions.create(
