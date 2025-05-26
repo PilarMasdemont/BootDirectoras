@@ -30,7 +30,7 @@ async def chat_handler(request: Request):
     fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje) or user_context[client_ip].get("fecha")
     nsemana = body.get("nsemana") or user_context[client_ip].get("nsemana")
     mes = body.get("mes") or user_context[client_ip].get("mes")
-    codempleado = body.get("codempleado") or user_context[client_ip].get("codempleado")
+    codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or user_context[client_ip].get("codempleado")
 
     if codsalon: user_context[client_ip]["codsalon"] = codsalon
     if fecha: user_context[client_ip]["fecha"] = fecha
