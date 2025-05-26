@@ -1,8 +1,13 @@
 import openai
 import os
 
-# Configura tu clave desde variable de entorno o colócala aquí (no recomendado en producción)
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Obtener la clave desde variables de entorno
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise EnvironmentError("❌ Falta la variable de entorno OPENAI_API_KEY")
+
+openai.api_key = api_key
 
 def clasificar_intencion(mensaje_usuario: str) -> str:
     prompt = (
@@ -19,3 +24,4 @@ def clasificar_intencion(mensaje_usuario: str) -> str:
     )
 
     return response.choices[0].message.content.strip().lower()
+
