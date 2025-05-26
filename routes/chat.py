@@ -3,6 +3,7 @@ from config import openai_client
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
+from funciones.explicar_ratio import explicar_ratio  # ✅ Nuevo
 from extractores import detectar_kpi, extraer_fecha_desde_texto
 from memory import user_context
 import json
@@ -71,6 +72,14 @@ Tus respuestas deben ser claras, profesionales.
 """.strip()
 
     try:
+        # ✅ PREPROCESADO: si hay fecha y codsalon, intentamos respuesta directa
+        if codsalon and fecha:
+            try:
+                respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
+            except Exception:
+                pass  # si algo falla, sigue con el flujo normal
+
         response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
