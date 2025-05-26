@@ -1,38 +1,72 @@
-import pandas as pd
-from sheets import cargar_hoja
 
-def explicar_ratio_semanal(codsalon: str, nsemana: int) -> str:
-    try:
-        df = cargar_hoja("72617950")  # GID de la hoja semanal
-    except Exception as e:
-        return f"⚠️ Error al cargar datos: {e}"
+def explicar_ratio_semanal(datos_semana):
+    causas = {
+        "facturacionsiva": "facturación destacada",
+        "horasfichadas": "exceso de horas fichadas",
+        "ratiodesviaciontiempoteorico": "desviación en la planificación del tiempo",
+        "ratiotiempoindirecto": "tiempo indirecto elevado",
+        "ticketsivamedio": "ticket medio alto",
+    }
 
-    columnas_requeridas = [
-        "year", "nsemana", "codsalon", "facturacionsiva", "horasfichadas",
-        "ratiogeneral", "ratiodesviaciontiempoteorico", "ratiotiempoindirecto",
-        "ratioticketsinferior20", "n_ticketsiva", "ticketsivamedio"
-    ]
-    if any(col not in df.columns for col in columnas_requeridas):
-        return "⚠️ La hoja de datos no contiene todas las columnas necesarias."
+    coeficientes = {
+        "facturacionsiva": 8.87484e-05,
+        "horasfichadas": -0.00271686,
+        "ratiodesviaciontiempoteorico": -0.9967235,
+        "ratiotiempoindirecto": -1.498131,
+        "ticketsivamedio": 0.014938,
+    }
 
-    df["codsalon"] = df["codsalon"].astype(str)
-    datos = df[(df["codsalon"] == codsalon) & (df["nsemana"] == nsemana)]
+    intercepto = 1.6347
+    real = datos_semana.get("ratiogeneral", 0)
+    esperado = intercepto + sum(datos_semana[k] * coeficientes[k] for k in coeficientes)
+    delta = round((real - esperado) * 100)
 
-    if datos.empty:
-        return f"⚠️ No se encontraron datos para el salón {codsalon} en la semana {nsemana}."
+    positivos = []
+    negativos = []
 
-    fila = datos.iloc[0]
-    ratio = fila["ratiogeneral"]
+    for k, v in coeficientes.items():
+        impacto = v * datos_semana.get(k, 0)
+        if impacto > 0:
+            positivos.append((k, impacto))
+        elif impacto < 0:
+            negativos.append((k, impacto))
 
-    resumen = [f"El ratio general en la semana {nsemana} fue {ratio:.2f}."]
+    positivos.sort(key=lambda x: abs(x[1]), reverse=True)
+    negativos.sort(key=lambda x: abs(x[1]), reverse=True)
 
-    if fila["ratiodesviaciontiempoteorico"] > 1:
-        resumen.append("Hubo una desviación significativa entre el tiempo agendado y el trabajado.")
-    if fila["ratiotiempoindirecto"] > 0.2:
-        resumen.append("El tiempo indirecto fue elevado, lo que indica menor productividad.")
-    if fila["ratioticketsinferior20"] > 0.3:
-        resumen.append("Una proporción alta de tickets fueron inferiores a 20 €, lo que afecta la rentabilidad.")
-    if fila["facturacionsiva"] < 1000:
-        resumen.append("La facturación fue baja para lo esperado en una semana estándar.")
+    mensaje = []
+    mensaje.append(f"📊 El Ratio General fue {round(real * 100)}% durante la semana.")
+    mensaje.append("El resultado estuvo condicionado por varios factores:")
 
-    return "\n".join(resumen)
+    if delta >= 0:
+        if positivos:
+            mensaje.append("✅ Factores que ayudaron a mejorar el resultado:")
+            for k, v in positivos:
+                impacto = round(v * 100)
+                mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
+        if negativos:
+            mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+            for k, v in negativos:
+                impacto = round(v * 100)
+                mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
+    else:
+        if negativos:
+            mensaje.append("⚠️ Factores que redujeron el rendimiento:")
+            for k, v in negativos:
+                impacto = round(v * 100)
+                mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
+        if positivos:
+            mensaje.append("✅ Factores que ayudaron a mejorar el resultado:")
+            for k, v in positivos:
+                impacto = round(v * 100)
+                mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
+
+    # Sugerencia
+    factor_mas_relevante = max(positivos + negativos, key=lambda x: abs(x[1]), default=None)
+    if factor_mas_relevante:
+        clave, _ = factor_mas_relevante
+        if clave in causas:
+            mensaje.append(f"💡 Sugerencia: Revisar {causas[clave]}, que fue el factor que más influyó esta semana.")
+
+    return "\n".join(mensaje)
+
