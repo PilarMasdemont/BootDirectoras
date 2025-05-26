@@ -70,20 +70,18 @@ def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
                     impacto = round(v * 100)
                     mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
             if negativos:
-                mensaje.append("⚠️ Factores que redujeron el rendimiento:
-")
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:\n")
                 for k, v in negativos:
                     impacto = round(v * 100)
                     mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
         else:
             if negativos:
-                mensaje.append("⚠️ Factores que redujeron el rendimiento:
-")
+                mensaje.append("⚠️ Factores que redujeron el rendimiento:\n")
                 for k, v in negativos:
                     impacto = round(v * 100)
                     mensaje.append(f"  🔻 {causas[k]} ({impacto}%)")
             if positivos:
-                mensaje.append("✅ Factores que ayudaron a mejorar el resultado:")
+                mensaje.append("✅ Factores que ayudaron a mejorar el resultado:\n")
                 for k, v in positivos:
                     impacto = round(v * 100)
                     mensaje.append(f"  ✅ {causas[k]} (+{impacto}%)")
