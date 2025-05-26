@@ -1,6 +1,6 @@
 from .explicar_ratio_diario import explicar_ratio_diario
 from .explicar_ratio_empleados import explicar_ratio_empleados
-from intencion import clasificar_intencion
+from .intencion import clasificar_intencion
 
 def explicar_ratio(codsalon: str, fecha: str, mensaje_usuario: str) -> str:
     try:
