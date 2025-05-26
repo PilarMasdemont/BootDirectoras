@@ -6,8 +6,16 @@ from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from extractores import detectar_kpi, extraer_fecha_desde_texto
 from memory import user_context
 import json
+import re
 
 router = APIRouter()
+
+def extraer_codsalon(texto):
+    texto = texto.lower()
+    match = re.search(r"sal[oó]n\s*(\d+)", texto)
+    if match:
+        return match.group(1)
+    return None
 
 @router.post("/chat")
 async def chat_handler(request: Request):
@@ -15,7 +23,7 @@ async def chat_handler(request: Request):
     body = await request.json()
     mensaje = body.get("mensaje", "")
     kpi_detectado = detectar_kpi(mensaje)
-    codsalon = body.get("codsalon") or user_context[client_ip].get("codsalon")
+    codsalon = body.get("codsalon") or extraer_codsalon(mensaje) or user_context[client_ip].get("codsalon")
     fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje) or user_context[client_ip].get("fecha")
     nsemana = body.get("nsemana") or user_context[client_ip].get("nsemana")
     mes = body.get("mes") or user_context[client_ip].get("mes")
@@ -29,8 +37,6 @@ async def chat_handler(request: Request):
     if kpi_detectado: user_context[client_ip]["kpi"] = kpi_detectado
 
     system_prompt = """
-Eres Mont Dirección, una asistente especializada en el análisis de salones de belleza...
-
 Eres Mont Dirección, una asistente especializada en el análisis de salones de belleza.
 
 Tu objetivo es ayudar a las directoras a interpretar los resultados operativos, basándote exclusivamente en los siguientes KPIs:
