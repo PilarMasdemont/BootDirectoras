@@ -171,3 +171,4 @@ async def chat_handler(request: Request):
 
     except Exception as e:
         return {"error": str(e)}
+
