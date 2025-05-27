@@ -3,6 +3,7 @@
 import pandas as pd
 from sheets_io import cargar_hoja_por_nombre, guardar_hoja
 from datetime import datetime, date
+import json
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
@@ -13,11 +14,24 @@ NAMESPACE = [
     "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
 ]
 
+def log_debug(etapa: str, datos: dict):
+    try:
+        linea = {
+            "timestamp": datetime.now().isoformat(),
+            "etapa": etapa,
+            "datos": datos
+        }
+        with open("/tmp/log_debug_sesion.txt", "a", encoding="utf-8") as f:
+            f.write(json.dumps(linea, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"❌ Error al escribir log de depuración: {e}")
+
 def cargar_sesion(ip: str, fecha: str) -> dict:
     """
     Carga la sesión de un usuario para una fecha dada.
     Devuelve un diccionario con el estado de la sesión o uno nuevo si no existe.
     """
+    log_debug("cargar_sesion_inicial", {"ip": ip, "fecha": fecha})
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
@@ -33,6 +47,7 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
         if not row.empty:
             r = row.iloc[0].to_dict()
             print(f"📂 Sesión encontrada: {r}")
+            log_debug("cargar_sesion_datos", r)
             return {
                 "ip_usuario": ip,
                 "fecha": fecha,
@@ -52,8 +67,8 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
     # Usar fecha actual si no se proporciona
     fecha_hoy = fecha if fecha else date.today().isoformat()
     print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha_hoy}")
+    log_debug("cargar_sesion_nueva", {"ip": ip, "fecha": fecha_hoy})
     return {"ip_usuario": ip, "fecha": fecha_hoy, "indice_empleado": 0}
-
 
 def guardar_sesion(sesion: dict):
     """
@@ -74,6 +89,11 @@ def guardar_sesion(sesion: dict):
         ip = str(sesion.get("ip_usuario", ""))
         fecha = sesion.get("fecha") or date.today().isoformat()
 
+        if not fecha or fecha.strip() == "":
+            print("⚠️ No se puede guardar la sesión sin una fecha válida.")
+            log_debug("guardar_sesion_cancelada_fecha_vacia", sesion)
+            return
+
         datos = {
             "ip_usuario": ip,
             "fecha": fecha,
@@ -88,6 +108,7 @@ def guardar_sesion(sesion: dict):
             "fecha_anterior": sesion.get("fecha_anterior", "")
         }
 
+        log_debug("guardar_sesion_datos", datos)
         print(f"📄 Datos de sesión a guardar: {datos}")
         mask = (df["ip_usuario"] == ip) & (df["fecha"] == fecha)
 
@@ -111,4 +132,3 @@ def guardar_sesion(sesion: dict):
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
-
