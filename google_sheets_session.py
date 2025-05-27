@@ -1,104 +1,106 @@
-from funciones import (
-    explicar_ratio, explicar_ratio_mensual, explicar_ratio_semanal,
-    explicar_ratio_diario, explicar_ratio_empleados,
-    explicar_ratio_empleado_individual
-)
+# google_sheets_session.py
 
-def get_definiciones_funciones():
-    return [
-        {
-            "name": "explicar_ratio_general",
-            "description": "Explica el ratio general de un salón en una fecha dada.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string", "format": "date"}
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_mensual",
-            "description": "Explica el ratio de un salón durante un mes específico.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "mes": {"type": "string"}
-                },
-                "required": ["codsalon", "mes"]
-            }
-        },
-        {
-            "name": "explicar_ratio_semanal",
-            "description": "Explica el ratio de un salón durante una semana específica.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "nsemana": {"type": "string"}
-                },
-                "required": ["codsalon", "nsemana"]
-            }
-        },
-        {
-            "name": "explicar_ratio_diario",
-            "description": "Explica el ratio de un salón en un día específico.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string", "format": "date"}
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_empleados",
-            "description": "Explica el ratio de todos los empleados de un salón en una fecha específica.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"}
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_empleado_individual",
-            "description": "Explica el ratio de un empleado individual de un salón en una fecha específica.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"},
-                    "codempleado": {"type": "string"}
-                },
-                "required": ["codsalon", "fecha", "codempleado"]
-            }
-        }
-    ]
+import pandas as pd
+from sheets_io import cargar_hoja_por_nombre, guardar_hoja
+from datetime import datetime
 
-def resolver(function_call, sesion):
-    nombre_funcion = function_call.name
-    argumentos = function_call.arguments.dict() if hasattr(function_call.arguments, 'dict') else {}
+SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
+TABLA_SESIONES = "session_state"
 
-    print("🧠 Nombre de función a resolver:", nombre_funcion)
-    print("📦 Argumentos recibidos:", argumentos)
+def cargar_sesion(ip: str, fecha: str) -> dict:
+    try:
+        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
+        # Normalizar nombres de columnas sin usar .str para evitar errores de tipo
+        df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
 
-    if nombre_funcion == "explicar_ratio_general":
-        return explicar_ratio(**argumentos)
-    elif nombre_funcion == "explicar_ratio_mensual":
-        return explicar_ratio_mensual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_semanal":
-        return explicar_ratio_semanal(**argumentos)
-    elif nombre_funcion == "explicar_ratio_diario":
-        return explicar_ratio_diario(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleados":
-        return explicar_ratio_empleados(**argumentos, sesion=sesion)
-    elif nombre_funcion == "explicar_ratio_empleado_individual":
-        return explicar_ratio_empleado_individual(**argumentos, sesion=sesion)
-    else:
-        return f"No se reconoce la función: {nombre_funcion}"
+        # Asegurar tipos string en columnas clave
+        if "ip_usuario" in df.columns:
+            df["ip_usuario"] = df["ip_usuario"].astype(str)
+        if "fecha" in df.columns:
+            df["fecha"] = df["fecha"].astype(str)
+
+        row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
+        if not row.empty:
+            r = row.iloc[0].to_dict()
+            return {
+                "ip_usuario": ip,
+                "fecha": fecha,
+                "codsalon": r.get("codsalon"),
+                "modo": r.get("modo"),
+                "indice_empleado": int(r.get("indice_empleado", 0)),
+                "ultima_interaccion": r.get("ultima_interaccion"),
+                "codempleado": r.get("codempleado"),
+                "nsemana": r.get("nsemana"),
+                "mes": r.get("mes"),
+                "kpi": r.get("kpi"),
+                "fecha_anterior": r.get("fecha_anterior")
+            }
+    except Exception as e:
+        print(f"Error al cargar sesión: {e}")
+    # Si no existe, devolver contexto vacío
+    return {"ip_usuario": ip, "fecha": fecha, "indice_empleado": 0}
+
+
+def guardar_sesion(sesion: dict):
+    try:
+        print("📌 Iniciando guardado de sesión.")
+        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
+        print("📥 Hoja cargada correctamente.")
+
+        # Normalizar nombres de columnas sin usar .str para evitar errores de tipo
+        df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
+        print("📋 Columnas normalizadas:", df.columns.tolist())
+
+        # Evitar errores al castear
+        if "ip_usuario" in df.columns:
+            df["ip_usuario"] = df["ip_usuario"].astype(str)
+        if "fecha" in df.columns:
+            df["fecha"] = df["fecha"].astype(str)
+
+        ip = str(sesion.get("ip_usuario", ""))
+        fecha = str(sesion.get("fecha", ""))
+        indice = sesion.get("indice_empleado", 0)
+        modo = sesion.get("modo", "")
+        codsalon = sesion.get("codsalon", "")
+        codempleado = sesion.get("codempleado", "")
+        nsemana = sesion.get("nsemana", "")
+        mes = sesion.get("mes", "")
+        kpi = sesion.get("kpi", "")
+        fecha_anterior = sesion.get("fecha_anterior", "")
+        ahora = datetime.now().strftime("%H:%M")
+
+        print(f"📄 Datos sesión: ip={ip}, fecha={fecha}, indice={indice}")
+
+        mask = (df["ip_usuario"] == ip) & (df["fecha"] == fecha)
+        if mask.any():
+            print("✏️ Actualizando fila existente.")
+            df.loc[mask, [
+                "indice_empleado", "modo", "codsalon", "ultima_interaccion",
+                "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
+            ]] = [
+                indice, modo, codsalon, ahora,
+                codempleado, nsemana, mes, kpi, fecha_anterior
+            ]
+        else:
+            print("➕ Agregando nueva fila.")
+            nueva_fila = pd.DataFrame([{  # Construir nueva fila
+                "ip_usuario": ip,
+                "fecha": fecha,
+                "indice_empleado": indice,
+                "modo": modo,
+                "codsalon": codsalon,
+                "ultima_interaccion": ahora,
+                "codempleado": codempleado,
+                "nsemana": nsemana,
+                "mes": mes,
+                "kpi": kpi,
+                "fecha_anterior": fecha_anterior
+            }])
+            print("🔄 Nueva fila generada:", nueva_fila.to_dict(orient="records"))
+            df = pd.concat([df, nueva_fila], ignore_index=True)
+
+        print("💾 Guardando hoja final con shape:", df.shape)
+        guardar_hoja(SHEET_ID, TABLA_SESIONES, df)
+        print("✅ Sesión guardada correctamente.")
+    except Exception as e:
+        print(f"❌ Error al guardar sesión: {e}")
