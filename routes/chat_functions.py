@@ -1,11 +1,11 @@
 # handlers/chat_functions.py
 import json
-from fastapi import HTTPException
 from funciones.explicar_ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
 from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado_individual
+
 
 def get_definiciones_funciones():
     return [
@@ -73,7 +73,8 @@ def get_definiciones_funciones():
         }
     ]
 
-def resolver(function_call, sesion):
+
+def resolver(function_call, sesion: dict) -> str:
     nombre_funcion = function_call.name
     argumentos = json.loads(function_call.arguments)
 
@@ -95,5 +96,5 @@ def resolver(function_call, sesion):
         sesion["indice_empleado"] = indice + 1
         sesion["modo"] = "empleados"
         return resultado
-
-    raise HTTPException(status_code=400, detail="Función no reconocida")
+    else:
+        raise ValueError("Función no reconocida")
