@@ -1,11 +1,10 @@
 # chat_router.py
 from fastapi import APIRouter, Request, HTTPException
 from config import openai_client
-from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado
+from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
 from funciones.explicar_ratio import explicar_ratio
-from handlers.chat_flujo_empleados import manejar_flujo_empleados
-from handlers.chat_functions import ejecutar_funcion_llamada
-from utils import extraer_codsalon
+from routes.chat_flujo_empleados import manejar_flujo_empleados
+from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 import json
 
@@ -71,12 +70,12 @@ async def chat_handler(request: Request):
                 {"role": "user", "content": mensaje}
             ],
             function_call="auto",
-            functions=ejecutar_funcion_llamada.get_definiciones_funciones()
+            functions=chat_functions.get_definiciones_funciones()
         )
 
         msg = response.choices[0].message
         if msg.function_call:
-            resultado = ejecutar_funcion_llamada.resolver(msg.function_call, sesion)
+            resultado = chat_functions.resolver(msg.function_call, sesion)
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
@@ -84,4 +83,3 @@ async def chat_handler(request: Request):
 
     except Exception as e:
         return {"error": str(e)}
-
