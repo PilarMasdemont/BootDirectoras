@@ -20,9 +20,9 @@ async def chat_handler(request: Request):
     # Cargar sesión persistente
     fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
     sesion = cargar_sesion(client_ip, fecha or "")
-    sesion["ip_usuario"] = client_ip
+    sesion["ip_usuario"] = str(client_ip)
     if fecha:
-        sesion["fecha"] = fecha
+        sesion["fecha"] = str(fecha)
 
     # Paso 1: flujo de empleados
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
@@ -33,7 +33,7 @@ async def chat_handler(request: Request):
     # Paso 2: extraer parámetros
     kpi_detectado = detectar_kpi(mensaje)
     codsalon = body.get("codsalon") or extraer_codsalon(mensaje) or sesion.get("codsalon")
-    fecha = fecha or sesion.get("fecha")
+    fecha = str(fecha or sesion.get("fecha"))
     nsemana = body.get("nsemana") or sesion.get("nsemana")
     mes = body.get("mes") or sesion.get("mes")
     codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
@@ -84,4 +84,3 @@ async def chat_handler(request: Request):
     except Exception as e:
         print(f"❌ Error en llamada OpenAI: {e}")
         return {"error": str(e)}
-
