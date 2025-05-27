@@ -91,3 +91,4 @@ def guardar_sesion(sesion: dict):
     except Exception as e:
         print(f"Error al guardar sesión: {e}")
 
+
