@@ -10,8 +10,8 @@ import json
 
 router = APIRouter()
 
-@router.post("")  # Endpoint raíz para POST /chat  # Endpoint raíz para POST /chat
-async def chat_handler(request: Request):
+@router.post("")  # Endpoint raíz para POST /chat
+def chat_handler(request: Request):
     client_ip = request.client.host
     body = await request.json()
     mensaje = body.get("mensaje", "").strip()
