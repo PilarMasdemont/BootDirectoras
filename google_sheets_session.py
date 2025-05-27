@@ -72,7 +72,8 @@ def guardar_sesion(sesion: dict):
         df["fecha"] = df["fecha"].astype(str)
 
         ip = str(sesion.get("ip_usuario", ""))
-        fecha = str(sesion.get("fecha")) or date.today().isoformat()
+        fecha = sesion.get("fecha") or date.today().isoformat()
+
         datos = {
             "ip_usuario": ip,
             "fecha": fecha,
@@ -86,18 +87,26 @@ def guardar_sesion(sesion: dict):
             "kpi": sesion.get("kpi", ""),
             "fecha_anterior": sesion.get("fecha_anterior", "")
         }
+
         print(f"📄 Datos de sesión a guardar: {datos}")
         mask = (df["ip_usuario"] == ip) & (df["fecha"] == fecha)
 
         if mask.any():
             print("✏️ Actualizando fila existente.")
             for key, val in datos.items():
-                df.loc[mask, key] = val
+                if key in df.columns:
+                    try:
+                        if pd.api.types.is_integer_dtype(df[key]):
+                            df.loc[mask, key] = int(val)
+                        else:
+                            df.loc[mask, key] = val
+                    except Exception as warn:
+                        print(f"⚠️ Problema al asignar {key}: {warn}")
         else:
             print("➕ Agregando nueva fila.")
             df = pd.concat([df, pd.DataFrame([datos])], ignore_index=True)
 
-        print(f"💾 Guardando hoja con {len(df)} filas.")
+        print(f"📂 Guardando hoja con {len(df)} filas.")
         guardar_hoja(SHEET_ID, TABLA_SESIONES, df)
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
