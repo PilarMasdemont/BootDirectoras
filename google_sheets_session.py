@@ -75,6 +75,11 @@ def guardar_sesion(sesion: dict):
                 "kpi": kpi,
                 "fecha_anterior": fecha_anterior
             }])
+
+            print("🔄 Nueva fila generada:", nueva_fila.to_dict(orient="records"))
+
+            df = pd.concat([df, nueva_fila], ignore_index=True)
+
             df = pd.concat([df, nueva_fila], ignore_index=True)
 
         guardar_hoja(SHEET_ID, TABLA_SESIONES, df)
