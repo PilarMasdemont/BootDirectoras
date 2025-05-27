@@ -13,15 +13,21 @@ credentials = Credentials.from_service_account_info(credentials_info, scopes=SCO
 client = gspread.authorize(credentials)
 
 def cargar_hoja_por_nombre(sheet_id: str, pestaña: str) -> pd.DataFrame:
-    """Carga una hoja específica por nombre de pestaña y devuelve un DataFrame"""
+    """
+    Carga una hoja específica por nombre de pestaña y devuelve un DataFrame.
+    Normaliza los nombres de columna sin usar accesores .str para evitar errores de tipo.
+    """
     sheet = client.open_by_key(sheet_id).worksheet(pestaña)
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    df.columns = df.columns.str.lower().str.replace(" ", "_")
+    # Normalizar nombres de columna de forma segura
+    df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
     return df
 
 def guardar_hoja(sheet_id: str, pestaña: str, df: pd.DataFrame):
-    """Sobrescribe toda la pestaña con el contenido del DataFrame"""
+    """
+    Sobrescribe toda la pestaña con el contenido del DataFrame.
+    """
     try:
         sheet = client.open_by_key(sheet_id).worksheet(pestaña)
         sheet.clear()
