@@ -3,8 +3,8 @@ from fastapi import APIRouter, Request, HTTPException
 from config import openai_client
 from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado
 from funciones.explicar_ratio import explicar_ratio
-from handlers.chat_flujo_empleados import manejar_flujo_empleados
-from handlers.chat_functions import ejecutar_funcion_llamada
+from routes.chat_flujo_empleados import manejar_flujo_empleados
+from routes.chat_functions import ejecutar_funcion_llamada
 from utils import extraer_codsalon
 from google_sheets_session import cargar_sesion, guardar_sesion
 import json
@@ -84,4 +84,5 @@ async def chat_handler(request: Request):
 
     except Exception as e:
         return {"error": str(e)}
+
 
