@@ -10,24 +10,30 @@ import json
 
 router = APIRouter()
 
-@router.post("")
+@router.post("")  # Endpoint raíz para POST /chat  # Endpoint raíz para POST /chat
 async def chat_handler(request: Request):
     client_ip = request.client.host
     body = await request.json()
     mensaje = body.get("mensaje", "").strip()
     mensaje_limpio = mensaje.lower()
 
-    # Cargar sesión persistente
+    # Seguimiento de la petición
+    print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
+
+    # Paso 0: cargar o inicializar sesión
     fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
     sesion = cargar_sesion(client_ip, fecha or "")
+    print(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
     if fecha:
         sesion["fecha"] = fecha
 
-    # Paso 1: flujo de empleados
+    # Paso 1: flujo de empleados continuado
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
         respuesta = manejar_flujo_empleados(sesion)
+        print(f"🛠️ Manejando flujo de empleados, respuesta: {respuesta}")
         guardar_sesion(sesion)
+        print(f"✅ Sesión guardada tras flujo empleados: {sesion}")
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
     # Paso 2: extraer parámetros
@@ -39,25 +45,25 @@ async def chat_handler(request: Request):
     codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
 
     # Actualizar sesión
-    if codsalon: sesion["codsalon"] = codsalon
+    for key, val in zip(["codsalon", "nsemana", "mes", "codempleado", "kpi"],
+                        [codsalon, nsemana, mes, codempleado, kpi_detectado]):
+        if val is not None:
+            sesion[key] = val
     if fecha:
         if fecha != sesion.get("fecha_anterior"):
             sesion["indice_empleado"] = 0
             sesion["fecha_anterior"] = fecha
         sesion["fecha"] = fecha
-    if nsemana: sesion["nsemana"] = nsemana
-    if mes: sesion["mes"] = mes
-    if codempleado: sesion["codempleado"] = codempleado
-    if kpi_detectado: sesion["kpi"] = kpi_detectado
 
-    # Paso 3: intentar respuesta directa
+    # Paso 3: intento de respuesta directa
     if codsalon and fecha:
         try:
             respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
             guardar_sesion(sesion)
+            print(f"✅ Sesión guardada tras respuesta directa: {sesion}")
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"⚠️ Error en respuesta directa: {e}")
 
     # Paso 4: invocar modelo OpenAI
     system_prompt = """... (tu prompt personalizado, sin cambios) ..."""
@@ -77,9 +83,13 @@ async def chat_handler(request: Request):
         if msg.function_call:
             resultado = chat_functions.resolver(msg.function_call, sesion)
             guardar_sesion(sesion)
+            print(f"✅ Sesión guardada tras función OpenAI: {sesion}")
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
+        print(f"💬 Respuesta libre del asistente: {msg.content}")
+        guardar_sesion(sesion)
         return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
     except Exception as e:
-        return {"error": str(e)}
+        print(f"❌ Error en chat_handler: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
