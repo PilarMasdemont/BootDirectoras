@@ -56,8 +56,8 @@ async def chat_handler(request: Request):
             respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"❌ Error en explicar_ratio: {e}")
 
     # Paso 4: invocar modelo OpenAI
     system_prompt = """... (tu prompt personalizado, sin cambios) ..."""
@@ -82,4 +82,6 @@ async def chat_handler(request: Request):
         return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
     except Exception as e:
+        print(f"❌ Error en llamada OpenAI: {e}")
         return {"error": str(e)}
+
