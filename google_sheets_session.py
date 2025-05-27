@@ -1,105 +1,104 @@
-# google_sheets_session.py
+from funciones import (
+    explicar_ratio, explicar_ratio_mensual, explicar_ratio_semanal,
+    explicar_ratio_diario, explicar_ratio_empleados,
+    explicar_ratio_empleado_individual
+)
 
-import pandas as pd
-from sheets_io import cargar_hoja_por_nombre, guardar_hoja
-from datetime import datetime, date
-
-SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
-TABLA_SESIONES = "session_state"
-
-# Columnas esperadas para session_state
-NAMESPACE = [
-    "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
-    "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
-]
-
-def cargar_sesion(ip: str, fecha: str) -> dict:
-    """
-    Carga la sesión de un usuario para una fecha dada.
-    Devuelve un diccionario con el estado de la sesión o uno nuevo si no existe.
-    """
-    try:
-        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
-        print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
-
-        if "ip_usuario" not in df.columns or "fecha" not in df.columns:
-            raise KeyError("Columnas de sesión no presentes en la hoja.")
-
-        df["ip_usuario"] = df["ip_usuario"].astype(str)
-        df["fecha"] = df["fecha"].astype(str)
-
-        row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
-        if not row.empty:
-            r = row.iloc[0].to_dict()
-            print(f"📂 Sesión encontrada: {r}")
-            return {
-                "ip_usuario": ip,
-                "fecha": fecha,
-                "codsalon": r.get("codsalon"),
-                "modo": r.get("modo"),
-                "indice_empleado": int(r.get("indice_empleado", 0)),
-                "ultima_interaccion": r.get("ultima_interaccion"),
-                "codempleado": r.get("codempleado"),
-                "nsemana": r.get("nsemana"),
-                "mes": r.get("mes"),
-                "kpi": r.get("kpi"),
-                "fecha_anterior": r.get("fecha_anterior")
+def get_definiciones_funciones():
+    return [
+        {
+            "name": "explicar_ratio_general",
+            "description": "Explica el ratio general de un salón en una fecha dada.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "fecha": {"type": "string", "format": "date"}
+                },
+                "required": ["codsalon", "fecha"]
             }
-    except Exception as e:
-        print(f"❌ Error al cargar sesión: {e}")
-
-    # Usar fecha actual si no se proporciona
-    fecha_hoy = fecha if fecha else date.today().isoformat()
-    print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha_hoy}")
-    return {"ip_usuario": ip, "fecha": fecha_hoy, "indice_empleado": 0}
-
-
-def guardar_sesion(sesion: dict):
-    """
-    Guarda/actualiza la sesión del usuario en la hoja de Google Sheets.
-    """
-    try:
-        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
-        print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
-
-        if not df.columns.tolist():
-            df = pd.DataFrame(columns=NAMESPACE)
-            print(f"🆕 Creando nueva estructura de sesión con columnas: {NAMESPACE}")
-
-        df["ip_usuario"] = df["ip_usuario"].astype(str)
-        df["fecha"] = df["fecha"].astype(str)
-
-        ip = str(sesion.get("ip_usuario", ""))
-        fecha = str(sesion.get("fecha")) or date.today().isoformat()
-        datos = {
-            "ip_usuario": ip,
-            "fecha": fecha,
-            "indice_empleado": sesion.get("indice_empleado", 0),
-            "modo": sesion.get("modo", ""),
-            "codsalon": sesion.get("codsalon", ""),
-            "ultima_interaccion": datetime.now().strftime("%H:%M"),
-            "codempleado": sesion.get("codempleado", ""),
-            "nsemana": sesion.get("nsemana", ""),
-            "mes": sesion.get("mes", ""),
-            "kpi": sesion.get("kpi", ""),
-            "fecha_anterior": sesion.get("fecha_anterior", "")
+        },
+        {
+            "name": "explicar_ratio_mensual",
+            "description": "Explica el ratio de un salón durante un mes específico.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "mes": {"type": "string"}
+                },
+                "required": ["codsalon", "mes"]
+            }
+        },
+        {
+            "name": "explicar_ratio_semanal",
+            "description": "Explica el ratio de un salón durante una semana específica.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "nsemana": {"type": "string"}
+                },
+                "required": ["codsalon", "nsemana"]
+            }
+        },
+        {
+            "name": "explicar_ratio_diario",
+            "description": "Explica el ratio de un salón en un día específico.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "fecha": {"type": "string", "format": "date"}
+                },
+                "required": ["codsalon", "fecha"]
+            }
+        },
+        {
+            "name": "explicar_ratio_empleados",
+            "description": "Explica el ratio de todos los empleados de un salón en una fecha específica.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "fecha": {"type": "string"}
+                },
+                "required": ["codsalon", "fecha"]
+            }
+        },
+        {
+            "name": "explicar_ratio_empleado_individual",
+            "description": "Explica el ratio de un empleado individual de un salón en una fecha específica.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "fecha": {"type": "string"},
+                    "codempleado": {"type": "string"}
+                },
+                "required": ["codsalon", "fecha", "codempleado"]
+            }
         }
-        print(f"📄 Datos de sesión a guardar: {datos}")
-        mask = (df["ip_usuario"] == ip) & (df["fecha"] == fecha)
+    ]
 
-        if mask.any():
-            print("✏️ Actualizando fila existente.")
-            for key, val in datos.items():
-                df.loc[mask, key] = val
-        else:
-            print("➕ Agregando nueva fila.")
-            df = pd.concat([df, pd.DataFrame([datos])], ignore_index=True)
+def resolver(function_call, sesion):
+    nombre_funcion = function_call.name
+    argumentos = function_call.arguments.dict() if hasattr(function_call.arguments, 'dict') else {}
 
-        print(f"💾 Guardando hoja con {len(df)} filas.")
-        guardar_hoja(SHEET_ID, TABLA_SESIONES, df)
-        print("✅ Sesión guardada correctamente.")
-    except Exception as e:
-        print(f"❌ Error al guardar sesión: {e}")
+    print("🧠 Nombre de función a resolver:", nombre_funcion)
+    print("📦 Argumentos recibidos:", argumentos)
 
+    if nombre_funcion == "explicar_ratio_general":
+        return explicar_ratio(**argumentos)
+    elif nombre_funcion == "explicar_ratio_mensual":
+        return explicar_ratio_mensual(**argumentos)
+    elif nombre_funcion == "explicar_ratio_semanal":
+        return explicar_ratio_semanal(**argumentos)
+    elif nombre_funcion == "explicar_ratio_diario":
+        return explicar_ratio_diario(**argumentos)
+    elif nombre_funcion == "explicar_ratio_empleados":
+        return explicar_ratio_empleados(**argumentos, sesion=sesion)
+    elif nombre_funcion == "explicar_ratio_empleado_individual":
+        return explicar_ratio_empleado_individual(**argumentos, sesion=sesion)
+    else:
+        return f"No se reconoce la función: {nombre_funcion}"
