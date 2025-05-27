@@ -4,6 +4,7 @@ import pandas as pd
 from sheets_io import cargar_hoja_por_nombre, guardar_hoja
 from datetime import datetime, date
 import json
+from extractores import extraer_fecha_desde_texto, extraer_codsalon
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
@@ -28,11 +29,22 @@ def log_debug(etapa: str, datos: dict):
     except Exception as e:
         print(f"❌ Error al escribir log de depuración: {e}")
 
+def procesar_peticion(ip: str, mensaje: str):
+    fecha = extraer_fecha_desde_texto(mensaje)
+    codsalon = extraer_codsalon(mensaje)
+
+    if not fecha:
+        print("⚠️ No se pudo extraer una fecha válida del mensaje.")
+        fecha = ""
+
+    sesion = cargar_sesion(ip, fecha)
+    sesion["fecha"] = fecha
+    if codsalon:
+        sesion["codsalon"] = codsalon
+
+    guardar_sesion(sesion)
+
 def cargar_sesion(ip: str, fecha: str) -> dict:
-    """
-    Carga la sesión de un usuario para una fecha dada.
-    Devuelve un diccionario con el estado de la sesión o uno nuevo si no existe.
-    """
     log_debug("cargar_sesion_inicial", {"ip": ip, "fecha": fecha})
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
@@ -66,16 +78,12 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
     except Exception as e:
         print(f"❌ Error al cargar sesión: {e}")
 
-    # Usar fecha actual si no se proporciona
     fecha_hoy = fecha if fecha else date.today().isoformat()
     print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha_hoy}")
     log_debug("cargar_sesion_nueva", {"ip": ip, "fecha": fecha_hoy})
     return {"ip_usuario": ip, "fecha": fecha_hoy, "indice_empleado": 0}
 
 def guardar_sesion(sesion: dict):
-    """
-    Guarda/actualiza la sesión del usuario en la hoja de Google Sheets.
-    """
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
@@ -134,3 +142,4 @@ def guardar_sesion(sesion: dict):
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
+        
