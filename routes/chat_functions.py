@@ -10,45 +10,56 @@ from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado
 def get_definiciones_funciones():
     return [
         {
-            "name": "explicar_ratio_diario",
-            "description": "Explica ratios diarios.",
+            "name": "explicar_ratio_general",
+            "description": "Explica el ratio general de un salón en una fecha dada.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"}
+                    "fecha": {"type": "string", "format": "date"}
                 },
                 "required": ["codsalon", "fecha"]
             }
         },
         {
-            "name": "explicar_ratio_semanal",
-            "description": "Explica ratios semanales.",
+            "name": "explicar_ratio_mensual",
+            "description": "Explica el ratio de un salón durante un mes específico.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "codsalon": {"type": "string"},
-                    "nsemana": {"type": "integer"}
+                    "mes": {"type": "string"}
+                },
+                "required": ["codsalon", "mes"]
+            }
+        },
+        {
+            "name": "explicar_ratio_semanal",
+            "description": "Explica el ratio de un salón durante una semana específica.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codsalon": {"type": "string"},
+                    "nsemana": {"type": "string"}
                 },
                 "required": ["codsalon", "nsemana"]
             }
         },
         {
-            "name": "explicar_ratio_mensual",
-            "description": "Explica ratios mensuales.",
+            "name": "explicar_ratio_diario",
+            "description": "Explica el ratio de un salón en un día específico.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "codsalon": {"type": "string"},
-                    "mes": {"type": "string"},
-                    "codempleado": {"type": "string"}
+                    "fecha": {"type": "string", "format": "date"}
                 },
-                "required": ["codsalon", "mes", "codempleado"]
+                "required": ["codsalon", "fecha"]
             }
         },
         {
             "name": "explicar_ratio_empleados",
-            "description": "Explica ratios de cada trabajador de forma progresiva.",
+            "description": "Explica el ratio de todos los empleados de un salón en una fecha específica.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -60,7 +71,7 @@ def get_definiciones_funciones():
         },
         {
             "name": "explicar_ratio_empleado_individual",
-            "description": "Explica ratio de un empleado individual.",
+            "description": "Explica el ratio de un empleado individual de un salón en una fecha específica.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -73,28 +84,22 @@ def get_definiciones_funciones():
         }
     ]
 
-
-def resolver(function_call, sesion: dict) -> str:
+def resolver(function_call, sesion):
     nombre_funcion = function_call.name
-    argumentos = json.loads(function_call.arguments)
+    argumentos = function_call.arguments.dict() if hasattr(function_call.arguments, 'dict') else {}
 
-    if nombre_funcion == "explicar_ratio_diario":
-        return explicar_ratio_diario(**argumentos)
-    elif nombre_funcion == "explicar_ratio_semanal":
-        return explicar_ratio_semanal(**argumentos)
+    if nombre_funcion == "explicar_ratio_general":
+        return explicar_ratio(**argumentos)
     elif nombre_funcion == "explicar_ratio_mensual":
         return explicar_ratio_mensual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleado_individual":
-        return explicar_ratio_empleado_individual(**argumentos)
+    elif nombre_funcion == "explicar_ratio_semanal":
+        return explicar_ratio_semanal(**argumentos)
+    elif nombre_funcion == "explicar_ratio_diario":
+        return explicar_ratio_diario(**argumentos)
     elif nombre_funcion == "explicar_ratio_empleados":
-        indice = sesion.get("indice_empleado", 0)
-        resultado = explicar_ratio_empleados(
-            codsalon=argumentos["codsalon"],
-            fecha=argumentos["fecha"],
-            indice=indice
-        )
-        sesion["indice_empleado"] = indice + 1
-        sesion["modo"] = "empleados"
-        return resultado
+        return explicar_ratio_empleados(**argumentos, sesion=sesion)
+    elif nombre_funcion == "explicar_ratio_empleado_individual":
+        return explicar_ratio_empleado_individual(**argumentos, sesion=sesion)
     else:
-        raise ValueError("Función no reconocida")
+        return f"No se reconoce la función: {nombre_funcion}"
+
