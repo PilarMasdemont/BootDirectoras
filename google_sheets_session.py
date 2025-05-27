@@ -2,7 +2,7 @@
 
 import pandas as pd
 from sheets_io import cargar_hoja_por_nombre, guardar_hoja
-from datetime import datetime
+from datetime import datetime, date
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
@@ -20,19 +20,15 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
     """
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        # Normalizar nombres de columnas sin usar .str
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
         print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
 
-        # Si no contiene las columnas clave, retornar contexto vacío
         if "ip_usuario" not in df.columns or "fecha" not in df.columns:
             raise KeyError("Columnas de sesión no presentes en la hoja.")
 
-        # Asegurar string
         df["ip_usuario"] = df["ip_usuario"].astype(str)
         df["fecha"] = df["fecha"].astype(str)
 
-        # Filtrar sesión existente
         row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
         if not row.empty:
             r = row.iloc[0].to_dict()
@@ -53,9 +49,10 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
     except Exception as e:
         print(f"❌ Error al cargar sesión: {e}")
 
-    # Contexto vacío si no existe o error
-    print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha}")
-    return {"ip_usuario": ip, "fecha": fecha, "indice_empleado": 0}
+    # Usar fecha actual si no se proporciona
+    fecha_hoy = fecha if fecha else date.today().isoformat()
+    print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha_hoy}")
+    return {"ip_usuario": ip, "fecha": fecha_hoy, "indice_empleado": 0}
 
 
 def guardar_sesion(sesion: dict):
@@ -64,22 +61,18 @@ def guardar_sesion(sesion: dict):
     """
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        # Normalizar
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
         print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
 
-        # Si no hay columnas, crear DataFrame vacío con encabezados
         if not df.columns.tolist():
             df = pd.DataFrame(columns=NAMESPACE)
             print(f"🆕 Creando nueva estructura de sesión con columnas: {NAMESPACE}")
 
-        # Asegurar string
         df["ip_usuario"] = df["ip_usuario"].astype(str)
         df["fecha"] = df["fecha"].astype(str)
 
-        # Preparar datos de sesión
         ip = str(sesion.get("ip_usuario", ""))
-        fecha = str(sesion.get("fecha", ""))
+        fecha = str(sesion.get("fecha")) or date.today().isoformat()
         datos = {
             "ip_usuario": ip,
             "fecha": fecha,
