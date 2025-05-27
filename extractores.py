@@ -1,42 +1,40 @@
+# extractores.py
 import re
+from datetime import datetime
+from dateutil import parser
 
-KPI_LIST = [
-    "ratiogeneral",
-    "facturacionsiva",
-    "ratiodesviaciontiempoteorico",
-    "ratioticketsinferior20",
-    "ratiotiempoindirecto",
-    "ticketsivamedio",
-    "horasfichadas"
-]
-
-def detectar_kpi(texto):
+def detectar_kpi(texto: str):
     texto = texto.lower()
-    for kpi in KPI_LIST:
-        if kpi in texto:
-            return kpi
-    return None
-
-def extraer_fecha_desde_texto(texto):
-    meses = {
-        "enero": "01", "febrero": "02", "marzo": "03", "abril": "04", "mayo": "05",
-        "junio": "06", "julio": "07", "agosto": "08", "septiembre": "09",
-        "octubre": "10", "noviembre": "11", "diciembre": "12"
-    }
-
-    texto = texto.lower()
-    match = re.search(r"(\d{1,2})\s+de\s+([a-zñ]+)(?:\s+de\s+(\d{4}))?", texto)
-    if match:
-        dia = match.group(1).zfill(2)
-        mes = meses.get(match.group(2))
-        anio = match.group(3) or "2025"
-        if mes:
-            return f"{anio}-{mes}-{dia}"
+    if "productividad" in texto:
+        return "productividad"
+    elif "clientes nuevos" in texto or "nuevos clientes" in texto:
+        return "clientes_nuevos"
+    elif "servicio" in texto:
+        return "servicios"
     return None
 
 def extraer_codempleado(texto: str):
     texto = texto.lower()
-    match = re.search(r"empleado\s*(\d+)", texto)
+    match = re.search(r"emplead[oa]\s*(\d+)", texto)
+    if match:
+        return match.group(1)
+    return None
+
+def extraer_fecha_desde_texto(texto):
+    texto = texto.lower()
+    if "hoy" in texto:
+        return datetime.today().strftime("%Y-%m-%d")
+    if "ayer" in texto:
+        return (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+    try:
+        fecha = parser.parse(texto, fuzzy=True)
+        return fecha.strftime("%Y-%m-%d")
+    except Exception:
+        return None
+
+def extraer_codsalon(texto: str):
+    texto = texto.lower()
+    match = re.search(r"sal[oó]n\s*(\d+)", texto)
     if match:
         return match.group(1)
     return None
