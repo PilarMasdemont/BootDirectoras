@@ -1,7 +1,7 @@
 # google_sheets_session.py
 
 import pandas as pd
-from sheets import cargar_hoja, guardar_hoja  # Asumimos que ya tienes estas funciones
+from sheets_io import cargar_hoja_por_nombre, guardar_hoja  # ← actualizado
 from datetime import datetime
 
 SHEET_ID = "tu_id_de_sheets"
@@ -10,7 +10,7 @@ TABLA_SESIONES = "session_state"  # Nombre de la pestaña de sesiones
 
 def cargar_sesion(ip: str, fecha: str) -> dict:
     try:
-        df = cargar_hoja(SHEET_ID, TABLA_SESIONES)
+        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
         df.columns = df.columns.str.lower().str.replace(" ", "_")
 
         row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
@@ -33,7 +33,7 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
 
 def guardar_sesion(sesion: dict):
     try:
-        df = cargar_hoja(SHEET_ID, TABLA_SESIONES)
+        df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
         df.columns = df.columns.str.lower().str.replace(" ", "_")
 
         ip = sesion["ip_usuario"]
@@ -64,3 +64,4 @@ def guardar_sesion(sesion: dict):
 
     except Exception as e:
         print(f"Error al guardar sesión: {e}")
+
