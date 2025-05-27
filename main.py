@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import setup_environment, openai_client
-from routes import chat, kpis
+from routes.chat_router import router as chat_router
+from routes.kpis import router as kpis_router
 
 app = FastAPI()
 
@@ -17,5 +18,5 @@ app.add_middleware(
 setup_environment()
 
 # Registrar rutas
-app.include_router(chat.router)
-app.include_router(kpis.router)
+app.include_router(chat_router, prefix="/chat")
+app.include_router(kpis_router, prefix="/kpis")
