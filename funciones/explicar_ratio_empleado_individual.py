@@ -1,7 +1,7 @@
 import pandas as pd
 from sheets import cargar_hoja
 
-def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: str) -> str:
+def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: str, sesion: dict = None) -> str:
     try:
         df = cargar_hoja("526988839")
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
@@ -11,11 +11,15 @@ def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: s
             (df["codempleado"] == int(codempleado))
         ]
         df["fecha"] = pd.to_datetime(df["fecha"]).dt.date
-        fecha = pd.to_datetime(fecha).date()
-        df = df[df["fecha"] == fecha]
+        fecha_dt = pd.to_datetime(fecha).date()
+        df = df[df["fecha"] == fecha_dt]
+
+        # Actualizar sesión si se proporciona
+        if sesion is not None:
+            sesion["fecha"] = str(fecha_dt)
 
         if df.empty:
-            return f"No se encontraron datos para el empleado {codempleado} en el salón {codsalon} en la fecha {fecha}."
+            return f"No se encontraron datos para el empleado {codempleado} en el salón {codsalon} en la fecha {fecha_dt}."
 
         fila = df.iloc[0]
         nombre = fila["nombre_empleado"]
