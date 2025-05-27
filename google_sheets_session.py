@@ -8,6 +8,10 @@ SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
 
 # Columnas esperadas para session_state
+NAMESPACE = [
+    "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
+    "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
+]
 definition\NAMESPACE = [
     "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
     "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
@@ -109,5 +113,3 @@ def guardar_sesion(sesion: dict):
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
-
-
