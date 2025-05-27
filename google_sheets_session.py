@@ -10,7 +10,7 @@ TABLA_SESIONES = "session_state"
 def cargar_sesion(ip: str, fecha: str) -> dict:
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = df.columns.str.lower().str.replace(" ", "_")
+        df.columns = df.columns.astype(str).str.lower().str.replace(" ", "_")
 
         row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
 
@@ -37,7 +37,7 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
 def guardar_sesion(sesion: dict):
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = df.columns.str.lower().str.replace(" ", "_")
+        df.columns = df.columns.astype(str).str.lower().str.replace(" ", "_")
 
         ip = sesion["ip_usuario"]
         fecha = sesion["fecha"]
@@ -81,4 +81,3 @@ def guardar_sesion(sesion: dict):
 
     except Exception as e:
         print(f"Error al guardar sesión: {e}")
-
