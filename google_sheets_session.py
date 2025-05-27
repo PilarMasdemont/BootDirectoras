@@ -10,13 +10,7 @@ TABLA_SESIONES = "session_state"
 def cargar_sesion(ip: str, fecha: str) -> dict:
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = df.columns.astype(str)
-        df.columns = df.columns.str.lower().str.replace(" ", "_")
-
-        if "ip_usuario" in df.columns:
-            df["ip_usuario"] = df["ip_usuario"].astype(str)
-        if "fecha" in df.columns:
-            df["fecha"] = df["fecha"].astype(str)
+        df.columns = df.columns.astype(str).str.lower().str.replace(" ", "_")
 
         row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
 
@@ -43,13 +37,7 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
 def guardar_sesion(sesion: dict):
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        df.columns = df.columns.astype(str)
-        df.columns = df.columns.str.lower().str.replace(" ", "_")
-
-        if "ip_usuario" in df.columns:
-            df["ip_usuario"] = df["ip_usuario"].astype(str)
-        if "fecha" in df.columns:
-            df["fecha"] = df["fecha"].astype(str)
+        df.columns = df.columns.astype(str).str.lower().str.replace(" ", "_")
 
         ip = sesion["ip_usuario"]
         fecha = sesion["fecha"]
@@ -89,6 +77,8 @@ def guardar_sesion(sesion: dict):
             }])
 
             print("🔄 Nueva fila generada:", nueva_fila.to_dict(orient="records"))
+
+            df = pd.concat([df, nueva_fila], ignore_index=True)
 
             df = pd.concat([df, nueva_fila], ignore_index=True)
 
