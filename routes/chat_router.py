@@ -5,7 +5,6 @@ from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempl
 from funciones.explicar_ratio import explicar_ratio
 from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
-from funciones.utils import extraer_codsalon
 from google_sheets_session import cargar_sesion, guardar_sesion
 import json
 
