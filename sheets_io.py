@@ -1,15 +1,15 @@
 # sheets_io.py
 import pandas as pd
 import gspread
+import os
+import json
 from google.oauth2.service_account import Credentials
 
-# Ámbitos requeridos por Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-# Cargar credenciales desde el entorno
-CREDENTIALS_PATH = "credentials.json"  # asegúrate de subir este archivo a Render y usar una variable de entorno si prefieres
-
-credentials = Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=SCOPES)
+# Cargar credenciales desde variable de entorno segura
+credentials_info = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+credentials = Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
 client = gspread.authorize(credentials)
 
 def cargar_hoja_por_nombre(sheet_id: str, pestaña: str) -> pd.DataFrame:
