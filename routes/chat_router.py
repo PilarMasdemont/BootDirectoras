@@ -1,7 +1,7 @@
 # chat_router.py
 from fastapi import APIRouter, Request, HTTPException
 from config import openai_client
-from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado
+from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
 from funciones.explicar_ratio import explicar_ratio
 from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
