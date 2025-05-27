@@ -21,8 +21,10 @@ def log_debug(etapa: str, datos: dict):
             "etapa": etapa,
             "datos": datos
         }
+        log_text = json.dumps(linea, ensure_ascii=False)
+        print(f"🛠️ DEBUG: {log_text}")
         with open("/tmp/log_debug_sesion.txt", "a", encoding="utf-8") as f:
-            f.write(json.dumps(linea, ensure_ascii=False) + "\n")
+            f.write(log_text + "\n")
     except Exception as e:
         print(f"❌ Error al escribir log de depuración: {e}")
 
