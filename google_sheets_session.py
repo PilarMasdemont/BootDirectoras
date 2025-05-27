@@ -12,10 +12,6 @@ NAMESPACE = [
     "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
     "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
 ]
-definition\NAMESPACE = [
-    "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
-    "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
-]
 
 def cargar_sesion(ip: str, fecha: str) -> dict:
     """
@@ -113,3 +109,4 @@ def guardar_sesion(sesion: dict):
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
+
