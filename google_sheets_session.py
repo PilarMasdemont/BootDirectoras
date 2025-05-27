@@ -2,26 +2,37 @@
 
 import pandas as pd
 from sheets_io import cargar_hoja_por_nombre, guardar_hoja
-from datetime import datetime
+from datetime import datetime, date
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
 
+# Columnas esperadas para session_state
+NAMESPACE = [
+    "ip_usuario", "fecha", "indice_empleado", "modo", "codsalon",
+    "ultima_interaccion", "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
+]
+
 def cargar_sesion(ip: str, fecha: str) -> dict:
+    """
+    Carga la sesión de un usuario para una fecha dada.
+    Devuelve un diccionario con el estado de la sesión o uno nuevo si no existe.
+    """
     try:
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        # Normalizar nombres de columnas sin usar .str para evitar errores de tipo
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
+        print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
 
-        # Asegurar tipos string en columnas clave
-        if "ip_usuario" in df.columns:
-            df["ip_usuario"] = df["ip_usuario"].astype(str)
-        if "fecha" in df.columns:
-            df["fecha"] = df["fecha"].astype(str)
+        if "ip_usuario" not in df.columns or "fecha" not in df.columns:
+            raise KeyError("Columnas de sesión no presentes en la hoja.")
+
+        df["ip_usuario"] = df["ip_usuario"].astype(str)
+        df["fecha"] = df["fecha"].astype(str)
 
         row = df[(df["ip_usuario"] == ip) & (df["fecha"] == fecha)]
         if not row.empty:
             r = row.iloc[0].to_dict()
+            print(f"📂 Sesión encontrada: {r}")
             return {
                 "ip_usuario": ip,
                 "fecha": fecha,
@@ -36,71 +47,59 @@ def cargar_sesion(ip: str, fecha: str) -> dict:
                 "fecha_anterior": r.get("fecha_anterior")
             }
     except Exception as e:
-        print(f"Error al cargar sesión: {e}")
-    # Si no existe, devolver contexto vacío
-    return {"ip_usuario": ip, "fecha": fecha, "indice_empleado": 0}
+        print(f"❌ Error al cargar sesión: {e}")
+
+    # Usar fecha actual si no se proporciona
+    fecha_hoy = fecha if fecha else date.today().isoformat()
+    print(f"📂 No se encontró sesión: creando nueva para ip={ip}, fecha={fecha_hoy}")
+    return {"ip_usuario": ip, "fecha": fecha_hoy, "indice_empleado": 0}
 
 
 def guardar_sesion(sesion: dict):
+    """
+    Guarda/actualiza la sesión del usuario en la hoja de Google Sheets.
+    """
     try:
-        print("📌 Iniciando guardado de sesión.")
         df = cargar_hoja_por_nombre(SHEET_ID, TABLA_SESIONES)
-        print("📥 Hoja cargada correctamente.")
-
-        # Normalizar nombres de columnas sin usar .str para evitar errores de tipo
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
-        print("📋 Columnas normalizadas:", df.columns.tolist())
+        print(f"📋 Columnas tras normalizar: {df.columns.tolist()}")
 
-        # Evitar errores al castear
-        if "ip_usuario" in df.columns:
-            df["ip_usuario"] = df["ip_usuario"].astype(str)
-        if "fecha" in df.columns:
-            df["fecha"] = df["fecha"].astype(str)
+        if not df.columns.tolist():
+            df = pd.DataFrame(columns=NAMESPACE)
+            print(f"🆕 Creando nueva estructura de sesión con columnas: {NAMESPACE}")
+
+        df["ip_usuario"] = df["ip_usuario"].astype(str)
+        df["fecha"] = df["fecha"].astype(str)
 
         ip = str(sesion.get("ip_usuario", ""))
-        fecha = str(sesion.get("fecha", ""))
-        indice = sesion.get("indice_empleado", 0)
-        modo = sesion.get("modo", "")
-        codsalon = sesion.get("codsalon", "")
-        codempleado = sesion.get("codempleado", "")
-        nsemana = sesion.get("nsemana", "")
-        mes = sesion.get("mes", "")
-        kpi = sesion.get("kpi", "")
-        fecha_anterior = sesion.get("fecha_anterior", "")
-        ahora = datetime.now().strftime("%H:%M")
-
-        print(f"📄 Datos sesión: ip={ip}, fecha={fecha}, indice={indice}")
-
+        fecha = str(sesion.get("fecha")) or date.today().isoformat()
+        datos = {
+            "ip_usuario": ip,
+            "fecha": fecha,
+            "indice_empleado": sesion.get("indice_empleado", 0),
+            "modo": sesion.get("modo", ""),
+            "codsalon": sesion.get("codsalon", ""),
+            "ultima_interaccion": datetime.now().strftime("%H:%M"),
+            "codempleado": sesion.get("codempleado", ""),
+            "nsemana": sesion.get("nsemana", ""),
+            "mes": sesion.get("mes", ""),
+            "kpi": sesion.get("kpi", ""),
+            "fecha_anterior": sesion.get("fecha_anterior", "")
+        }
+        print(f"📄 Datos de sesión a guardar: {datos}")
         mask = (df["ip_usuario"] == ip) & (df["fecha"] == fecha)
+
         if mask.any():
             print("✏️ Actualizando fila existente.")
-            df.loc[mask, [
-                "indice_empleado", "modo", "codsalon", "ultima_interaccion",
-                "codempleado", "nsemana", "mes", "kpi", "fecha_anterior"
-            ]] = [
-                indice, modo, codsalon, ahora,
-                codempleado, nsemana, mes, kpi, fecha_anterior
-            ]
+            for key, val in datos.items():
+                df.loc[mask, key] = val
         else:
             print("➕ Agregando nueva fila.")
-            nueva_fila = pd.DataFrame([{  # Construir nueva fila
-                "ip_usuario": ip,
-                "fecha": fecha,
-                "indice_empleado": indice,
-                "modo": modo,
-                "codsalon": codsalon,
-                "ultima_interaccion": ahora,
-                "codempleado": codempleado,
-                "nsemana": nsemana,
-                "mes": mes,
-                "kpi": kpi,
-                "fecha_anterior": fecha_anterior
-            }])
-            print("🔄 Nueva fila generada:", nueva_fila.to_dict(orient="records"))
-            df = pd.concat([df, nueva_fila], ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([datos])], ignore_index=True)
 
-        print("💾 Guardando hoja final con shape:", df.shape)
+        print(f"💾 Guardando hoja con {len(df)} filas.")
         guardar_hoja(SHEET_ID, TABLA_SESIONES, df)
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
+
