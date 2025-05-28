@@ -21,11 +21,23 @@ def extraer_codempleado(texto: str):
     return None
 
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
-    from datetime import datetime, timedelta
-    from dateutil import parser
-    import re
-
+    """
+    Extrae la fecha más relevante desde una cadena de texto.
+    Reconoce "hoy", "ayer", "hace X días", y fechas como "26 de mayo".
+    Si el año no está especificado, asume anio_por_defecto.
+    """
     texto = texto.lower()
+
+    # Traducción de meses españoles a ingleses para parser
+    meses_es_en = {
+        "enero": "january", "febrero": "february", "marzo": "march",
+        "abril": "april", "mayo": "may", "junio": "june",
+        "julio": "july", "agosto": "august", "septiembre": "september",
+        "octubre": "october", "noviembre": "november", "diciembre": "december"
+    }
+
+    for es, en in meses_es_en.items():
+        texto = texto.replace(es, en)
 
     if "hoy" in texto:
         return datetime.today().strftime("%Y-%m-%d")
@@ -38,20 +50,17 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         dias = int(match.group(1))
         return (datetime.today() - timedelta(days=dias)).strftime("%Y-%m-%d")
 
-    # Detectar si el texto incluye explícitamente un año
-    hay_anio_explicito = bool(re.search(r"\b\d{4}\b", texto))
-
     try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
 
-        if not hay_anio_explicito:
+        # Asigna el año por defecto si no se detecta explícitamente
+        if not re.search(r"\b\d{4}\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
 
         return fecha.strftime("%Y-%m-%d")
     except Exception as e:
         print(f"❌ Error al interpretar la fecha en el texto '{texto}': {e}")
         return None
-
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
