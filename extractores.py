@@ -1,124 +1,112 @@
-# extractores.py
-import re
-from datetime import datetime
-from dateutil import parser
+# chat_router.py
+from fastapi import APIRouter, Request, HTTPException
+from config import setup_environment, openai_client
+from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
+from funciones.explicar_ratio import explicar_ratio
+from routes.chat_flujo_empleados import manejar_flujo_empleados
+from routes import chat_functions
+from google_sheets_session import cargar_sesion, guardar_sesion
+import json
 
-def detectar_kpi(texto: str):
-    texto = texto.lower()
-    if "productividad" in texto:
-        return "productividad"
-    elif "clientes nuevos" in texto or "nuevos clientes" in texto:
-        return "clientes_nuevos"
-    elif "servicio" in texto:
-        return "servicios"
-    return None
+router = APIRouter()
 
-def extraer_codempleado(texto: str):
-    texto = texto.lower()
-    match = re.search(r"emplead[oa]\s*(\d+)", texto)
-    if match:
-        return match.group(1)
-    return None
+@router.post("")  # Endpoint raíz para POST /chat
+async def chat_handler(request: Request):
+    client_ip = request.client.host
+    # Leer cuerpo JSON
+    body = await request.json()
+    mensaje = body.get("mensaje", "").strip()
+    mensaje_limpio = mensaje.lower()
 
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
+    print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
+    from extractores import extraer_fecha_desde_texto
 
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
-import calendar
+# Extraer fecha del mensaje
+fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
 
-
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
-import calendar
-
-
-def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
-    texto = texto.lower()
-
-    meses_es_en = {
-        "enero": "january", "febrero": "february", "marzo": "march",
-        "abril": "april", "mayo": "may", "junio": "june",
-        "julio": "july", "agosto": "august", "septiembre": "september",
-        "octubre": "october", "noviembre": "november", "diciembre": "december"
-    }
-
-    dias_semana = {
-        "lunes": 0, "martes": 1, "miércoles": 2, "miercoles": 2,
-        "jueves": 3, "viernes": 4, "sábado": 5, "sabado": 5, "domingo": 6
-    }
-
-    # Convertir números escritos a dígitos
-    numeros_texto = {
-        "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
-        "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10
-    }
-    for palabra, numero in numeros_texto.items():
-        texto = re.sub(rf"\\b{palabra}\\b", str(numero), texto)
-
-    for es, en in meses_es_en.items():
-        texto = texto.replace(es, en)
-
-    hoy = datetime.today()
-
-    if "hoy" in texto:
-        return hoy.strftime("%Y-%m-%d")
-
-    if "ayer" in texto:
-        return (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
-
-    match = re.search(r"hace\\s+(\\d+)\\s+d[ií]as?", texto)
-    if match:
-        dias = int(match.group(1))
-        return (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
-
-    match = re.search(r"el\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+pasado", texto)
-    if match:
-        dia_nombre = match.group(1)
-        dia_target = dias_semana[dia_nombre]
-        dias_diferencia = (hoy.weekday() - dia_target + 7) % 7 or 7
-        fecha_objetivo = hoy - timedelta(days=dias_diferencia)
-        return fecha_objetivo.strftime("%Y-%m-%d")
-
-    match = re.search(r"el\\s+último\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+de\\s+(\\w+)", texto)
-    if match:
-        dia_nombre = match.group(1)
-        mes_nombre = match.group(2)
-
-        try:
-            mes_en = meses_es_en[mes_nombre]
-            mes = list(meses_es_en.keys()).index(mes_nombre) + 1
-            anio = anio_por_defecto
-
-            _, ultimo_dia = calendar.monthrange(anio, mes)
-
-            for dia in range(ultimo_dia, 0, -1):
-                fecha = datetime(anio, mes, dia)
-                if fecha.weekday() == dias_semana[dia_nombre]:
-                    return fecha.strftime("%Y-%m-%d")
-        except:
-            pass
-
-         try:
-        fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
-
-        # Si el año no está en el texto, usar el año por defecto
-        if not re.search(r"\b\d{4}\b", texto):
-            fecha = fecha.replace(year=anio_por_defecto)
-
-        return fecha.strftime("%Y-%m-%d")
+# Validación adicional para forzar año por defecto si no se detectó explícitamente
+if fecha:
+    try:
+        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
+        if fecha_dt.year != 2025:
+            fecha_dt = fecha_dt.replace(year=2025)
+            fecha = fecha_dt.strftime("%Y-%m-%d")
     except Exception as e:
-        print(f"❌ Error al interpretar la fecha en el texto '{texto}': {e}")
-        return "FECHA_NO_VALIDA"
+        print(f"❌ Error ajustando año de la fecha '{fecha}': {e}")
 
+# Cargar o inicializar sesión
+sesion = cargar_sesion(client_ip, fecha or "")
+print(f"📂 Sesión cargada: {sesion}")
+sesion["ip_usuario"] = client_ip
+if fecha:
+    sesion["fecha"] = fecha
 
-def extraer_codsalon(texto: str):
-    texto = texto.lower()
-    match = re.search(r"sal[oó]n\s*(\d+)", texto)
-    if match:
-        return match.group(1)
-    return None
+    print(f"📂 Sesión cargada: {sesion}")
+    sesion["ip_usuario"] = client_ip
+    if fecha:
+        sesion["fecha"] = fecha
+
+    # Flujo de empleados continuado
+    if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
+        respuesta = manejar_flujo_empleados(sesion)
+        print(f"🛠️ Manejando flujo de empleados, respuesta: {respuesta}")
+        guardar_sesion(sesion)
+        print(f"✅ Sesión guardada tras flujo empleados: {sesion}")
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+
+    # Extraer parámetros
+    kpi_detectado = detectar_kpi(mensaje)
+    codsalon = body.get("codsalon") or extraer_codsalon(mensaje) or sesion.get("codsalon")
+    nsemana = body.get("nsemana") or sesion.get("nsemana")
+    mes = body.get("mes") or sesion.get("mes")
+    codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
+
+    # Actualizar sesión
+    for key, val in [
+        ("codsalon", codsalon), ("nsemana", nsemana),
+        ("mes", mes), ("codempleado", codempleado), ("kpi", kpi_detectado)
+    ]:
+        if val is not None:
+            sesion[key] = val
+    if fecha:
+        if fecha != sesion.get("fecha_anterior"):
+            sesion["indice_empleado"] = 0
+            sesion["fecha_anterior"] = fecha
+        sesion["fecha"] = fecha
+
+    # Intento de respuesta directa
+    if codsalon and fecha:
+        try:
+            respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
+            guardar_sesion(sesion)
+            print(f"✅ Sesión guardada tras respuesta directa: {sesion}")
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
+        except Exception as e:
+            print(f"⚠️ Error en respuesta directa: {e}")
+
+    # Invocar modelo OpenAI
+    system_prompt = """... (tu prompt personalizado, sin cambios) ..."""
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": mensaje}
+            ],
+            function_call="auto",
+            functions=chat_functions.get_definiciones_funciones()
+        )
+        msg = response.choices[0].message
+        if msg.function_call:
+            resultado = chat_functions.resolver(msg.function_call, sesion)
+            guardar_sesion(sesion)
+            print(f"✅ Sesión guardada tras función OpenAI: {sesion}")
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+
+        print(f"💬 Respuesta libre del asistente: {msg.content}")
+        guardar_sesion(sesion)
+        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
+    except Exception as e:
+        print(f"❌ Error en chat_handler: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
