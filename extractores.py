@@ -1,7 +1,9 @@
 # extractores.py
 import re
-from datetime import datetime
+import calendar
+from datetime import datetime, timedelta
 from dateutil import parser
+
 
 def detectar_kpi(texto: str):
     texto = texto.lower()
@@ -13,28 +15,13 @@ def detectar_kpi(texto: str):
         return "servicios"
     return None
 
+
 def extraer_codempleado(texto: str):
     texto = texto.lower()
     match = re.search(r"emplead[oa]\s*(\d+)", texto)
     if match:
         return match.group(1)
     return None
-
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
-
-
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
-import calendar
-
-
-from datetime import datetime, timedelta
-from dateutil import parser
-import re
-import calendar
 
 
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
@@ -58,8 +45,9 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10
     }
     for palabra, numero in numeros_texto.items():
-        texto = re.sub(rf"\\b{palabra}\\b", str(numero), texto)
+        texto = re.sub(rf"\b{palabra}\b", str(numero), texto)
 
+    # Reemplazar meses en español por inglés
     for es, en in meses_es_en.items():
         texto = texto.replace(es, en)
 
@@ -71,12 +59,12 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     if "ayer" in texto:
         return (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    match = re.search(r"hace\\s+(\\d+)\\s+d[ií]as?", texto)
+    match = re.search(r"hace\s+(\d+)\s+d[ií]as?", texto)
     if match:
         dias = int(match.group(1))
         return (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
 
-    match = re.search(r"el\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+pasado", texto)
+    match = re.search(r"el\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+pasado", texto)
     if match:
         dia_nombre = match.group(1)
         dia_target = dias_semana[dia_nombre]
@@ -84,36 +72,34 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         fecha_objetivo = hoy - timedelta(days=dias_diferencia)
         return fecha_objetivo.strftime("%Y-%m-%d")
 
-    match = re.search(r"el\\s+último\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+de\\s+(\\w+)", texto)
+    match = re.search(r"el\s+último\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+de\s+(\w+)", texto)
     if match:
         dia_nombre = match.group(1)
         mes_nombre = match.group(2)
-
         try:
             mes_en = meses_es_en[mes_nombre]
             mes = list(meses_es_en.keys()).index(mes_nombre) + 1
             anio = anio_por_defecto
 
             _, ultimo_dia = calendar.monthrange(anio, mes)
-
             for dia in range(ultimo_dia, 0, -1):
                 fecha = datetime(anio, mes, dia)
                 if fecha.weekday() == dias_semana[dia_nombre]:
                     return fecha.strftime("%Y-%m-%d")
-        except:
+        except KeyError:
             pass
 
-      try:
+    # Fallback: parsear fecha libremente
+    try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
-
         # Si el año no está en el texto, usar el año por defecto
         if not re.search(r"\b\d{4}\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
-
         return fecha.strftime("%Y-%m-%d")
     except Exception as e:
         print(f"❌ Error al interpretar la fecha en el texto '{texto}': {e}")
         return "FECHA_NO_VALIDA"
+
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
@@ -121,3 +107,4 @@ def extraer_codsalon(texto: str):
     if match:
         return match.group(1)
     return None
+
