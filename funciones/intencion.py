@@ -1,34 +1,29 @@
-import os
-import openai
 import re
 
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def clasificar_intencion(texto: str) -> dict:
+    texto = texto.lower().strip()
 
-def clasificar_intencion(mensaje_usuario: str) -> dict:
-    prompt = (
-        "Clasifica este mensaje con una estructura JSON.\n\n"
-        "Debe incluir:\n"
-        "- intencion: 'general', 'empleados', o 'empleado'\n"
-        "- tiene_fecha: true o false si el mensaje contiene una fecha explícita\n"
-        "- comentario: breve explicación del motivo\n\n"
-        f"Mensaje: '{mensaje_usuario}'\n\n"
-        "Reglas:\n"
-        "- Usa 'general' si se analiza un salón sin mencionar empleados.\n"
-        "- Usa 'empleados' si habla de varios trabajadores.\n"
-        "- Usa 'empleado' si menciona uno solo, por código o nombre.\n"
-        "- Considera que hay fecha si se menciona día, mes y opcionalmente año.\n\n"
-        "Ejemplo de respuesta:\n"
-        "{\"intencion\": \"empleado\", \"tiene_fecha\": true, \"comentario\": \"Se refiere a un empleado específico con fecha\"}"
-    )
+    # Sinónimos comunes para empleado
+    patron_empleado = r"(emplead[oa]|trabajador[a]?)\s*\d+"
 
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
+    # Detectar intención de ratio por mención explícita
+    if re.search(patron_empleado, texto):
+        return {
+            "intencion": "empleado",
+            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
+            "comentario": "Detectado patrón de empleado"
+        }
 
-    try:
-        return eval(response.choices[0].message.content.strip())
-    except:
-        return {"intencion": "general", "tiene_fecha": False, "comentario": "Respuesta no interpretable"}
+    if re.search(r"(ratio|indicador|rendimiento|productividad)", texto):
+        return {
+            "intencion": "general",
+            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
+            "comentario": "Consulta general de indicadores"
+        }
+
+    return {
+        "intencion": "general",
+        "tiene_fecha": False,
+        "comentario": "Respuesta no interpretable"
+    }
 
