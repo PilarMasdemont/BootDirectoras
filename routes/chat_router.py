@@ -20,6 +20,7 @@ router = APIRouter()
 
 @router.post("")
 async def chat_handler(request: Request):
+    print("💡 Chat handler activado")
     client_ip = request.client.host
     body = await request.json()
     mensaje = body.get("mensaje", "").strip()
