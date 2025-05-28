@@ -6,7 +6,7 @@ from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 from google.oauth2 import service_account
 
 # Cargar credenciales desde variable de entorno
-GOOGLE_CREDENTIALS = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+GOOGLE_CREDENTIALS = json.loads(os.environ["1kQUa22fp26t8MO_n4P5anqU82B14aF3A"])
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 credentials = service_account.Credentials.from_service_account_info(
