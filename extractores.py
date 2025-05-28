@@ -103,7 +103,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         except:
             pass
 
-      try:
+         try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
 
         # Si el año no está en el texto, usar el año por defecto
@@ -114,6 +114,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     except Exception as e:
         print(f"❌ Error al interpretar la fecha en el texto '{texto}': {e}")
         return "FECHA_NO_VALIDA"
+
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
