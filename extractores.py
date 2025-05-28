@@ -31,69 +31,67 @@ import re
 import calendar
 
 
-def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025) -> str | None:
-    """
-    Extrae la fecha más relevante desde una cadena de texto.
-    - Reconoce: "hoy", "ayer", "hace X días", "el lunes pasado", "el último jueves de mayo", "26 de mayo"
-    - Si el año no se menciona, usa `anio_por_defecto`.
-    """
-
+def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     texto = texto.lower()
-    hoy = datetime.today()
 
-    # Mapeo español-inglés para el parser
     meses_es_en = {
         "enero": "january", "febrero": "february", "marzo": "march",
         "abril": "april", "mayo": "may", "junio": "june",
         "julio": "july", "agosto": "august", "septiembre": "september",
         "octubre": "october", "noviembre": "november", "diciembre": "december"
     }
-    dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+    dias_semana = {
+        "lunes": 0, "martes": 1, "miércoles": 2, "miercoles": 2,
+        "jueves": 3, "viernes": 4, "sábado": 5, "sabado": 5, "domingo": 6
+    }
 
     for es, en in meses_es_en.items():
         texto = texto.replace(es, en)
 
-    # Hoy
+    hoy = datetime.today()
+
     if "hoy" in texto:
         return hoy.strftime("%Y-%m-%d")
 
-    # Ayer
     if "ayer" in texto:
         return (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # Hace X días
     match = re.search(r"hace\s+(\d+)\s+d[ií]as?", texto)
     if match:
         dias = int(match.group(1))
         return (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
 
-    # "el lunes pasado", "el viernes pasado", etc.
-    for i, dia in enumerate(dias_semana):
-        if f"el {dia} pasado" in texto:
-            hoy_idx = hoy.weekday()  # 0=lunes
-            delta_dias = (hoy_idx - i + 7) % 7 or 7
-            return (hoy - timedelta(days=delta_dias)).strftime("%Y-%m-%d")
-
-    # "el último jueves de mayo"
-    match = re.search(r"el último (\w+) de (\w+)", texto)
+    match = re.search(r"el\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+pasado", texto)
     if match:
-        dia_nombre, mes_nombre = match.groups()
-        if dia_nombre in dias_semana and mes_nombre in meses_es_en:
-            mes_num = list(meses_es_en.values()).index(mes_nombre) + 1
-            dia_idx = dias_semana.index(dia_nombre)
-            year = anio_por_defecto
+        dia_nombre = match.group(1)
+        dia_target = dias_semana[dia_nombre]
+        dias_diferencia = (hoy.weekday() - dia_target + 7) % 7 or 7
+        fecha_objetivo = hoy - timedelta(days=dias_diferencia)
+        return fecha_objetivo.strftime("%Y-%m-%d")
 
-            _, ultimo_dia_mes = calendar.monthrange(year, mes_num)
-            for d in range(ultimo_dia_mes, 0, -1):
-                fecha = datetime(year, mes_num, d)
-                if fecha.weekday() == dia_idx:
+    match = re.search(r"el\s+último\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+de\s+(\w+)", texto)
+    if match:
+        dia_nombre = match.group(1)
+        mes_nombre = match.group(2)
+
+        try:
+            mes_en = meses_es_en[mes_nombre]
+            mes = list(meses_es_en.keys()).index(mes_nombre) + 1
+            anio = anio_por_defecto
+
+            _, ultimo_dia = calendar.monthrange(anio, mes)
+
+            for dia in range(ultimo_dia, 0, -1):
+                fecha = datetime(anio, mes, dia)
+                if fecha.weekday() == dias_semana[dia_nombre]:
                     return fecha.strftime("%Y-%m-%d")
+        except:
+            pass
 
-    # Parseo general
     try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
 
-        # Forzar año por defecto si no se especifica
         if not re.search(r"\b\d{4}\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
 
