@@ -20,9 +20,28 @@ async def chat_handler(request: Request):
 
     print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
-    # Cargar o inicializar sesión
-    fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
-    sesion = cargar_sesion(client_ip, fecha or "")
+    from extractores import extraer_fecha_desde_texto
+
+# Extraer fecha del mensaje
+fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
+
+# Validación adicional para forzar año por defecto si no se detectó explícitamente
+if fecha:
+    try:
+        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
+        if fecha_dt.year != 2025:
+            fecha_dt = fecha_dt.replace(year=2025)
+            fecha = fecha_dt.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"❌ Error ajustando año de la fecha '{fecha}': {e}")
+
+# Cargar o inicializar sesión
+sesion = cargar_sesion(client_ip, fecha or "")
+print(f"📂 Sesión cargada: {sesion}")
+sesion["ip_usuario"] = client_ip
+if fecha:
+    sesion["fecha"] = fecha
+
     print(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
     if fecha:
