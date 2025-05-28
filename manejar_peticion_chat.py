@@ -1,4 +1,4 @@
-from intencion import clasificar_intencion
+from funciones.intencion import clasificar_intencion
 from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
 import re
 import logging
