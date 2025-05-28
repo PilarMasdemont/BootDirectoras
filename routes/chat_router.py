@@ -11,6 +11,7 @@ from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
+from manejar_peticion_chat import manejar_peticion_chat
 
 import json
 
@@ -25,15 +26,25 @@ async def chat_handler(request: Request):
 
     print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
-    # 📅 Fecha desde el mensaje o body
-    fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
+    # 🧠 Analizar petición
+    datos = manejar_peticion_chat(mensaje)
+    intencion = datos["intencion"]
+    fecha = datos["fecha"]
+    codsalon = datos["codsalon"]
+    codempleado = datos["codempleado"]
+    kpi_detectado = datos["kpi"]
+
+    # 🔍 DEBUG - Verificación de extracción
+    print(f"🧠 Intención: {intencion}")
+    print(f"📅 Fecha extraída: {fecha}")
+    print(f"🏢 Salón: {codsalon}")
+    print(f"👤 Empleado: {codempleado}")
+    print(f"📊 KPI: {kpi_detectado}")
 
     # 📂 Cargar sesión
     sesion = cargar_sesion(client_ip, fecha or "")
     print(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
-    if fecha:
-        sesion["fecha"] = fecha
 
     # ✅ Modo empleados activo
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
@@ -41,23 +52,13 @@ async def chat_handler(request: Request):
         guardar_sesion(sesion)
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
-    # 📌 Parámetros contextuales
-    kpi_detectado = detectar_kpi(mensaje)
-    codsalon = body.get("codsalon") or extraer_codsalon(mensaje) or sesion.get("codsalon")
-    codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
-    nsemana = body.get("nsemana") or sesion.get("nsemana")
-    mes = body.get("mes") or sesion.get("mes")
-
+    # 📌 Actualizar sesión
     if codsalon is not None:
         sesion["codsalon"] = codsalon
     if codempleado is not None:
         sesion["codempleado"] = codempleado
     if kpi_detectado:
         sesion["kpi"] = kpi_detectado
-    if nsemana:
-        sesion["nsemana"] = nsemana
-    if mes:
-        sesion["mes"] = mes
     if fecha:
         if fecha != sesion.get("fecha_anterior"):
             sesion["indice_empleado"] = 0
@@ -72,10 +73,10 @@ async def chat_handler(request: Request):
             resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
         elif codsalon and fecha and not codempleado and kpi_detectado:
             resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
-        elif codsalon and nsemana and kpi_detectado:
-            resultado = explicar_ratio_semanal(codsalon, nsemana, kpi_detectado)
-        elif codsalon and mes and kpi_detectado:
-            resultado = explicar_ratio_mensual(codsalon, mes, kpi_detectado)
+        elif codsalon and sesion.get("nsemana") and kpi_detectado:
+            resultado = explicar_ratio_semanal(codsalon, sesion["nsemana"], kpi_detectado)
+        elif codsalon and sesion.get("mes") and kpi_detectado:
+            resultado = explicar_ratio_mensual(codsalon, sesion["mes"], kpi_detectado)
         elif codsalon and fecha and kpi_detectado and codempleado:
             resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
         else:
