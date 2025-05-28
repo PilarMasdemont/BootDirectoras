@@ -1,112 +1,113 @@
-# chat_router.py
+from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException
 from config import setup_environment, openai_client
 from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
 from funciones.explicar_ratio import explicar_ratio
+from funciones.explicar_ratio_empleados import explicar_ratio_empleados
+from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado_individual
+from funciones.explicar_ratio_diario import explicar_ratio_diario
+from funciones.explicar_ratio_mensual import explicar_ratio_mensual
+from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
+
 import json
 
 router = APIRouter()
 
-@router.post("")  # Endpoint raíz para POST /chat
+@router.post("")
 async def chat_handler(request: Request):
     client_ip = request.client.host
-    # Leer cuerpo JSON
     body = await request.json()
     mensaje = body.get("mensaje", "").strip()
     mensaje_limpio = mensaje.lower()
 
     print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
-    from extractores import extraer_fecha_desde_texto
+    # 📅 Fecha desde el mensaje o body
+    fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
 
-# Extraer fecha del mensaje
-fecha = body.get("fecha") or extraer_fecha_desde_texto(mensaje)
-
-# Validación adicional para forzar año por defecto si no se detectó explícitamente
-if fecha:
-    try:
-        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
-        if fecha_dt.year != 2025:
-            fecha_dt = fecha_dt.replace(year=2025)
-            fecha = fecha_dt.strftime("%Y-%m-%d")
-    except Exception as e:
-        print(f"❌ Error ajustando año de la fecha '{fecha}': {e}")
-
-# Cargar o inicializar sesión
-sesion = cargar_sesion(client_ip, fecha or "")
-print(f"📂 Sesión cargada: {sesion}")
-sesion["ip_usuario"] = client_ip
-if fecha:
-    sesion["fecha"] = fecha
-
+    # 📂 Cargar sesión
+    sesion = cargar_sesion(client_ip, fecha or "")
     print(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
     if fecha:
         sesion["fecha"] = fecha
 
-    # Flujo de empleados continuado
+    # ✅ Modo empleados activo
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
         respuesta = manejar_flujo_empleados(sesion)
-        print(f"🛠️ Manejando flujo de empleados, respuesta: {respuesta}")
         guardar_sesion(sesion)
-        print(f"✅ Sesión guardada tras flujo empleados: {sesion}")
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
-    # Extraer parámetros
+    # 📌 Parámetros contextuales
     kpi_detectado = detectar_kpi(mensaje)
     codsalon = body.get("codsalon") or extraer_codsalon(mensaje) or sesion.get("codsalon")
+    codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
     nsemana = body.get("nsemana") or sesion.get("nsemana")
     mes = body.get("mes") or sesion.get("mes")
-    codempleado = body.get("codempleado") or extraer_codempleado(mensaje) or sesion.get("codempleado")
 
-    # Actualizar sesión
-    for key, val in [
-        ("codsalon", codsalon), ("nsemana", nsemana),
-        ("mes", mes), ("codempleado", codempleado), ("kpi", kpi_detectado)
-    ]:
-        if val is not None:
-            sesion[key] = val
+    if codsalon is not None:
+        sesion["codsalon"] = codsalon
+    if codempleado is not None:
+        sesion["codempleado"] = codempleado
+    if kpi_detectado:
+        sesion["kpi"] = kpi_detectado
+    if nsemana:
+        sesion["nsemana"] = nsemana
+    if mes:
+        sesion["mes"] = mes
     if fecha:
         if fecha != sesion.get("fecha_anterior"):
             sesion["indice_empleado"] = 0
             sesion["fecha_anterior"] = fecha
         sesion["fecha"] = fecha
 
-    # Intento de respuesta directa
-    if codsalon and fecha:
-        try:
-            respuesta_directa = explicar_ratio(codsalon, fecha, mensaje)
-            guardar_sesion(sesion)
-            print(f"✅ Sesión guardada tras respuesta directa: {sesion}")
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta_directa}"}
-        except Exception as e:
-            print(f"⚠️ Error en respuesta directa: {e}")
+    # 📊 Procesamiento por función directa
+    try:
+        if codsalon and fecha and not codempleado and not kpi_detectado:
+            resultado = explicar_ratio(codsalon, fecha, mensaje)
+        elif codsalon and fecha and codempleado and not kpi_detectado:
+            resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+        elif codsalon and fecha and not codempleado and kpi_detectado:
+            resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
+        elif codsalon and nsemana and kpi_detectado:
+            resultado = explicar_ratio_semanal(codsalon, nsemana, kpi_detectado)
+        elif codsalon and mes and kpi_detectado:
+            resultado = explicar_ratio_mensual(codsalon, mes, kpi_detectado)
+        elif codsalon and fecha and kpi_detectado and codempleado:
+            resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
+        else:
+            resultado = None
 
-    # Invocar modelo OpenAI
-    system_prompt = """... (tu prompt personalizado, sin cambios) ..."""
+        if resultado:
+            guardar_sesion(sesion)
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    except Exception as e:
+        print(f"⚠️ Error en funciones directas: {e}")
+
+    # 🤖 Llamada OpenAI si no hubo función directa
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
                 {"role": "user", "content": mensaje}
             ],
             function_call="auto",
             functions=chat_functions.get_definiciones_funciones()
         )
+
         msg = response.choices[0].message
         if msg.function_call:
             resultado = chat_functions.resolver(msg.function_call, sesion)
             guardar_sesion(sesion)
-            print(f"✅ Sesión guardada tras función OpenAI: {sesion}")
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-        print(f"💬 Respuesta libre del asistente: {msg.content}")
         guardar_sesion(sesion)
         return {"respuesta": msg.content or "No se recibió contenido del asistente."}
+
     except Exception as e:
         print(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
