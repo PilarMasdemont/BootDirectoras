@@ -16,9 +16,9 @@ def detectar_kpi(texto: str):
 
 def extraer_codempleado(texto: str):
     texto = texto.lower()
-    match = re.search(r"emplead[oa]\s*(\d+)", texto)
+    match = re.search(r"(emplead[oa]|trabajador[a]?)\s*(\d+)", texto)
     if match:
-        return match.group(1)
+        return match.group(2)
     return None
 
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
@@ -54,12 +54,12 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     if "ayer" in texto:
         return (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    match = re.search(r"hace\\s+(\\d+)\\s+d[ií]as?", texto)
+    match = re.search(r"hace\s+(\d+)\s+d[ií]as?", texto)
     if match:
         dias = int(match.group(1))
         return (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
 
-    match = re.search(r"el\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+pasado", texto)
+    match = re.search(r"el\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+pasado", texto)
     if match:
         dia_nombre = match.group(1)
         dia_target = dias_semana[dia_nombre]
@@ -67,7 +67,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         fecha_objetivo = hoy - timedelta(days=dias_diferencia)
         return fecha_objetivo.strftime("%Y-%m-%d")
 
-    match = re.search(r"el\\s+último\\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\\s+de\\s+(\\w+)", texto)
+    match = re.search(r"el\s+último\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+de\s+(\w+)", texto)
     if match:
         dia_nombre = match.group(1)
         mes_nombre = match.group(2)
@@ -83,10 +83,10 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
             pass
 
     # NUEVO: limpiar menciones a empleados antes del parser
-    texto = re.sub(r"emplead[oa]\s*\d+", "", texto)
+    texto = re.sub(r"(emplead[oa]|trabajador[a]?)\s*\d+", "", texto)
     texto = re.sub(r"\s{2,}", " ", texto).strip()
 
-    # Extraer patrones explícitos tipo "27 de mayo"
+    # Extraer patrones explícitos tipo "27 de mayo" o "27 de mayo de 2025"
     patron_fecha = re.search(r"\b(\d{1,2})\s+de\s+([a-zA-Z]+)(?:\s+de\s+(\d{4}))?\b", texto)
     if patron_fecha:
         dia, mes_str, anio = patron_fecha.groups()
