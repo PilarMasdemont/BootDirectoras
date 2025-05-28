@@ -1,5 +1,5 @@
 import re
-from intencion import clasificar_intencion
+from funciones.intencion import clasificar_intencion
 from extractores import (
     extraer_fecha_desde_texto,
     extraer_codempleado,
