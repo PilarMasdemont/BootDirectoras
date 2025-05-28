@@ -72,10 +72,8 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         dia_nombre = match.group(1)
         mes_nombre = match.group(2)
         try:
-            mes_en = meses_es_en[mes_nombre]
             mes = list(meses_es_en.keys()).index(mes_nombre) + 1
             anio = anio_por_defecto
-
             _, ultimo_dia = calendar.monthrange(anio, mes)
             for dia in range(ultimo_dia, 0, -1):
                 fecha = datetime(anio, mes, dia)
@@ -84,7 +82,11 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         except KeyError:
             pass
 
-    # NUEVO: Extraer patrones explícitos tipo "27 de mayo"
+    # NUEVO: limpiar menciones a empleados antes del parser
+    texto = re.sub(r"emplead[oa]\s*\d+", "", texto)
+    texto = re.sub(r"\s{2,}", " ", texto).strip()
+
+    # Extraer patrones explícitos tipo "27 de mayo"
     patron_fecha = re.search(r"\b(\d{1,2})\s+de\s+([a-zA-Z]+)(?:\s+de\s+(\d{4}))?\b", texto)
     if patron_fecha:
         dia, mes_str, anio = patron_fecha.groups()
@@ -99,8 +101,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
                 pass
 
     try:
-        texto_filtrado = re.sub(r"emplead[oa] \d+", "", texto)  # eliminar "empleado 2"
-        fecha = parser.parse(texto_filtrado, fuzzy=True, dayfirst=True)
+        fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
         if not re.search(r"\b\d{4}\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
         return fecha.strftime("%Y-%m-%d")
@@ -114,5 +115,6 @@ def extraer_codsalon(texto: str):
     if match:
         return match.group(1)
     return None
+
 
 
