@@ -20,15 +20,21 @@ def extraer_codempleado(texto: str):
         return match.group(1)
     return None
 
+from datetime import datetime, timedelta
+from dateutil import parser
+import re
+
+
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     """
     Extrae la fecha más relevante desde una cadena de texto.
-    Reconoce "hoy", "ayer", "hace X días", y fechas como "26 de mayo".
-    Si el año no está especificado, asume anio_por_defecto.
+    - Reconoce "hoy", "ayer", "hace X días".
+    - Extrae fechas explícitas como "26 de mayo".
+      Si el año no está especificado, asume anio_por_defecto.
     """
     texto = texto.lower()
 
-    # Traducción de meses españoles a ingleses para parser
+    # Traducción de meses en español a inglés para mejorar parseo
     meses_es_en = {
         "enero": "january", "febrero": "february", "marzo": "march",
         "abril": "april", "mayo": "may", "junio": "june",
@@ -53,8 +59,8 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
 
-        # Asigna el año por defecto si no se detecta explícitamente
-        if not re.search(r"\b\d{4}\b", texto):
+        # Si no hay año explícito en el texto, asignamos el año por defecto
+        if not re.search(r"\\b\\d{4}\\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
 
         return fecha.strftime("%Y-%m-%d")
