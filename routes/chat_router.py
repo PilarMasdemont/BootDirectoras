@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException
 from config import setup_environment, openai_client
@@ -15,6 +16,8 @@ from manejar_peticion_chat import manejar_peticion_chat
 
 import json
 
+logging.basicConfig(level=logging.INFO)
+
 router = APIRouter()
 
 @router.post("")
@@ -24,7 +27,7 @@ async def chat_handler(request: Request):
     mensaje = body.get("mensaje", "").strip()
     mensaje_limpio = mensaje.lower()
 
-    print(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
+    logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
     # 🧠 Analizar petición
     datos = manejar_peticion_chat(mensaje)
@@ -35,15 +38,15 @@ async def chat_handler(request: Request):
     kpi_detectado = datos["kpi"]
 
     # 🔍 DEBUG - Verificación de extracción
-    print(f"🧠 Intención: {intencion}")
-    print(f"📅 Fecha extraída: {fecha}")
-    print(f"🏢 Salón: {codsalon}")
-    print(f"👤 Empleado: {codempleado}")
-    print(f"📊 KPI: {kpi_detectado}")
+    logging.info(f"🧠 Intención: {intencion}")
+    logging.info(f"📅 Fecha extraída: {fecha}")
+    logging.info(f"🏢 Salón: {codsalon}")
+    logging.info(f"👤 Empleado: {codempleado}")
+    logging.info(f"📊 KPI: {kpi_detectado}")
 
     # 📂 Cargar sesión
     sesion = cargar_sesion(client_ip, fecha or "")
-    print(f"📂 Sesión cargada: {sesion}")
+    logging.info(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
 
     # ✅ Modo empleados activo
@@ -86,7 +89,7 @@ async def chat_handler(request: Request):
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
-        print(f"⚠️ Error en funciones directas: {e}")
+        logging.error(f"⚠️ Error en funciones directas: {e}")
 
     # 🤖 Llamada OpenAI si no hubo función directa
     try:
@@ -110,5 +113,6 @@ async def chat_handler(request: Request):
         return {"respuesta": msg.content or "No se recibió contenido del asistente."}
 
     except Exception as e:
-        print(f"❌ Error en chat_handler: {e}")
+        logging.error(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
