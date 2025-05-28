@@ -18,7 +18,7 @@ else:
 
 router = APIRouter()
 
-@router.post("/chat")
+@router.post("")
 async def chat_handler(request: Request):
     client_ip = request.client.host
     body = await request.json()
