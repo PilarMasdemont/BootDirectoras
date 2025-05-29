@@ -1,20 +1,20 @@
 import re
-from rapidfuzz import process, fuzz
 import pandas as pd
+from rapidfuzz import process, fuzz
 
-# 👇 Carga rápida del catálogo de productos
+# 👇 Carga catálogo para fuzzy match en intenciones
 def cargar_nombres_productos() -> list:
     try:
-        df = pd.read_csv("productos_catalogo.csv")  # o cargar_hoja_por_nombre(...)
+        df = pd.read_csv("productos_catalogo.csv")
         return [str(n).lower().strip() for n in df["nombre"].dropna().tolist()]
     except Exception as e:
         print(f"Error al cargar nombres de producto: {e}")
         return []
 
+# 🎯 Fuzzy detection para intenciones
 def clasificar_intencion(texto: str) -> dict:
     texto = texto.lower().strip()
 
-    # 🎯 1. Palabras clave asociadas a productos
     palabras_producto = [
         "producto", "alisador", "tratamiento", "beneficio", "cómo se usa", "opiniones",
         "comentarios", "hidrata", "keratina", "ácido hialurónico", "glatt", "lisse", "color freeze"
@@ -26,7 +26,6 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Detectado por palabras clave de producto"
         }
 
-    # 🎯 2. Fuzzy match contra nombres de producto
     nombres_producto = cargar_nombres_productos()
     if nombres_producto:
         mejor_match, score, _ = process.extractOne(texto, nombres_producto, scorer=fuzz.partial_ratio)
@@ -37,7 +36,6 @@ def clasificar_intencion(texto: str) -> dict:
                 "comentario": f"Detectado por fuzzy match con producto: {mejor_match}"
             }
 
-    # 3. Patrón de empleado
     patron_empleado = r"(emplead[oa]|trabajador[a]?)\s*\d+"
     if re.search(patron_empleado, texto):
         return {
@@ -46,7 +44,6 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Detectado patrón de empleado"
         }
 
-    # 4. Indicadores generales
     if re.search(r"(ratio|indicador|rendimiento|productividad)", texto):
         return {
             "intencion": "general",
@@ -54,9 +51,42 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Consulta general de indicadores"
         }
 
-    # 5. Sin coincidencias
     return {
         "intencion": "general",
         "tiene_fecha": False,
+        "comentario": "Respuesta no interpretable"
+    }
+
+# ✅ DETECCIÓN DEL PRODUCTO
+def cargar_aliases_productos() -> pd.DataFrame:
+    try:
+        df = pd.read_csv("productos_catalogo.csv")
+        return df
+    except Exception as e:
+        print(f"Error al cargar hoja de productos: {e}")
+        return pd.DataFrame()
+
+def extraer_nombre_producto(texto_usuario: str) -> str:
+    texto_usuario = texto_usuario.lower().strip()
+    productos_df = cargar_aliases_productos()
+
+    productos_df["nombre"] = productos_df["nombre"].fillna("")
+    productos_df["aliases"] = productos_df.get("aliases", "").fillna("")
+
+    nombres = productos_df["nombre"].tolist()
+    nombres_lower = [n.lower().strip() for n in nombres]
+
+    mejor_match, score, _ = process.extractOne(texto_usuario, nombres_lower, scorer=fuzz.partial_ratio)
+    if score >= 80:
+        return productos_df.iloc[nombres_lower.index(mejor_match)]["nombre"]
+
+    for _, row in productos_df.iterrows():
+        alias_raw = str(row["aliases"]).lower()
+        alias_list = [a.strip() for a in alias_raw.split(",") if a.strip()]
+        if any(alias in texto_usuario for alias in alias_list):
+            return row["nombre"]
+
+    return None
+
         "comentario": "Respuesta no interpretable"
     }
