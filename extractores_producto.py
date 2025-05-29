@@ -1,60 +1,59 @@
-import re
-from rapidfuzz import process, fuzz
-import pandas as pd
 
-# 👇 Carga rápida del catálogo de productos
-def cargar_nombres_productos() -> list:
-    try:
-        df = pd.read_csv("productos_catalogo.csv")  # o cargar_hoja_por_nombre(...)
-        return [str(n).lower().strip() for n in df["nombre"].dropna().tolist()]
-    except Exception as e:
-        print(f"Error al cargar nombres de producto: {e}")
-        return []
+import re
+import pandas as pd
+from rapidfuzz import fuzz
+from google_sheets_session import cargar_aliases_productos
+
+def extraer_nombre_producto(texto: str) -> str:
+    """
+    Extrae el nombre del producto del mensaje del usuario utilizando coincidencia difusa
+    con nombres y aliases de productos de Google Sheets.
+    """
+    texto = texto.lower().strip()
+    productos_df = cargar_aliases_productos()
+
+    # Normalizar columnas
+    productos_df.columns = [str(c).strip().lower().replace(" ", "_") for c in productos_df.columns]
+    productos_df["nombre"] = productos_df["nombre"].fillna("")
+    productos_df["aliases"] = productos_df["aliases"].fillna("")
+
+    mejor_coincidencia = {"producto": None, "score": 0}
+
+    for _, fila in productos_df.iterrows():
+        nombre = str(fila["nombre"]).lower()
+        if not nombre:
+            continue
+        score_nombre = fuzz.partial_ratio(texto, nombre)
+        if score_nombre > mejor_coincidencia["score"]:
+            mejor_coincidencia = {"producto": nombre, "score": score_nombre}
+
+        for alias in str(fila["aliases"]).split(","):
+            alias = alias.strip().lower()
+            if alias:
+                score_alias = fuzz.partial_ratio(texto, alias)
+                if score_alias > mejor_coincidencia["score"]:
+                    mejor_coincidencia = {"producto": nombre, "score": score_alias}
+
+    if mejor_coincidencia["score"] > 70:
+        return mejor_coincidencia["producto"]
+    return None
 
 def clasificar_intencion(texto: str) -> dict:
-    texto = texto.lower().strip()
+    texto = texto.lower()
 
-    # 🎯 1. Palabras clave asociadas a productos
-    palabras_producto = [
-        "producto", "alisador", "tratamiento", "beneficio", "cómo se usa", "opiniones",
-        "comentarios", "hidrata", "keratina", "ácido hialurónico", "glatt", "lisse", "color freeze"
+    patrones_explicar_producto = [
+        r"beneficios.*producto", r"para qué sirve", r"cómo.*usar", r"modo.*de.*uso",
+        r"cuál es el efecto", r"qué hace", r"explica.*producto", r"producto.*sirve"
     ]
-    if any(p in texto for p in palabras_producto):
-        return {
-            "intencion": "explicar_producto",
-            "tiene_fecha": False,
-            "comentario": "Detectado por palabras clave de producto"
-        }
 
-    # 🎯 2. Fuzzy match contra nombres de producto
-    nombres_producto = cargar_nombres_productos()
-    if nombres_producto:
-        mejor_match, score, _ = process.extractOne(texto, nombres_producto, scorer=fuzz.partial_ratio)
-        if score >= 85:
+    for patron in patrones_explicar_producto:
+        if re.search(patron, texto):
             return {
                 "intencion": "explicar_producto",
                 "tiene_fecha": False,
-                "comentario": f"Detectado por fuzzy match con producto: {mejor_match}"
+                "comentario": "Consulta sobre un producto o sus beneficios"
             }
 
-    # 3. Patrón de empleado
-    patron_empleado = r"(emplead[oa]|trabajador[a]?)\s*\d+"
-    if re.search(patron_empleado, texto):
-        return {
-            "intencion": "empleado",
-            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
-            "comentario": "Detectado patrón de empleado"
-        }
-
-    # 4. Indicadores generales
-    if re.search(r"(ratio|indicador|rendimiento|productividad)", texto):
-        return {
-            "intencion": "general",
-            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
-            "comentario": "Consulta general de indicadores"
-        }
-
-    # 5. Sin coincidencias
     return {
         "intencion": "general",
         "tiene_fecha": False,
