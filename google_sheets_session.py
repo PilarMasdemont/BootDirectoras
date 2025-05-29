@@ -125,4 +125,14 @@ def buscar_producto_por_nombre_o_alias(nombre_producto: str) -> dict:
 
     return {}
 
+def cargar_aliases_productos():
+    try:
+        SHEET_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
+        GID_PRODUCTOS = "0"
+        df = cargar_hoja_por_nombre(SHEET_ID, GID_PRODUCTOS)
+        df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+        return df
+    except Exception as e:
+        print(f"❌ Error al cargar hoja de productos: {e}")
+        return pd.DataFrame()
 
