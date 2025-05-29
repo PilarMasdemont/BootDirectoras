@@ -1,5 +1,6 @@
 from funciones.intencion import clasificar_intencion
 from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
+from extractores_producto import extraer_nombre_producto  # ✅ NUEVA IMPORTACIÓN
 import re
 import logging
 
@@ -31,8 +32,8 @@ def manejar_peticion_chat(datos: dict) -> dict:
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
-    # Paso 4: Retornar estructura con todos los datos necesarios
-    return {
+    # Paso 4: Preparar retorno
+    resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
         "codempleado": codempleado,
@@ -40,4 +41,12 @@ def manejar_peticion_chat(datos: dict) -> dict:
         "codsalon": codsalon,
         "kpi": kpi
     }
+
+    # ✅ EXTRA: Si es intención de producto, extraer nombre
+    if intencion == "explicar_producto":
+        resultado["nombre_producto"] = extraer_nombre_producto(mensaje_usuario)
+        logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
+
+    return resultado
+
 
