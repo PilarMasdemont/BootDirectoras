@@ -87,6 +87,3 @@ def extraer_nombre_producto(texto_usuario: str) -> str:
             return row["nombre"]
 
     return None
-
-        "comentario": "Respuesta no interpretable"
-    }
