@@ -30,7 +30,7 @@ async def chat_handler(request: Request):
     logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
     # 🧠 Analizar petición
-    datos = manejar_peticion_chat(mensaje)
+    datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
     intencion = datos["intencion"]
     fecha = datos["fecha"]
     codsalon = datos["codsalon"]
