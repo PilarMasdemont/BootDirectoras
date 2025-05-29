@@ -1,74 +1,55 @@
-
-import re
 import pandas as pd
 from rapidfuzz import fuzz
-from google_sheets_session import cargar_aliases_productos
+from google_sheets_session import cargar_hoja_google_sheets
 
-def extraer_nombre_producto(texto_usuario):
-    productos_df = cargar_aliases_productos()
 
-    if productos_df.empty:
-        print("⚠️ Hoja de productos vacía o no cargada")
-        return None
-
-    if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
-        print("❌ Columnas necesarias 'nombre' y/o 'aliases' no están presentes")
-        return None
-
-    productos_df["nombre"] = productos_df["nombre"].fillna("")
-    productos_df["aliases"] = productos_df["aliases"].fillna("")
-    ...
-
-    Extrae el nombre del producto del mensaje del usuario utilizando coincidencia difusa
-    con nombres y aliases de productos de Google Sheets.
+def extraer_nombre_producto(texto_usuario: str) -> str:
     """
-    texto = texto.lower().strip()
-    productos_df = cargar_aliases_productos()
+    Extrae el nombre más probable de producto a partir del texto de entrada del usuario.
+    Usa coincidencia difusa con columnas 'nombre' y 'aliases'.
+    """
+    try:
+        # Cargar hoja de productos
+        df = cargar_hoja_google_sheets("productos_catalogo")
+        df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
+        print("📋 Columnas normalizadas:", df.columns.tolist())
 
-    # Normalizar columnas
-    productos_df.columns = [str(c).strip().lower().replace(" ", "_") for c in productos_df.columns]
-    productos_df["nombre"] = productos_df["nombre"].fillna("")
-    productos_df["aliases"] = productos_df["aliases"].fillna("")
+        # Validar columnas necesarias
+        if 'nombre' not in df.columns or 'aliases' not in df.columns:
+            print("❌ Columnas requeridas faltantes en la hoja de productos")
+            return None
 
-    mejor_coincidencia = {"producto": None, "score": 0}
+        # Rellenar vacíos
+        df['nombre'] = df['nombre'].fillna("")
+        df['aliases'] = df['aliases'].fillna("")
 
-    for _, fila in productos_df.iterrows():
-        nombre = str(fila["nombre"]).lower()
-        if not nombre:
-            continue
-        score_nombre = fuzz.partial_ratio(texto, nombre)
-        if score_nombre > mejor_coincidencia["score"]:
-            mejor_coincidencia = {"producto": nombre, "score": score_nombre}
+        # Preparar lista de comparación
+        candidatos = []
+        for idx, row in df.iterrows():
+            nombre = row['nombre'].strip().lower()
+            aliases = [alias.strip().lower() for alias in row['aliases'].split(',') if alias.strip()] if row['aliases'] else []
+            opciones = [nombre] + aliases
 
-        for alias in str(fila["aliases"]).split(","):
-            alias = alias.strip().lower()
-            if alias:
-                score_alias = fuzz.partial_ratio(texto, alias)
-                if score_alias > mejor_coincidencia["score"]:
-                    mejor_coincidencia = {"producto": nombre, "score": score_alias}
+            for op in opciones:
+                puntuacion = fuzz.partial_ratio(op, texto_usuario.lower())
+                candidatos.append((puntuacion, nombre))
 
-    if mejor_coincidencia["score"] > 70:
-        return mejor_coincidencia["producto"]
-    return None
+        if not candidatos:
+            print("⚠️ No se encontraron candidatos en el catálogo de productos")
+            return None
 
-def clasificar_intencion(texto: str) -> dict:
-    texto = texto.lower()
+        # Obtener mejor coincidencia
+        candidatos.sort(reverse=True)
+        mejor_score, mejor_nombre = candidatos[0]
+        print(f"🔍 Mejor coincidencia: '{mejor_nombre}' con puntuación {mejor_score}")
 
-    patrones_explicar_producto = [
-        r"beneficios.*producto", r"para qué sirve", r"cómo.*usar", r"modo.*de.*uso",
-        r"cuál es el efecto", r"qué hace", r"explica.*producto", r"producto.*sirve"
-    ]
+        # Umbral de confianza mínima
+        if mejor_score >= 70:
+            return mejor_nombre
+        else:
+            print("⚠️ Puntuación insuficiente para determinar un producto con confianza")
+            return None
 
-    for patron in patrones_explicar_producto:
-        if re.search(patron, texto):
-            return {
-                "intencion": "explicar_producto",
-                "tiene_fecha": False,
-                "comentario": "Consulta sobre un producto o sus beneficios"
-            }
-
-    return {
-        "intencion": "general",
-        "tiene_fecha": False,
-        "comentario": "Respuesta no interpretable"
-    }
+    except Exception as e:
+        print(f"❌ Error al procesar productos: {e}")
+        return None
