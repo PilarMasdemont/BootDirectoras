@@ -1,55 +1,70 @@
 import pandas as pd
-from rapidfuzz import fuzz
-from google_sheets_session import cargar_hoja_google_sheets
+import re
+from rapidfuzz import process, fuzz
+from google_sheets_session import cargar_productos_catalogo
 
 
-def extraer_nombre_producto(texto_usuario: str) -> str:
+def normalizar(texto):
+    """Limpia y convierte a minúsculas el texto."""
+    if not isinstance(texto, str):
+        return ""
+    return re.sub(r"\s+", " ", texto.lower().strip())
+
+
+def extraer_nombre_producto(texto_usuario: str) -> dict:
     """
-    Extrae el nombre más probable de producto a partir del texto de entrada del usuario.
-    Usa coincidencia difusa con columnas 'nombre' y 'aliases'.
+    Extrae el nombre de producto más parecido desde el catálogo.
+
+    Usa coincidencia difusa con rapidfuzz considerando nombre y aliases.
     """
     try:
-        # Cargar hoja de productos
-        df = cargar_hoja_google_sheets("productos_catalogo")
-        df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
-        print("📋 Columnas normalizadas:", df.columns.tolist())
-
-        # Validar columnas necesarias
-        if 'nombre' not in df.columns or 'aliases' not in df.columns:
-            print("❌ Columnas requeridas faltantes en la hoja de productos")
-            return None
-
-        # Rellenar vacíos
-        df['nombre'] = df['nombre'].fillna("")
-        df['aliases'] = df['aliases'].fillna("")
-
-        # Preparar lista de comparación
-        candidatos = []
-        for idx, row in df.iterrows():
-            nombre = row['nombre'].strip().lower()
-            aliases = [alias.strip().lower() for alias in row['aliases'].split(',') if alias.strip()] if row['aliases'] else []
-            opciones = [nombre] + aliases
-
-            for op in opciones:
-                puntuacion = fuzz.partial_ratio(op, texto_usuario.lower())
-                candidatos.append((puntuacion, nombre))
-
-        if not candidatos:
-            print("⚠️ No se encontraron candidatos en el catálogo de productos")
-            return None
-
-        # Obtener mejor coincidencia
-        candidatos.sort(reverse=True)
-        mejor_score, mejor_nombre = candidatos[0]
-        print(f"🔍 Mejor coincidencia: '{mejor_nombre}' con puntuación {mejor_score}")
-
-        # Umbral de confianza mínima
-        if mejor_score >= 70:
-            return mejor_nombre
-        else:
-            print("⚠️ Puntuación insuficiente para determinar un producto con confianza")
-            return None
-
+        productos_df = cargar_productos_catalogo()
     except Exception as e:
-        print(f"❌ Error al procesar productos: {e}")
-        return None
+        return {
+            "nombre_producto": None,
+            "comentario": f"❌ Error al cargar hoja de productos: {e}"
+        }
+
+    # Normalizar columnas
+    productos_df.columns = [col.lower().strip().replace(" ", "_") for col in productos_df.columns]
+
+    if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
+        return {
+            "nombre_producto": None,
+            "comentario": "❌ Faltan columnas necesarias ('nombre' o 'aliases') en la hoja de productos"
+        }
+
+    productos_df["nombre"] = productos_df["nombre"].fillna("").apply(normalizar)
+    productos_df["aliases"] = productos_df["aliases"].fillna("").apply(normalizar)
+
+    texto_usuario = normalizar(texto_usuario)
+
+    # Generar lista de posibles alias y nombres
+    candidatos = []
+    for _, row in productos_df.iterrows():
+        candidatos.append((row["nombre"], row["nombre"]))  # (texto, valor_retorno)
+        for alias in row["aliases"].split(","):
+            alias = alias.strip()
+            if alias:
+                candidatos.append((alias, row["nombre"]))
+
+    # Buscar coincidencia
+    mejor_match, score, nombre_canonico = None, 0, None
+    if candidatos:
+        mejor_match, score = process.extractOne(texto_usuario, [c[0] for c in candidatos], scorer=fuzz.token_sort_ratio)
+        for alias, nombre in candidatos:
+            if alias == mejor_match:
+                nombre_canonico = nombre
+                break
+
+    if score >= 70:
+        return {
+            "nombre_producto": nombre_canonico,
+            "comentario": f"✅ Producto encontrado por coincidencia: '{mejor_match}' (score: {score})"
+        }
+    else:
+        return {
+            "nombre_producto": None,
+            "comentario": f"❌ Ningún producto coincide lo suficiente (score: {score})"
+        }
+
