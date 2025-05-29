@@ -4,8 +4,21 @@ import pandas as pd
 from rapidfuzz import fuzz
 from google_sheets_session import cargar_aliases_productos
 
-def extraer_nombre_producto(texto: str) -> str:
-    """
+def extraer_nombre_producto(texto_usuario):
+    productos_df = cargar_aliases_productos()
+
+    if productos_df.empty:
+        print("⚠️ Hoja de productos vacía o no cargada")
+        return None
+
+    if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
+        print("❌ Columnas necesarias 'nombre' y/o 'aliases' no están presentes")
+        return None
+
+    productos_df["nombre"] = productos_df["nombre"].fillna("")
+    productos_df["aliases"] = productos_df["aliases"].fillna("")
+    ...
+
     Extrae el nombre del producto del mensaje del usuario utilizando coincidencia difusa
     con nombres y aliases de productos de Google Sheets.
     """
