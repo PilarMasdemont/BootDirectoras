@@ -28,7 +28,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     fecha = extraer_fecha_desde_texto(texto_limpio)
     logging.info(f"[FECHA] Extraída: {fecha}")
 
-    codsalon = datos.get("salon") or extraer_codsalon(mensaje_usuario)
+    codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
     # Paso 4: Retornar estructura con todos los datos necesarios
