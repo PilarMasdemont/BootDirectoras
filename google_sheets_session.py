@@ -7,7 +7,7 @@ from datetime import datetime
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
 SHEET_PRODUCTOS_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
-GID_PRODUCTOS = "0"
+nombre_pestana = "ProductosBoot"
 
 def cargar_sesion(ip: str, fecha: str) -> dict:
     try:
