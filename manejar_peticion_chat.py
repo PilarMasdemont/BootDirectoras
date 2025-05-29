@@ -5,7 +5,9 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-def manejar_peticion_chat(mensaje_usuario: str) -> dict:
+def manejar_peticion_chat(datos: dict) -> dict:
+    mensaje_usuario = datos.get("mensaje", "")
+
     # Paso 1: Clasificar la intención
     datos_intencion = clasificar_intencion(mensaje_usuario)
     intencion = datos_intencion.get("intencion", "general")
@@ -26,7 +28,7 @@ def manejar_peticion_chat(mensaje_usuario: str) -> dict:
     fecha = extraer_fecha_desde_texto(texto_limpio)
     logging.info(f"[FECHA] Extraída: {fecha}")
 
-    codsalon = extraer_codsalon(mensaje_usuario)
+    codsalon = datos.get("salon") or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
     # Paso 4: Retornar estructura con todos los datos necesarios
