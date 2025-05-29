@@ -13,6 +13,8 @@ from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
+from funciones.explicar_producto import explicar_producto
+
 
 import json
 
@@ -90,6 +92,19 @@ async def chat_handler(request: Request):
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
         logging.error(f"⚠️ Error en funciones directas: {e}")
+            # 🎯 Procesamiento para intención de producto
+    if intencion == "explicar_producto":
+        nombre_producto = datos.get("nombre_producto")
+        if nombre_producto:
+            try:
+                resultado = explicar_producto(nombre_producto)
+                guardar_sesion(sesion)
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+            except Exception as e:
+                logging.error(f"❌ Error al procesar producto: {e}")
+                raise HTTPException(status_code=500, detail="Error al procesar el producto.")
+        else:
+            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
 
     # 🤖 Llamada OpenAI si no hubo función directa
     try:
