@@ -1,89 +1,72 @@
+from pathlib import Path
+
+# Código reconstruido de extractores_producto.py con la nueva lógica pero respetando lo anterior
+codigo_reconstruido = '''
 import re
 import pandas as pd
-from rapidfuzz import process, fuzz
+from rapidfuzz import fuzz
+from google_sheets_session import cargar_aliases_productos
 
-# 👇 Carga catálogo para fuzzy match en intenciones
-def cargar_nombres_productos() -> list:
-    try:
-        df = pd.read_csv("productos_catalogo.csv")
-        return [str(n).lower().strip() for n in df["nombre"].dropna().tolist()]
-    except Exception as e:
-        print(f"Error al cargar nombres de producto: {e}")
-        return []
-
-# 🎯 Fuzzy detection para intenciones
-def clasificar_intencion(texto: str) -> dict:
+def extraer_nombre_producto(texto: str) -> str:
+    """
+    Extrae el nombre del producto del mensaje del usuario utilizando coincidencia difusa
+    con nombres y aliases de productos de Google Sheets.
+    """
     texto = texto.lower().strip()
+    productos_df = cargar_aliases_productos()
 
-    palabras_producto = [
-        "producto", "alisador", "tratamiento", "beneficio", "cómo se usa", "opiniones",
-        "comentarios", "hidrata", "keratina", "ácido hialurónico", "glatt", "lisse", "color freeze"
+    # Normalizar columnas
+    productos_df.columns = [str(c).strip().lower().replace(" ", "_") for c in productos_df.columns]
+    productos_df["nombre"] = productos_df["nombre"].fillna("")
+    productos_df["aliases"] = productos_df["aliases"].fillna("")
+
+    mejor_coincidencia = {"producto": None, "score": 0}
+
+    for _, fila in productos_df.iterrows():
+        nombre = str(fila["nombre"]).lower()
+        if not nombre:
+            continue
+        score_nombre = fuzz.partial_ratio(texto, nombre)
+        if score_nombre > mejor_coincidencia["score"]:
+            mejor_coincidencia = {"producto": nombre, "score": score_nombre}
+
+        for alias in str(fila["aliases"]).split(","):
+            alias = alias.strip().lower()
+            if alias:
+                score_alias = fuzz.partial_ratio(texto, alias)
+                if score_alias > mejor_coincidencia["score"]:
+                    mejor_coincidencia = {"producto": nombre, "score": score_alias}
+
+    if mejor_coincidencia["score"] > 70:
+        return mejor_coincidencia["producto"]
+    return None
+
+def clasificar_intencion(texto: str) -> dict:
+    texto = texto.lower()
+
+    patrones_explicar_producto = [
+        r"beneficios.*producto", r"para qué sirve", r"cómo.*usar", r"modo.*de.*uso",
+        r"cuál es el efecto", r"qué hace", r"explica.*producto", r"producto.*sirve"
     ]
-    if any(p in texto for p in palabras_producto):
-        return {
-            "intencion": "explicar_producto",
-            "tiene_fecha": False,
-            "comentario": "Detectado por palabras clave de producto"
-        }
 
-    nombres_producto = cargar_nombres_productos()
-    if nombres_producto:
-        mejor_match, score, _ = process.extractOne(texto, nombres_producto, scorer=fuzz.partial_ratio)
-        if score >= 85:
+    for patron in patrones_explicar_producto:
+        if re.search(patron, texto):
             return {
                 "intencion": "explicar_producto",
                 "tiene_fecha": False,
-                "comentario": f"Detectado por fuzzy match con producto: {mejor_match}"
+                "comentario": "Consulta sobre un producto o sus beneficios"
             }
-
-    patron_empleado = r"(emplead[oa]|trabajador[a]?)\s*\d+"
-    if re.search(patron_empleado, texto):
-        return {
-            "intencion": "empleado",
-            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
-            "comentario": "Detectado patrón de empleado"
-        }
-
-    if re.search(r"(ratio|indicador|rendimiento|productividad)", texto):
-        return {
-            "intencion": "general",
-            "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
-            "comentario": "Consulta general de indicadores"
-        }
 
     return {
         "intencion": "general",
         "tiene_fecha": False,
         "comentario": "Respuesta no interpretable"
     }
+'''
 
-# ✅ DETECCIÓN DEL PRODUCTO
-def cargar_aliases_productos() -> pd.DataFrame:
-    try:
-        df = pd.read_csv("productos_catalogo.csv")
-        return df
-    except Exception as e:
-        print(f"Error al cargar hoja de productos: {e}")
-        return pd.DataFrame()
+# Guardar el archivo reconstruido
+ruta_final = Path("/mnt/data/extractores_producto_RECONSTRUIDO.py")
+ruta_final.write_text(codigo_reconstruido)
 
-def extraer_nombre_producto(texto_usuario: str) -> str:
-    texto_usuario = texto_usuario.lower().strip()
-    productos_df = cargar_aliases_productos()
+ruta_final.name
 
-    productos_df["nombre"] = productos_df["nombre"].fillna("")
-    productos_df["aliases"] = productos_df.get("aliases", "").fillna("")
-
-    nombres = productos_df["nombre"].tolist()
-    nombres_lower = [n.lower().strip() for n in nombres]
-
-    mejor_match, score, _ = process.extractOne(texto_usuario, nombres_lower, scorer=fuzz.partial_ratio)
-    if score >= 80:
-        return productos_df.iloc[nombres_lower.index(mejor_match)]["nombre"]
-
-    for _, row in productos_df.iterrows():
-        alias_raw = str(row["aliases"]).lower()
-        alias_list = [a.strip() for a in alias_raw.split(",") if a.strip()]
-        if any(alias in texto_usuario for alias in alias_list):
-            return row["nombre"]
-
-    return None
