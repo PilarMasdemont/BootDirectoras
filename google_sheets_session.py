@@ -6,6 +6,8 @@ from datetime import datetime
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
 TABLA_SESIONES = "session_state"
+SHEET_PRODUCTOS_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
+GID_PRODUCTOS = "0"
 
 def cargar_sesion(ip: str, fecha: str) -> dict:
     try:
@@ -104,3 +106,23 @@ def guardar_sesion(sesion: dict):
         print("✅ Sesión guardada correctamente.")
     except Exception as e:
         print(f"❌ Error al guardar sesión: {e}")
+def buscar_producto_por_nombre_o_alias(nombre_producto: str) -> dict:
+    try:
+        hoja_productos = cargar_hoja_por_nombre(SHEET_PRODUCTOS_ID, GID_PRODUCTOS)
+        hoja_productos.columns = [str(c).strip().lower().replace(" ", "_") for c in hoja_productos.columns]
+
+        nombre_producto = nombre_producto.lower().strip()
+
+        for _, fila in hoja_productos.iterrows():
+            nombre = str(fila.get("nombre", "")).lower()
+            aliases_raw = fila.get("aliases", "")
+            aliases = [a.strip().lower() for a in str(aliases_raw).split(",") if a.strip()]
+
+            if nombre_producto in nombre or any(nombre_producto in alias for alias in aliases):
+                return fila.to_dict()
+    except Exception as e:
+        print(f"❌ Error al buscar producto: {e}")
+
+    return {}
+
+
