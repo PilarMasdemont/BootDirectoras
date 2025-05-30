@@ -44,9 +44,9 @@ async def chat_handler(request: Request):
     logging.info(f"👤 Empleado: {codempleado}")
     logging.info(f"📊 KPI: {kpi_detectado}")
 
-    # Cargar sesión
+    # Cargar sesión (usa clave 'ip')
     sesion = cargar_sesion(client_ip, fecha or "")
-    sesion["ip_usuario"] = client_ip
+    sesion["ip"] = client_ip
 
     # Modo empleados interactivo
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
@@ -72,31 +72,30 @@ async def chat_handler(request: Request):
         resultado = None
         if intencion == "explicar_producto":
             nombre_info = datos.get("nombre_producto")
-            # Debug: ver datos recibidos
             logging.debug(f"📋 datos incoming nombre_producto: {nombre_info}")
             if nombre_info:
-                # Aceptar tanto string como dict de alias
-                if isinstance(nombre_info, dict):
-                    prod_name = nombre_info.get("nombre_producto")
-                else:
-                    prod_name = nombre_info
+                prod_name = nombre_info.get("nombre_producto") if isinstance(nombre_info, dict) else nombre_info
                 logging.debug(f"📋 llamando explicar_producto con prod_name: '{prod_name}'")
                 try:
                     resultado = explicar_producto(prod_name)
                     logging.debug(f"📋 resultado explicar_producto raw: {resultado!r}")
+                except NameError as ne:
+                    if 'GID_PRODUCTOS' in str(ne):
+                        logging.error("❌ Constante GID_PRODUCTOS no definida en explicar_producto.")
+                        return {"respuesta": "Error interno: configuración de productos incompleta (GID_PRODUCTOS no definido). Por favor, revisa la configuración del conector a Google Sheets."}
+                    else:
+                        logging.error(f"❌ Excepción en explicar_producto: {ne}")
                 except Exception as ex:
                     logging.error(f"❌ Excepción en explicar_producto: {ex}")
-                    # Continuar para mensaje de error al usuario
                 if resultado:
                     guardar_sesion(sesion)
                     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-                # Si llega aquí, no hay resultado válido
-                logging.info(f"📋 No se encontró info completa para '{prod_name}'")
-                return {"respuesta": f"Hola, soy Mont Dirección.\n\nNo encontré información completa sobre el producto '{prod_name}'. Voy a revisar los datos disponibles y volveré en un momento."}
+                logging.info(f"📋 No se encontró info completa para '{prod_name}', columnas disponibles: {resultado.keys() if isinstance(resultado, dict) else 'None'}")
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\nNo encontré información completa sobre el producto '{prod_name}'. Comprueba que las columnas en Google Sheets estén bien definidas."}
             else:
                 return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
         elif intencion.startswith("explicar_ratio"):
-            # Flujo KPI: casos desde más específico a más general
+            # Flujo KPI...
             if codsalon and fecha and codempleado and kpi_detectado:
                 resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
             elif codsalon and fecha and codempleado:
@@ -109,21 +108,18 @@ async def chat_handler(request: Request):
                 resultado = explicar_ratio_mensual(codsalon, sesion["mes"], kpi_detectado)
             elif codsalon and fecha:
                 resultado = explicar_ratio(codsalon, fecha, mensaje)
-        # Si se obtuvo resultado, guardamos y devolvemos
         if resultado:
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
         logging.error(f"⚠️ Error en procesamiento directo: {e}")
 
-    # Llamada a OpenAI como fallback
+    # Fallback a OpenAI
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
-                {"role": "user", "content": mensaje}
-            ],
+            messages=[{"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
+                      {"role": "user", "content": mensaje}],
             function_call="auto",
             functions=chat_functions.get_definiciones_funciones()
         )
