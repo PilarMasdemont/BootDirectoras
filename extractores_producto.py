@@ -53,3 +53,4 @@ def extraer_nombre_producto(texto_usuario: str) -> dict:
         print(f"❌ No se encontró coincidencia suficiente. Mejor score: {mejor_score}")
         return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "No se identificó el producto"}
 
+
