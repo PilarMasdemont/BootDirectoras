@@ -1,56 +1,54 @@
-import re
 import pandas as pd
-from google_sheets_session import cargar_aliases_productos
+from rapidfuzz import fuzz
+from sheets_io import cargar_hoja_google_sheets
 
+SHEET_PRODUCTOS_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
+GID_PRODUCTOS = "0"
 
-def extraer_nombre_producto(texto: str) -> dict:
-    """
-    Extrae el nombre del producto mencionado en el texto, buscando coincidencias
-    exactas o parciales con los nombres y alias de productos del catálogo.
-    """
+def extraer_nombre_producto(texto_usuario: str) -> dict:
+    print(f"🔍 Buscando producto en texto: '{texto_usuario}'")
+
     try:
-        texto = texto.lower().strip()
-        print(f"🔍 Buscando producto en texto: '{texto}'")
-
-        productos_df = cargar_aliases_productos()
-        if productos_df.empty:
-            print("❌ Error: El DataFrame de productos está vacío")
-            return {
-                "nombre_producto": "PRODUCTO_NO_ENCONTRADO",
-                "comentario": "El DataFrame de productos está vacío"
-            }
-
-        if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
-            print("❌ Error: Faltan columnas requeridas en la hoja de productos")
-            return {
-                "nombre_producto": "PRODUCTO_NO_ENCONTRADO",
-                "comentario": "Faltan columnas requeridas (nombre, aliases)"
-            }
-
-        productos_df["nombre"] = productos_df["nombre"].fillna("").astype(str)
-        productos_df["aliases"] = productos_df["aliases"].fillna("").astype(str)
-
-        for _, fila in productos_df.iterrows():
-            nombre = fila["nombre"].lower()
-            if nombre in texto:
-                print(f"✅ Coincidencia exacta con nombre: {nombre}")
-                return fila.to_dict()
-
-            aliases = [alias.strip().lower() for alias in fila["aliases"].split(",") if alias.strip()]
-            for alias in aliases:
-                if alias in texto:
-                    print(f"✅ Coincidencia con alias: {alias} para producto {nombre}")
-                    return fila.to_dict()
-
-        print("⚠️ No se encontró coincidencia para ningún producto")
-        return {
-            "nombre_producto": "PRODUCTO_NO_ENCONTRADO",
-            "comentario": "No se encontró coincidencia con ningún producto del catálogo"
-        }
-
+        productos_df = cargar_hoja_google_sheets(SHEET_PRODUCTOS_ID, GID_PRODUCTOS)
+        print("📋 Columnas originales:", productos_df.columns.tolist())
     except Exception as e:
-        print(f"❌ Error durante la extracción del nombre de producto: {e}")
-        return {
-            "nombre_producto": "PRODUCTO_NO_ENCONTRADO",
-            "comentario": f"Excepción en la extracción: {e}"
-        }
+        print("❌ Error al cargar hoja de productos:", e)
+        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Error al acceder a los datos"}
+
+    if productos_df.empty:
+        print("❌ El DataFrame de productos está vacío")
+        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Catálogo vacío o inaccesible"}
+
+    # Normalizar columnas
+    productos_df.columns = [col.lower().strip().replace(" ", "_") for col in productos_df.columns]
+    print("📋 Columnas normalizadas:", productos_df.columns.tolist())
+
+    # Verificar columnas requeridas
+    if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
+        print("❌ Faltan columnas requeridas: 'nombre' y/o 'aliases'")
+        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Estructura de hoja inválida"}
+
+    productos_df["nombre"] = productos_df["nombre"].fillna("").str.strip()
+    productos_df["aliases"] = productos_df["aliases"].fillna("").str.strip()
+
+    mejor_score = 0
+    mejor_nombre = ""
+
+    for _, fila in productos_df.iterrows():
+        nombre = fila["nombre"]
+        aliases = fila["aliases"].split(",") if fila["aliases"] else []
+        candidatos = [nombre] + [alias.strip() for alias in aliases]
+
+        for candidato in candidatos:
+            score = fuzz.partial_ratio(candidato.lower(), texto_usuario.lower())
+            print(f"🔎 Evaluando: '{candidato}' vs. '{texto_usuario}' → score: {score}")
+            if score > mejor_score:
+                mejor_score = score
+                mejor_nombre = nombre
+
+    if mejor_score >= 80:
+        print(f"✅ Producto encontrado: {mejor_nombre} (score: {mejor_score})")
+        return {"nombre_producto": mejor_nombre, "comentario": "Coincidencia encontrada"}
+    else:
+        print(f"❌ No se encontró coincidencia suficiente. Mejor score: {mejor_score}")
+        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "No se identificó el producto"}
