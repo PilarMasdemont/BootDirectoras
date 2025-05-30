@@ -72,18 +72,27 @@ async def chat_handler(request: Request):
         resultado = None
         if intencion == "explicar_producto":
             nombre_info = datos.get("nombre_producto")
+            # Debug: ver datos recibidos
+            logging.debug(f"📋 datos incoming nombre_producto: {nombre_info}")
             if nombre_info:
                 # Aceptar tanto string como dict de alias
                 if isinstance(nombre_info, dict):
                     prod_name = nombre_info.get("nombre_producto")
                 else:
                     prod_name = nombre_info
-                resultado = explicar_producto(prod_name)
+                logging.debug(f"📋 llamando explicar_producto con prod_name: '{prod_name}'")
+                try:
+                    resultado = explicar_producto(prod_name)
+                    logging.debug(f"📋 resultado explicar_producto raw: {resultado!r}")
+                except Exception as ex:
+                    logging.error(f"❌ Excepción en explicar_producto: {ex}")
+                    # Continuar para mensaje de error al usuario
                 if resultado:
                     guardar_sesion(sesion)
                     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-                # mensaje de no encontrado explícito
-                return {"respuesta": f"Hola, soy Mont Dirección.\n\nNo encontré información sobre el producto '{prod_name}'. ¿Podrías verificar el nombre o darme más detalles?"}
+                # Si llega aquí, no hay resultado válido
+                logging.info(f"📋 No se encontró info completa para '{prod_name}'")
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\nNo encontré información completa sobre el producto '{prod_name}'. Voy a revisar los datos disponibles y volveré en un momento."}
             else:
                 return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
         elif intencion.startswith("explicar_ratio"):
