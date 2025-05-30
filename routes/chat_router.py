@@ -18,6 +18,11 @@ from manejar_peticion_chat import manejar_peticion_chat
 logging.basicConfig(level=logging.INFO)
 router = APIRouter()
 
+# Leer directamente la variable de entorno en Render
+GID_PRODUCTOS = os.getenv("GID_PRODUCTOS")
+if not GID_PRODUCTOS:
+    raise RuntimeError("La variable de entorno GID_PRODUCTOS no está definida")
+    
 @router.post("")
 async def chat_handler(request: Request):
     # Obtener datos de la petición
