@@ -48,9 +48,7 @@ def extraer_nombre_producto(texto_usuario: str) -> dict:
 
     if mejor_score >= 80:
         print(f"✅ Producto encontrado: {mejor_nombre} (score: {mejor_score})")
-        # Llamar a la función de explicación directamente para completar el flujo
-        explicacion = explicar_producto(mejor_nombre)
-        return {"nombre_producto": mejor_nombre, "comentario": "Coincidencia encontrada", "respuesta": explicacion}
+        return {"nombre_producto": mejor_nombre, "comentario": "Coincidencia encontrada"}
     else:
         print(f"❌ No se encontró coincidencia suficiente. Mejor score: {mejor_score}")
         return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "No se identificó el producto"}
