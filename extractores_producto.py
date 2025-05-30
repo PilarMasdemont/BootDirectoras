@@ -1,6 +1,6 @@
 import pandas as pd
 from rapidfuzz import fuzz
-from sheets_io import cargar_hoja_google_sheets
+from sheets_io import cargar_hoja_por_gid
 
 SHEET_PRODUCTOS_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
 GID_PRODUCTOS = "0"
@@ -9,7 +9,7 @@ def extraer_nombre_producto(texto_usuario: str) -> dict:
     print(f"🔍 Buscando producto en texto: '{texto_usuario}'")
 
     try:
-        productos_df = cargar_hoja_google_sheets(SHEET_PRODUCTOS_ID, GID_PRODUCTOS)
+        productos_df = cargar_hoja_por_gid(SHEET_PRODUCTOS_ID, GID_PRODUCTOS)
         print("📋 Columnas originales:", productos_df.columns.tolist())
     except Exception as e:
         print("❌ Error al cargar hoja de productos:", e)
@@ -52,3 +52,4 @@ def extraer_nombre_producto(texto_usuario: str) -> dict:
     else:
         print(f"❌ No se encontró coincidencia suficiente. Mejor score: {mejor_score}")
         return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "No se identificó el producto"}
+
