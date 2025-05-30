@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException
-from config import setup_environment, openai_client
+from config import setup_environment, openai_client, GID_PRODUCTOS
 from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
 from funciones.explicar_ratio import explicar_ratio
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
