@@ -32,11 +32,11 @@ async def chat_handler(request: Request):
 
     # Analizar petición
     datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
-    intencion = datos["intencion"]
-    fecha = datos["fecha"]
-    codsalon = datos["codsalon"]
-    codempleado = datos["codempleado"]
-    kpi_detectado = datos["kpi"]
+    intencion = datos.get("intencion")
+    fecha = datos.get("fecha")
+    codsalon = datos.get("codsalon")
+    codempleado = datos.get("codempleado")
+    kpi_detectado = datos.get("kpi")
 
     logging.info(f"🧠 Intención: {intencion}")
     logging.info(f"📅 Fecha extraída: {fecha}")
@@ -68,12 +68,22 @@ async def chat_handler(request: Request):
         sesion["fecha"] = fecha
 
     # Procesamiento directo según intención y datos disponibles
-    resultado = None
     try:
+        resultado = None
         if intencion == "explicar_producto":
-            nombre_producto = datos.get("nombre_producto")
-            if nombre_producto:
-                resultado = explicar_producto(nombre_producto)
+            nombre_info = datos.get("nombre_producto")
+            if nombre_info:
+                # Aceptar tanto string como dict de alias
+                if isinstance(nombre_info, dict):
+                    prod_name = nombre_info.get("nombre_producto")
+                else:
+                    prod_name = nombre_info
+                resultado = explicar_producto(prod_name)
+                if resultado:
+                    guardar_sesion(sesion)
+                    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+                # mensaje de no encontrado explícito
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\nNo encontré información sobre el producto '{prod_name}'. ¿Podrías verificar el nombre o darme más detalles?"}
             else:
                 return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
         elif intencion.startswith("explicar_ratio"):
@@ -118,5 +128,3 @@ async def chat_handler(request: Request):
     except Exception as e:
         logging.error(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
