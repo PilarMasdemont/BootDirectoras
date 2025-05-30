@@ -13,8 +13,7 @@ from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
-from funciones.explicar_producto import explicar_producto
-
+from funciones.explicar_producto import explicar_producto  # ✅ Correcto
 
 import json
 
@@ -31,7 +30,6 @@ async def chat_handler(request: Request):
 
     logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
-    # 🧠 Analizar petición
     datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
     intencion = datos["intencion"]
     fecha = datos["fecha"]
@@ -39,19 +37,31 @@ async def chat_handler(request: Request):
     codempleado = datos["codempleado"]
     kpi_detectado = datos["kpi"]
 
-    # 🔍 DEBUG - Verificación de extracción
     logging.info(f"🧠 Intención: {intencion}")
     logging.info(f"📅 Fecha extraída: {fecha}")
     logging.info(f"🏢 Salón: {codsalon}")
     logging.info(f"👤 Empleado: {codempleado}")
     logging.info(f"📊 KPI: {kpi_detectado}")
 
-    # 📂 Cargar sesión
     sesion = cargar_sesion(client_ip, fecha or "")
     logging.info(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
 
-    # ✅ Modo empleados activo
+    # ✅ Flujo para productos antes del resto
+    if intencion == "explicar_producto":
+        nombre_producto = datos.get("nombre_producto")
+        if nombre_producto:
+            try:
+                resultado = explicar_producto(nombre_producto)
+                guardar_sesion(sesion)
+                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+            except Exception as e:
+                logging.error(f"❌ Error al procesar producto: {e}")
+                raise HTTPException(status_code=500, detail="Error al procesar el producto.")
+        else:
+            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
+
+    # ✅ Modo empleados
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
         respuesta = manejar_flujo_empleados(sesion)
         guardar_sesion(sesion)
@@ -70,7 +80,7 @@ async def chat_handler(request: Request):
             sesion["fecha_anterior"] = fecha
         sesion["fecha"] = fecha
 
-    # 📊 Procesamiento por función directa
+    # 📊 Funciones KPI directas
     try:
         if codsalon and fecha and not codempleado and not kpi_detectado:
             resultado = explicar_ratio(codsalon, fecha, mensaje)
@@ -92,21 +102,9 @@ async def chat_handler(request: Request):
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
         logging.error(f"⚠️ Error en funciones directas: {e}")
-            # 🎯 Procesamiento para intención de producto
-    if intencion == "explicar_producto":
-        nombre_producto = datos.get("nombre_producto")
-        if nombre_producto:
-            try:
-                resultado = explicar_producto(nombre_producto)
-                guardar_sesion(sesion)
-                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-            except Exception as e:
-                logging.error(f"❌ Error al procesar producto: {e}")
-                raise HTTPException(status_code=500, detail="Error al procesar el producto.")
-        else:
-            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
+        return {"respuesta": "Se produjo un error al procesar tu solicitud. Puedes intentar reformularla."}
 
-    # 🤖 Llamada OpenAI si no hubo función directa
+    # 🤖 Fallback a OpenAI
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
@@ -130,6 +128,3 @@ async def chat_handler(request: Request):
     except Exception as e:
         logging.error(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
