@@ -1,4 +1,3 @@
-
 from funciones.intencion import clasificar_intencion
 from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
 import re
@@ -26,7 +25,15 @@ def manejar_peticion_chat(datos: dict) -> dict:
     logging.info(f"[LIMPIEZA] Texto para extracción de fecha: '{texto_limpio}'")
 
     # Paso 3: Extraer parámetros
-    fecha = extraer_fecha_desde_texto(texto_limpio)
+    if intencion == "explicar_producto":
+        fecha = "NO_NECESARIA"
+    else:
+        try:
+            fecha = extraer_fecha_desde_texto(texto_limpio)
+        except Exception as e:
+            fecha = "FECHA_NO_VALIDA"
+            logging.error(f"❌ Error al interpretar la fecha en el texto '{texto_limpio}': {e}")
+
     logging.info(f"[FECHA] Extraída: {fecha}")
 
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
