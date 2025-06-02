@@ -98,3 +98,17 @@ def resolver(function_call, sesion: dict) -> str:
         return resultado
     else:
         raise ValueError("Función no reconocida")
+
+from config import openai_client
+
+def generar_respuesta(prompt: str) -> str:
+    """Genera una respuesta usando el modelo GPT basado en un prompt de usuario."""
+    response = openai_client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "Responde con claridad y profesionalismo para asesorar a una directora de salón de peluquería. Utiliza el archivo de productos si aplica."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
