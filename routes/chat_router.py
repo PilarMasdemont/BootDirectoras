@@ -69,18 +69,18 @@ async def chat_handler(request: Request):
             sesion["fecha_anterior"] = fecha
         sesion["fecha"] = fecha
 
-   # 🔀 Bifurcación según tipo de intención
-try:
-    if intencion == "explicar_producto":
-        nombre_producto = extraer_nombre_producto(mensaje)  # NUEVO
-        contenido_productos = cargar_info_producto(nombre_producto)  # MODIFICADO
-        prompt = (
-            "Consulta sobre productos del salón:\n"
-            f"{contenido_productos}\n\n"
-            f"Pregunta de la directora: '{mensaje}'\n\n"
-            "Responde de forma clara y profesional usando únicamente la información anterior."
-        )
-        respuesta = chat_functions.generar_respuesta(prompt)
+    # 🔀 Bifurcación según tipo de intención
+    try:
+        if intencion == "explicar_producto":
+            nombre_producto = extraer_nombre_producto(mensaje)  # NUEVO
+            contenido_productos = cargar_info_producto(nombre_producto)  # MODIFICADO
+            prompt = (
+                "Consulta sobre productos del salón:\n"
+                f"{contenido_productos}\n\n"
+                f"Pregunta de la directora: '{mensaje}'\n\n"
+                "Responde de forma clara y profesional usando únicamente la información anterior."
+            )
+            respuesta = chat_functions.generar_respuesta(prompt)
         elif tiene_fecha:
             if codsalon and fecha and not codempleado and not kpi_detectado:
                 respuesta = explicar_ratio(codsalon, fecha, mensaje)
@@ -106,7 +106,6 @@ try:
 
     guardar_sesion(sesion)
     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
-
 
 
 
