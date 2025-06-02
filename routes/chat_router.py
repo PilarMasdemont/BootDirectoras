@@ -13,6 +13,7 @@ from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
+from funciones.cargar_productos import cargar_info_producto
 
 import json
 
