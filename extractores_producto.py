@@ -1,18 +1,25 @@
+
 import re
+from unidecode import unidecode
 
 def extraer_nombre_producto(texto: str) -> str:
-    """
-    Extrae el posible nombre de producto desde el texto del usuario,
-    eliminando palabras innecesarias o muy comunes.
-    """
+    '''
+    Extrae el nombre probable del producto del texto proporcionado por el usuario.
+    Se eliminan palabras comunes y se normaliza el texto para comparaciones más efectivas.
+    '''
     texto = texto.lower()
-    patrones_irrelevantes = [
-        r"\bproducto\b", r"\binformaci[oó]n\b", r"\bexplic[aá]me\b", r"\bsobre\b",
-        r"\bmodo\b", r"\baplicar\b", r"\bel\b", r"\bla\b", r"\bdel\b", r"\bde\b",
+    texto = unidecode(texto)
+
+    # Palabras comunes a eliminar
+    palabras_excluir = [
+        'podrias', 'puedes', 'quiero', 'quisiera', 'me', 'informacion',
+        'explicarme', 'explicar', 'modo', 'como', 'aplicar', 'producto',
+        'del', 'de', 'el', 'la', 'los', 'las', 'un', 'una', 'sobre', 'acerca'
     ]
-    
-    for patron in patrones_irrelevantes:
-        texto = re.sub(patron, '', texto)
-    
-    texto = re.sub(r'\s+', ' ', texto).strip()  # Limpiar espacios
-    return texto
+
+    # Eliminar signos de puntuación y dividir en palabras
+    palabras = re.findall(r'\b\w+\b', texto)
+    palabras_filtradas = [p for p in palabras if p not in palabras_excluir]
+
+    # Reconstruir texto limpio
+    return ' '.join(palabras_filtradas).strip()
