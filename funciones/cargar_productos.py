@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from unidecode import unidecode
+from rapidfuzz import process, fuzz
 
 def cargar_info_producto(nombre_producto: str, campo_especifico: str = None) -> str:
     """
@@ -12,8 +14,6 @@ def cargar_info_producto(nombre_producto: str, campo_especifico: str = None) -> 
     Returns:
         str: Información del producto o mensaje de no encontrado.
     """
-    from unidecode import unidecode
-
     # Normalización del nombre
     nombre_normalizado = unidecode(nombre_producto.strip().lower())
 
@@ -30,16 +30,24 @@ def cargar_info_producto(nombre_producto: str, campo_especifico: str = None) -> 
     # Separar productos
     productos = contenido.split("\n---")
 
-    for bloque in productos:
-        bloque_limpio = unidecode(bloque.lower())
-        if nombre_normalizado in bloque_limpio:
-            if campo_especifico:
-                campo = campo_especifico.lower()
-                lineas = bloque.strip().splitlines()
-                for linea in lineas:
-                    if linea.lower().startswith(f"**{campo}**:"):
-                        return linea.replace(f"**{campo_especifico}**:", "").strip()
-                return f"⚠️ El campo '{campo_especifico}' no fue encontrado para el producto solicitado."
-            return bloque.strip()
+    # Extraer encabezados para usar en matching difuso
+    encabezados = [unidecode(bloque.split('\n')[0].strip().lower()) for bloque in productos]
 
-    return f"⚠️ El producto '{nombre_producto}' no se encuentra registrado en la base de datos."
+    # Buscar mejor coincidencia con rapidfuzz
+    mejor_match = process.extractOne(nombre_normalizado, encabezados, scorer=fuzz.token_set_ratio)
+
+    if not mejor_match or mejor_match[1] < 60:
+        return f"⚠️ El producto '{nombre_producto}' no se encuentra registrado en la base de datos."
+
+    idx = encabezados.index(mejor_match[0])
+    bloque = productos[idx]
+
+    if campo_especifico:
+        campo = campo_especifico.lower()
+        lineas = bloque.strip().splitlines()
+        for linea in lineas:
+            if linea.lower().startswith(f"**{campo}**:"):
+                return linea.replace(f"**{campo_especifico}**:", "").strip()
+        return f"⚠️ El campo '{campo_especifico}' no fue encontrado para el producto solicitado."
+
+    return bloque.strip()
