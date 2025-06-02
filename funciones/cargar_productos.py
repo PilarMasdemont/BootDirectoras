@@ -1,35 +1,32 @@
-import difflib
 from pathlib import Path
+import logging
+import difflib
 
-def cargar_info_producto(nombre_producto: str) -> str:
-    ruta = Path(__file__).parent / "datos_estaticos" / "productos.md"
+def cargar_info_producto(nombre_producto: str):
+    ruta = Path("datos_estaticos/productos.md")
+    logging.info(f"📄 Ruta absoluta del archivo productos.md: {ruta.resolve()}")
 
     if not ruta.exists():
-        raise FileNotFoundError(f"No se encontró el archivo: {ruta.resolve()}")
+        logging.error("❌ El archivo productos.md no se encuentra.")
+        raise FileNotFoundError("El archivo productos.md no se encuentra.")
 
-    contenido = ruta.read_text(encoding='utf-8')
+    contenido = ruta.read_text(encoding="utf-8").strip()
+    if not contenido:
+        logging.warning("⚠️ El archivo productos.md está vacío.")
+        raise ValueError("El archivo productos.md está vacío.")
 
-    # Dividir por secciones de productos (asumiendo que empiezan con '###')
-    secciones = contenido.split("### ")
-    productos = {}
-    
-    for seccion in secciones:
-        if not seccion.strip():
-            continue
-        lineas = seccion.splitlines()
-        titulo = lineas[0].strip()
-        cuerpo = "\n".join(lineas[1:]).strip()
-        productos[titulo] = cuerpo
+    # Dividir por secciones (cada producto empieza con '## ')
+    secciones = contenido.split("## ")
+    productos = {s.splitlines()[0].strip(): s for s in secciones if s.strip()}
 
-    # Buscar coincidencia aproximada con el nombre del producto
-    coincidencia = difflib.get_close_matches(nombre_producto.strip().lower(), productos.keys(), n=1, cutoff=0.4)
+    # Buscar coincidencia aproximada
+    nombres = list(productos.keys())
+    mejor_coincidencia = difflib.get_close_matches(nombre_producto, nombres, n=1, cutoff=0.4)
 
-    if coincidencia:
-        titulo_match = coincidencia[0]
-        resultado = f"### {titulo_match}\n{productos[titulo_match]}"
-        print(f"[PRODUCTO] Coincidencia encontrada: {titulo_match}")
-        return resultado
+    if mejor_coincidencia:
+        producto = mejor_coincidencia[0]
+        logging.info(f"✅ Producto encontrado: {producto}")
+        return f"## {productos[producto]}"
     else:
-        print("[PRODUCTO] No se encontró ninguna coincidencia.")
-        return "No he encontrado información sobre ese producto."
-
+        logging.warning(f"❌ No se encontró una coincidencia para: {nombre_producto}")
+        return None
