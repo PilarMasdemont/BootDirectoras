@@ -72,17 +72,12 @@ async def chat_handler(request: Request):
     try:
         if intencion == "explicar_producto":
             contenido_productos = cargar_info_producto()
-        prompt = (
-            "Consulta sobre productos del salón:
-"
-            f"{contenido_productos}
-
-"
-            f"Pregunta de la directora: '{mensaje}'
-
-"
-            "Responde de forma clara y profesional usando únicamente la información anterior."
-        )
+            prompt = (
+                "Consulta sobre productos del salón:\n"
+                f"{contenido_productos}\n\n"
+                f"Pregunta de la directora: '{mensaje}'\n\n"
+                "Responde de forma clara y profesional usando únicamente la información anterior."
+            )
             respuesta = chat_functions.generar_respuesta(prompt)
         elif tiene_fecha:
             if codsalon and fecha and not codempleado and not kpi_detectado:
