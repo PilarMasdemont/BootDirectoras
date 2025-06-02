@@ -5,6 +5,7 @@ import os
 
 def cargar_info_producto():
     basedir = os.path.dirname(os.path.abspath(__file__))
+    print("Ruta absoluta del archivo productos.md:", ruta.resolve())  # 👈 Añade esta línea aquí
     ruta_productos = os.path.join(basedir, "..", "datos_estaticos", "productos.md")
 
     try:
