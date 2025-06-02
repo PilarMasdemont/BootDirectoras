@@ -14,7 +14,6 @@ from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
 
-
 import json
 
 logging.basicConfig(level=logging.INFO)
@@ -91,28 +90,28 @@ async def chat_handler(request: Request):
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
         logging.error(f"⚠️ Error en funciones directas: {e}")
-            # 🎯 Procesamiento para intención de producto
+        # 🎯 Procesamiento para intención de producto
         if intencion == "explicar_producto":
-        nombre_producto = datos.get("nombre_producto")
-        if nombre_producto:
-            guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\nEstoy consultando la información del producto '{nombre_producto}' según los datos disponibles."}
-
-Estoy consultando la información del producto '{nombre_producto}' según los datos disponibles."}
-        else:
-            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
+            nombre_producto = datos.get("nombre_producto")
+            if nombre_producto:
+                guardar_sesion(sesion)
+                return {
+                    "respuesta": f"Hola, soy Mont Dirección.\n\nEstoy consultando la información del producto '{nombre_producto}' según los datos disponibles."
+                }
+            else:
+                return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
 
     # 🤖 Llamada OpenAI si no hubo función directa
     try:
-            with open("instrucciones/sistema_direccion.md", "r", encoding="utf-8") as f:
-        prompt_sistema = f.read()
+        with open("instrucciones/sistema_direccion.md", "r", encoding="utf-8") as f:
+            prompt_sistema = f.read()
 
-    response = openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": prompt_sistema},
-            {"role": "user", "content": mensaje}
-        ],
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": mensaje}
+            ],
             function_call="auto",
             functions=chat_functions.get_definiciones_funciones()
         )
