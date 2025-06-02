@@ -96,7 +96,7 @@ async def chat_handler(request: Request):
         nombre_producto = datos.get("nombre_producto")
         if nombre_producto:
             guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\nEstoy consultando la información del producto '{nombre_producto}' según los datos disponibles."}
 
 Estoy consultando la información del producto '{nombre_producto}' según los datos disponibles."}
         else:
