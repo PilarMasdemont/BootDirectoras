@@ -1,32 +1,41 @@
 from pathlib import Path
-import logging
+import re
 import difflib
 
-def cargar_info_producto(nombre_producto: str):
-    ruta = Path("datos_estaticos/productos.md")
-    logging.info(f"📄 Ruta absoluta del archivo productos.md: {ruta.resolve()}")
-
+def cargar_info_producto(nombre_producto, ruta_archivo='datos_estaticos/productos.md', umbral_similitud=0.5):
+    ruta = Path(ruta_archivo)
     if not ruta.exists():
-        logging.error("❌ El archivo productos.md no se encuentra.")
-        raise FileNotFoundError("El archivo productos.md no se encuentra.")
+        raise FileNotFoundError(f"No se encontró el archivo: {ruta.resolve()}")
 
-    contenido = ruta.read_text(encoding="utf-8").strip()
-    if not contenido:
-        logging.warning("⚠️ El archivo productos.md está vacío.")
-        raise ValueError("El archivo productos.md está vacío.")
+    with ruta.open("r", encoding="utf-8") as f:
+        contenido = f.read()
 
-    # Dividir por secciones (cada producto empieza con '## ')
-    secciones = contenido.split("## ")
-    productos = {s.splitlines()[0].strip(): s for s in secciones if s.strip()}
+    # Separar el contenido por productos usando los títulos '## '
+    productos = re.split(r"^##\s+", contenido, flags=re.MULTILINE)
+    nombres_productos = []
+    secciones_productos = []
 
-    # Buscar coincidencia aproximada
-    nombres = list(productos.keys())
-    mejor_coincidencia = difflib.get_close_matches(nombre_producto, nombres, n=1, cutoff=0.4)
+    for producto in productos:
+        lineas = producto.strip().split("\n")
+        if lineas:
+            nombre = lineas[0].strip()
+            nombres_productos.append(nombre)
+            secciones_productos.append(producto.strip())
 
-    if mejor_coincidencia:
-        producto = mejor_coincidencia[0]
-        logging.info(f"✅ Producto encontrado: {producto}")
-        return f"## {productos[producto]}"
+    # Buscar la mejor coincidencia
+    coincidencias = difflib.get_close_matches(nombre_producto, nombres_productos, n=1, cutoff=umbral_similitud)
+
+    if coincidencias:
+        indice = nombres_productos.index(coincidencias[0])
+        return secciones_productos[indice]
     else:
-        logging.warning(f"❌ No se encontró una coincidencia para: {nombre_producto}")
         return None
+
+# Mostrar función como archivo para el usuario
+from ace_tools import save_file
+
+ruta_archivo = "/mnt/data/cargar_productos_optimo.py"
+with open(ruta_archivo, "w", encoding="utf-8") as f:
+    f.write(inspect.getsource(cargar_info_producto))
+
+save_file(ruta_archivo)
