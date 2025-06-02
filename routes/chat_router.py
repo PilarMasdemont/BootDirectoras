@@ -13,8 +13,6 @@ from routes.chat_flujo_empleados import manejar_flujo_empleados
 from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
-from funciones.explicar_producto import explicar_producto
-
 
 import json
 
@@ -38,8 +36,8 @@ async def chat_handler(request: Request):
     codsalon = datos["codsalon"]
     codempleado = datos["codempleado"]
     kpi_detectado = datos["kpi"]
+    tiene_fecha = datos["tiene_fecha"]
 
-    # 🔍 DEBUG - Verificación de extracción
     logging.info(f"🧠 Intención: {intencion}")
     logging.info(f"📅 Fecha extraída: {fecha}")
     logging.info(f"🏢 Salón: {codsalon}")
@@ -48,8 +46,8 @@ async def chat_handler(request: Request):
 
     # 📂 Cargar sesión
     sesion = cargar_sesion(client_ip, fecha or "")
-    logging.info(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
+    logging.info(f"📂 Sesión cargada: {sesion}")
 
     # ✅ Modo empleados activo
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
@@ -70,66 +68,36 @@ async def chat_handler(request: Request):
             sesion["fecha_anterior"] = fecha
         sesion["fecha"] = fecha
 
-    # 📊 Procesamiento por función directa
+    # 🔀 Bifurcación según tipo de intención
     try:
-        if codsalon and fecha and not codempleado and not kpi_detectado:
-            resultado = explicar_ratio(codsalon, fecha, mensaje)
-        elif codsalon and fecha and codempleado and not kpi_detectado:
-            resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
-        elif codsalon and fecha and not codempleado and kpi_detectado:
-            resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
-        elif codsalon and sesion.get("nsemana") and kpi_detectado:
-            resultado = explicar_ratio_semanal(codsalon, sesion["nsemana"], kpi_detectado)
-        elif codsalon and sesion.get("mes") and kpi_detectado:
-            resultado = explicar_ratio_mensual(codsalon, sesion["mes"], kpi_detectado)
-        elif codsalon and fecha and kpi_detectado and codempleado:
-            resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
+        if intencion == "explicar_producto":
+            prompt = f"Este es el mensaje del usuario: '{mensaje}'. Proporciónale información útil sobre el producto basándote en el archivo markdown de productos."
+            respuesta = chat_functions.generar_respuesta(prompt)
+        elif tiene_fecha:
+            if codsalon and fecha and not codempleado and not kpi_detectado:
+                respuesta = explicar_ratio(codsalon, fecha, mensaje)
+            elif codsalon and fecha and codempleado and not kpi_detectado:
+                respuesta = explicar_ratio_empleado_individual(codsalon, codempleado, fecha, mensaje)
+            elif codsalon and fecha and codempleado and kpi_detectado:
+                respuesta = explicar_ratio_empleados(codsalon, fecha, codempleado, kpi_detectado)
+            elif codsalon and fecha and kpi_detectado and "día" in mensaje_limpio:
+                respuesta = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
+            elif codsalon and fecha and kpi_detectado and "semana" in mensaje_limpio:
+                respuesta = explicar_ratio_semanal(codsalon, fecha, kpi_detectado)
+            elif codsalon and fecha and kpi_detectado and "mes" in mensaje_limpio:
+                respuesta = explicar_ratio_mensual(codsalon, fecha, kpi_detectado)
+            else:
+                prompt = f"El usuario ha dicho: '{mensaje}'. Usa el modelo para generar una respuesta útil con base en la fecha proporcionada."
+                respuesta = chat_functions.generar_respuesta(prompt)
         else:
-            resultado = None
-
-        if resultado:
-            guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+            prompt = f"El usuario ha dicho: '{mensaje}'. Responde de forma clara y útil, sin usar datos históricos."
+            respuesta = chat_functions.generar_respuesta(prompt)
     except Exception as e:
-        logging.error(f"⚠️ Error en funciones directas: {e}")
-            # 🎯 Procesamiento para intención de producto
-    if intencion == "explicar_producto":
-        nombre_producto = datos.get("nombre_producto")
-        if nombre_producto:
-            try:
-                resultado = explicar_producto(nombre_producto)
-                guardar_sesion(sesion)
-                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-            except Exception as e:
-                logging.error(f"❌ Error al procesar producto: {e}")
-                raise HTTPException(status_code=500, detail="Error al procesar el producto.")
-        else:
-            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
+        logging.error(f"❌ Error al procesar mensaje: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-    # 🤖 Llamada OpenAI si no hubo función directa
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
-                {"role": "user", "content": mensaje}
-            ],
-            function_call="auto",
-            functions=chat_functions.get_definiciones_funciones()
-        )
-
-        msg = response.choices[0].message
-        if msg.function_call:
-            resultado = chat_functions.resolver(msg.function_call, sesion)
-            guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-
-        guardar_sesion(sesion)
-        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
-
-    except Exception as e:
-        logging.error(f"❌ Error en chat_handler: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    guardar_sesion(sesion)
+    return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
 
 
