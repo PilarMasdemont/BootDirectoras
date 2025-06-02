@@ -1,6 +1,6 @@
 from funciones.intencion import clasificar_intencion
 from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
-from funciones.extractores_producto import extraer_nombre_producto
+from extractores_producto import extraer_nombre_producto
 import re
 import logging
 
