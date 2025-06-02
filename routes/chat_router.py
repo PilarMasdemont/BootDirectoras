@@ -104,12 +104,15 @@ Estoy consultando la información del producto '{nombre_producto}' según los da
 
     # 🤖 Llamada OpenAI si no hubo función directa
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
-                {"role": "user", "content": mensaje}
-            ],
+            with open("instrucciones/sistema_direccion.md", "r", encoding="utf-8") as f:
+        prompt_sistema = f.read()
+
+    response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": prompt_sistema},
+            {"role": "user", "content": mensaje}
+        ],
             function_call="auto",
             functions=chat_functions.get_definiciones_funciones()
         )
@@ -126,7 +129,6 @@ Estoy consultando la información del producto '{nombre_producto}' según los da
     except Exception as e:
         logging.error(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
