@@ -14,7 +14,7 @@ from routes import chat_functions
 from google_sheets_session import cargar_sesion, guardar_sesion
 from manejar_peticion_chat import manejar_peticion_chat
 from funciones.cargar_productos import cargar_info_producto
-from funciones.extractores_producto import extraer_nombre_producto 
+from extractores_producto import extraer_nombre_producto 
 import json
 
 logging.basicConfig(level=logging.INFO)
