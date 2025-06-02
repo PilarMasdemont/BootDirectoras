@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException
@@ -72,7 +71,18 @@ async def chat_handler(request: Request):
     # 🔀 Bifurcación según tipo de intención
     try:
         if intencion == "explicar_producto":
-            prompt = f"Este es el mensaje del usuario: '{mensaje}'. Proporciónale información útil sobre el producto basándote en el archivo markdown de productos."
+            contenido_productos = cargar_info_producto()
+        prompt = (
+            "Consulta sobre productos del salón:
+"
+            f"{contenido_productos}
+
+"
+            f"Pregunta de la directora: '{mensaje}'
+
+"
+            "Responde de forma clara y profesional usando únicamente la información anterior."
+        )
             respuesta = chat_functions.generar_respuesta(prompt)
         elif tiene_fecha:
             if codsalon and fecha and not codempleado and not kpi_detectado:
@@ -99,7 +109,6 @@ async def chat_handler(request: Request):
 
     guardar_sesion(sesion)
     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
-
 
 
 
