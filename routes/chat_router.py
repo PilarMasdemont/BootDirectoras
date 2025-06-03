@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException
 from config import setup_environment, openai_client
@@ -74,17 +75,23 @@ async def chat_handler(request: Request):
         if intencion == "explicar_producto":
             nombre_producto = extraer_nombre_producto(mensaje)
             contenido_productos = cargar_info_producto(nombre_producto)
+
+            ruta_instrucciones = os.path.join(os.path.dirname(__file__), "../instrucciones/sistema_direccion.md")
+
+            try:
+                with open(ruta_instrucciones, "r", encoding="utf-8") as f:
+                    instrucciones = f.read()
+            except Exception as e:
+                logging.error(f"❌ No se pudo leer el archivo de instrucciones: {e}")
+                raise HTTPException(status_code=500, detail="Error al cargar las instrucciones del sistema.")
+
             prompt = (
-                "Consulta sobre productos del salón:
-"
-                f"{contenido_productos}
-
-"
-                f"Pregunta de la directora: '{mensaje}'
-
-"
+                f"{instrucciones}\n\n"
+                f"{contenido_productos}\n\n"
+                f"Pregunta de la directora: '{mensaje}'\n\n"
                 "Responde de forma clara y profesional usando únicamente la información anterior."
             )
+
             respuesta = chat_functions.generar_respuesta(prompt)
 
         elif intencion == "explicar_ratio":
@@ -107,13 +114,13 @@ async def chat_handler(request: Request):
         else:
             prompt = f"El usuario ha dicho: '{mensaje}'. Responde de forma clara y útil, sin usar datos históricos."
             respuesta = chat_functions.generar_respuesta(prompt)
+
     except Exception as e:
         logging.error(f"❌ Error al procesar mensaje: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
     guardar_sesion(sesion)
     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
-
 
 
 
