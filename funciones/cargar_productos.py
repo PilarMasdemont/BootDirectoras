@@ -41,3 +41,5 @@ def cargar_info_producto(nombre_producto: str) -> str:
     logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
     return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
 
+
+
