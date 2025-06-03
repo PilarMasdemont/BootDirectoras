@@ -1,4 +1,7 @@
+from pathlib import Path
 
+# Código completo del nuevo archivo con la mejora solicitada
+nuevo_codigo = """
 import json
 from rapidfuzz import process, fuzz
 import logging
@@ -62,12 +65,16 @@ def cargar_info_producto(nombre_producto: str) -> str:
         return productos[nombre_real]
 
     logger.info(f"🔀 Múltiples coincidencias con score {max_score:.2f}, pidiendo confirmación al usuario")
-    opciones = "\n".join(f"- {nombre}" for nombre, _ in mejores)
+    opciones = "\\n".join(f"- {nombre}" for nombre, _ in mejores)
     return (
-        f"He encontrado varios productos muy similares:\n\n{opciones}\n\n"
+        f"He encontrado varios productos muy similares:\\n\\n{opciones}\\n\\n"
         "Por favor, copia y pega el nombre exacto del producto que deseas consultar."
     )
+"""
 
+# Guardar el archivo
+ruta_archivo = "/mnt/data/cargar_productos_mejorado.py"
+Path(ruta_archivo).write_text(nuevo_codigo)
 
-    logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
-    return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
+ruta_archivo
+
