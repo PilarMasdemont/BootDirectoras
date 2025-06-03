@@ -1,48 +1,43 @@
+import re
+import json
 import logging
 from pathlib import Path
-from rapidfuzz import process, fuzz
+from rapidfuzz import fuzz, process
+
+logger = logging.getLogger(__name__)
+
+# Ruta al nuevo diccionario JSON
+RUTA_JSON = Path("datos_estaticos/productos_diccionario.json")
+
+# Umbral de similitud mínimo para considerar una coincidencia válida
+UMBRAL_SIMILITUD = 50.0
 
 def cargar_info_producto(nombre_producto: str) -> str:
-    ruta = Path(__file__).resolve().parent.parent / "datos_estaticos" / "productos.md"
-    logging.info(f"📁 Ruta absoluta del archivo productos.md: {ruta}")
+    """
+    Busca el producto más parecido usando el diccionario y devuelve su descripción si lo encuentra.
+    """
+    logger.info(f"📥 Producto solicitado: {nombre_producto}")
 
-    if not ruta.exists():
-        logging.warning("⚠️ Archivo productos.md no encontrado.")
-        return "Lo siento, no he podido encontrar el archivo de productos."
+    if not RUTA_JSON.exists():
+        logger.error(f"❌ Archivo de diccionario no encontrado: {RUTA_JSON}")
+        return "No se pudo acceder a la base de datos de productos."
 
-    contenido = ruta.read_text(encoding="utf-8")
+    try:
+        productos = json.loads(RUTA_JSON.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error(f"❌ Error al leer el diccionario JSON: {e}")
+        return "No se pudo procesar el archivo de productos."
 
-    lineas = contenido.splitlines()
-    indices_titulos = [(i, linea.strip()) for i, linea in enumerate(lineas) if linea.startswith("### ")]
+    nombres = list(productos.keys())
+    resultados = process.extract(nombre_producto, nombres, scorer=fuzz.partial_ratio, limit=3)
+    logger.info(f"🔍 Resultados de matching: {resultados}")
 
-    titulos = [titulo[1][4:].strip() for titulo in indices_titulos]
+    for nombre_encontrado, similitud, _ in resultados:
+        if similitud >= UMBRAL_SIMILITUD:
+            descripcion = productos[nombre_encontrado]
+            logger.info(f"✅ Producto encontrado: {nombre_encontrado} con similitud {similitud:.2f}")
+            return descripcion
 
-    resultados = process.extract(
-        nombre_producto, titulos, scorer=fuzz.partial_ratio, limit=3
-    )
-    logging.info(f"🔍 Resultados de matching: {resultados}")
+    logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
+    return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
 
-    mejor_match = resultados[0] if resultados else None
-
-    if mejor_match and mejor_match[1] > 40:
-        logging.info(f"✅ Producto encontrado: {mejor_match[0]} con similitud {mejor_match[1]:.2f}")
-        index_encontrado = next(i for i, (_, t) in enumerate(indices_titulos) if t[4:].strip() == mejor_match[0])
-        inicio = indices_titulos[index_encontrado][0]
-        fin = indices_titulos[index_encontrado + 1][0] if index_encontrado + 1 < len(indices_titulos) else len(lineas)
-        descripcion = "\n".join(lineas[inicio:fin]).strip()
-        return descripcion
-    else:
-        sugerencias = [r[0] for r in resultados if r[1] > 25]
-        if sugerencias:
-            logging.info(f"🤔 No coincidencia exacta, pero sugerencias: {sugerencias}")
-            sugerencias_texto = "\n".join([f"- {s}" for s in sugerencias])
-            return (
-                f"No he encontrado una coincidencia exacta para '{nombre_producto}', "
-                "pero quizás te refieras a:\n" + sugerencias_texto
-            )
-        else:
-            logging.warning("❌ Ningún producto suficientemente parecido encontrado.")
-            return (
-                f"No he encontrado información relevante sobre el producto '{nombre_producto}'. "
-                "Por favor, verifica el nombre o proporciona más detalles."
-            )
