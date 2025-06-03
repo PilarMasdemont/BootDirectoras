@@ -1,40 +1,48 @@
-
-import re
+import logging
 from pathlib import Path
-from unidecode import unidecode
-from rapidfuzz import fuzz
+from rapidfuzz import process, fuzz
 
 def cargar_info_producto(nombre_producto: str) -> str:
-    # Ruta al archivo productos.md
     ruta = Path(__file__).resolve().parent.parent / "datos_estaticos" / "productos.md"
-    print("📁 Ruta absoluta del archivo productos.md:", ruta)
+    logging.info(f"📁 Ruta absoluta del archivo productos.md: {ruta}")
 
     if not ruta.exists():
-        print("⚠️ Archivo productos.md no encontrado.")
-        return "Lo siento, no se encuentra disponible la base de datos de productos en este momento."
+        logging.warning("⚠️ Archivo productos.md no encontrado.")
+        return "Lo siento, no he podido encontrar el archivo de productos."
 
-    # Leer y dividir el contenido por secciones
-    texto = ruta.read_text(encoding="utf-8")
-    bloques = re.split(r"(?=^#|^IGORA|^WELLA|^SCHWARZKOPF|^L'ORÉAL|^L'OREAL)", texto, flags=re.MULTILINE)
+    contenido = ruta.read_text(encoding="utf-8")
 
-    # Normalizar el nombre del producto
-    nombre_normalizado = unidecode(nombre_producto.lower())
+    lineas = contenido.splitlines()
+    indices_titulos = [(i, linea.strip()) for i, linea in enumerate(lineas) if linea.startswith("### ")]
 
-    # Buscar el bloque más parecido
-    mejores_resultados = []
-    for i, bloque in enumerate(bloques):
-        titulo = bloque.strip().split("\n")[0]
-        puntuacion = fuzz.token_sort_ratio(nombre_normalizado, unidecode(titulo.lower()))
-        mejores_resultados.append((titulo, puntuacion, i))
+    titulos = [titulo[1][4:].strip() for titulo in indices_titulos]
 
-    mejores_resultados.sort(key=lambda x: x[1], reverse=True)
-    print("🔍 Resultados de matching:", mejores_resultados[:3])
+    resultados = process.extract(
+        nombre_producto, titulos, scorer=fuzz.partial_ratio, limit=3
+    )
+    logging.info(f"🔍 Resultados de matching: {resultados}")
 
-    mejor_match = mejores_resultados[0]
-    if mejor_match[1] < 60:
-        print("❌ Ningún producto suficientemente parecido encontrado.")
-        return f"No se encontró información específica para el producto '{nombre_producto}'."
+    mejor_match = resultados[0] if resultados else None
 
-    bloque_elegido = bloques[mejor_match[2]]
-    print(f"✅ Producto detectado como match: '{mejor_match[0]}' con score {mejor_match[1]}")
-    return bloque_elegido.strip()
+    if mejor_match and mejor_match[1] > 40:
+        logging.info(f"✅ Producto encontrado: {mejor_match[0]} con similitud {mejor_match[1]:.2f}")
+        index_encontrado = next(i for i, (_, t) in enumerate(indices_titulos) if t[4:].strip() == mejor_match[0])
+        inicio = indices_titulos[index_encontrado][0]
+        fin = indices_titulos[index_encontrado + 1][0] if index_encontrado + 1 < len(indices_titulos) else len(lineas)
+        descripcion = "\n".join(lineas[inicio:fin]).strip()
+        return descripcion
+    else:
+        sugerencias = [r[0] for r in resultados if r[1] > 25]
+        if sugerencias:
+            logging.info(f"🤔 No coincidencia exacta, pero sugerencias: {sugerencias}")
+            sugerencias_texto = "\n".join([f"- {s}" for s in sugerencias])
+            return (
+                f"No he encontrado una coincidencia exacta para '{nombre_producto}', "
+                "pero quizás te refieras a:\n" + sugerencias_texto
+            )
+        else:
+            logging.warning("❌ Ningún producto suficientemente parecido encontrado.")
+            return (
+                f"No he encontrado información relevante sobre el producto '{nombre_producto}'. "
+                "Por favor, verifica el nombre o proporciona más detalles."
+            )
