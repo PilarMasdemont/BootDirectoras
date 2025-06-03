@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 # Ruta al nuevo diccionario JSON
 RUTA_JSON = Path("datos_estaticos/productos_diccionario.json")
 
-# Umbral de similitud mínimo para considerar una coincidencia válida
+# Umbral de similitud mínimo
 UMBRAL_SIMILITUD = 50.0
 
+def normalizar(texto: str) -> str:
+    return re.sub(r'\s+', ' ', texto.strip().lower())
+
 def cargar_info_producto(nombre_producto: str) -> str:
-    """
-    Busca el producto más parecido usando el diccionario y devuelve su descripción si lo encuentra.
-    """
     logger.info(f"📥 Producto solicitado: {nombre_producto}")
 
     if not RUTA_JSON.exists():
@@ -28,18 +28,27 @@ def cargar_info_producto(nombre_producto: str) -> str:
         logger.error(f"❌ Error al leer el diccionario JSON: {e}")
         return "No se pudo procesar el archivo de productos."
 
-    nombres = list(productos.keys())
-    resultados = process.extract(nombre_producto, nombres, scorer=fuzz.partial_ratio, limit=3)
-    logger.info(f"🔍 Resultados de matching: {resultados}")
+    nombres_originales = list(productos.keys())
+    nombres_normalizados = [normalizar(n) for n in nombres_originales]
+    nombre_producto_normalizado = normalizar(nombre_producto)
 
-    for nombre_encontrado, similitud, _ in resultados:
-        if similitud >= UMBRAL_SIMILITUD:
-            descripcion = productos[nombre_encontrado]
-            logger.info(f"✅ Producto encontrado: {nombre_encontrado} con similitud {similitud:.2f}")
-            return descripcion
+    resultados = process.extract(
+        nombre_producto_normalizado,
+        nombres_normalizados,
+        scorer=fuzz.partial_ratio,
+        limit=5
+    )
+
+    logger.info("🔍 Resultados de matching:")
+    for (match, score, index) in resultados:
+        logger.info(f"   - {nombres_originales[index]} → {score:.2f}")
+
+    mejor_match = max(resultados, key=lambda x: x[1], default=None)
+
+    if mejor_match and mejor_match[1] >= UMBRAL_SIMILITUD:
+        nombre_real = nombres_originales[mejor_match[2]]
+        logger.info(f"✅ Producto encontrado: {nombre_real} con similitud {mejor_match[1]:.2f}")
+        return productos[nombre_real]
 
     logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
     return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
-
-
-
