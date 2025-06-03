@@ -111,6 +111,18 @@ async def chat_handler(request: Request):
                 prompt = f"El usuario ha dicho: '{mensaje}'. Usa el modelo para generar una respuesta útil con base en la fecha proporcionada."
                 respuesta = chat_functions.generar_respuesta(prompt)
 
+        elif intencion == "empleado":
+            if codsalon and fecha and codempleado:
+                respuesta = explicar_ratio_empleado_individual(codsalon, codempleado, fecha, mensaje)
+            else:
+                prompt = (
+                    f"El usuario mencionó un empleado, pero no se detectaron todos los datos necesarios.\n"
+                    f"Mensaje: '{mensaje}'\n"
+                    f"Fecha: {fecha} | Empleado: {codempleado} | Salón: {codsalon}\n\n"
+                    "Responde solicitando los datos faltantes de manera clara y profesional."
+                )
+                respuesta = chat_functions.generar_respuesta(prompt)
+
         else:
             prompt = f"El usuario ha dicho: '{mensaje}'. Responde de forma clara y útil, sin usar datos históricos."
             respuesta = chat_functions.generar_respuesta(prompt)
@@ -121,6 +133,5 @@ async def chat_handler(request: Request):
 
     guardar_sesion(sesion)
     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
-
 
 
