@@ -1,19 +1,21 @@
-import re
+
 import json
+from rapidfuzz import process, fuzz
 import logging
 from pathlib import Path
-from rapidfuzz import fuzz, process
 
+# Configuración del logger
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# Ruta al nuevo diccionario JSON
+# Ruta al diccionario de productos
 RUTA_JSON = Path("datos_estaticos/productos_diccionario.json")
 
-# Umbral de similitud mínimo
-UMBRAL_SIMILITUD = 50.0
+# Umbral de similitud
+UMBRAL_SIMILITUD = 60
 
 def normalizar(texto: str) -> str:
-    return re.sub(r'\s+', ' ', texto.strip().lower())
+    return texto.strip().lower().replace("-", " ").replace("_", " ")
 
 def cargar_info_producto(nombre_producto: str) -> str:
     logger.info(f"📥 Producto solicitado: {nombre_producto}")
@@ -36,19 +38,36 @@ def cargar_info_producto(nombre_producto: str) -> str:
         nombre_producto_normalizado,
         nombres_normalizados,
         scorer=fuzz.partial_ratio,
-        limit=5
+        limit=10
     )
 
     logger.info("🔍 Resultados de matching:")
     for (match, score, index) in resultados:
         logger.info(f"   - {nombres_originales[index]} → {score:.2f}")
 
-    mejor_match = max(resultados, key=lambda x: x[1], default=None)
+    if not resultados:
+        logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
+        return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
 
-    if mejor_match and mejor_match[1] >= UMBRAL_SIMILITUD:
-        nombre_real = nombres_originales[mejor_match[2]]
-        logger.info(f"✅ Producto encontrado: {nombre_real} con similitud {mejor_match[1]:.2f}")
+    max_score = max(score for _, score, _ in resultados)
+    mejores = [(nombres_originales[i], score) for _, score, i in resultados if score == max_score and score >= UMBRAL_SIMILITUD]
+
+    if not mejores:
+        logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
+        return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
+
+    if len(mejores) == 1:
+        nombre_real = mejores[0][0]
+        logger.info(f"✅ Producto encontrado: {nombre_real} con similitud {mejores[0][1]:.2f}")
         return productos[nombre_real]
+
+    logger.info(f"🔀 Múltiples coincidencias con score {max_score:.2f}, pidiendo confirmación al usuario")
+    opciones = "\n".join(f"- {nombre}" for nombre, _ in mejores)
+    return (
+        f"He encontrado varios productos muy similares:\n\n{opciones}\n\n"
+        "Por favor, copia y pega el nombre exacto del producto que deseas consultar."
+    )
+
 
     logger.warning("❌ Ningún producto suficientemente parecido encontrado.")
     return f"Lo siento, no tengo información sobre el producto '{nombre_producto}'."
