@@ -72,16 +72,22 @@ async def chat_handler(request: Request):
     # 🔀 Bifurcación según tipo de intención
     try:
         if intencion == "explicar_producto":
-            nombre_producto = extraer_nombre_producto(mensaje)  # NUEVO
-            contenido_productos = cargar_info_producto(nombre_producto)  # MODIFICADO
+            nombre_producto = extraer_nombre_producto(mensaje)
+            contenido_productos = cargar_info_producto(nombre_producto)
             prompt = (
-                "Consulta sobre productos del salón:\n"
-                f"{contenido_productos}\n\n"
-                f"Pregunta de la directora: '{mensaje}'\n\n"
+                "Consulta sobre productos del salón:
+"
+                f"{contenido_productos}
+
+"
+                f"Pregunta de la directora: '{mensaje}'
+
+"
                 "Responde de forma clara y profesional usando únicamente la información anterior."
             )
             respuesta = chat_functions.generar_respuesta(prompt)
-        elif tiene_fecha:
+
+        elif intencion == "explicar_ratio":
             if codsalon and fecha and not codempleado and not kpi_detectado:
                 respuesta = explicar_ratio(codsalon, fecha, mensaje)
             elif codsalon and fecha and codempleado and not kpi_detectado:
@@ -97,6 +103,7 @@ async def chat_handler(request: Request):
             else:
                 prompt = f"El usuario ha dicho: '{mensaje}'. Usa el modelo para generar una respuesta útil con base en la fecha proporcionada."
                 respuesta = chat_functions.generar_respuesta(prompt)
+
         else:
             prompt = f"El usuario ha dicho: '{mensaje}'. Responde de forma clara y útil, sin usar datos históricos."
             respuesta = chat_functions.generar_respuesta(prompt)
