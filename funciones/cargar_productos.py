@@ -56,15 +56,15 @@ def cargar_info_producto(nombre_producto: str) -> str:
         return productos[nombre_real]
 
     logger.info("🤔 Múltiples coincidencias posibles encontradas.")
-    opciones = "
+    opciones = "\n".join([f"- {nombre}" for nombre, _ in candidatos])
+
 ".join([f"- {nombre}" for nombre, _ in candidatos])
     return (
-        "He encontrado varios productos que coinciden con tu búsqueda:
-"
-        f"{opciones}
-"
-        "Por favor, copia y pega el nombre exacto del producto del que quieres información."
-    )
+    "He encontrado varios productos que coinciden con tu búsqueda:\n"
+    f"{opciones}\n"
+    "Por favor, copia y pega el nombre exacto del producto del que quieres información."
+)
+
     logger.info(f"📥 Producto solicitado: {nombre_producto}")
 
     if not RUTA_JSON.exists():
