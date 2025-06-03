@@ -98,7 +98,7 @@ async def chat_handler(request: Request):
             if codsalon and fecha and not codempleado and not kpi_detectado:
                 respuesta = explicar_ratio(codsalon, fecha, mensaje)
             elif codsalon and fecha and codempleado and not kpi_detectado:
-                respuesta = explicar_ratio_empleado_individual(codsalon, codempleado, fecha, mensaje)
+                respuesta = explicar_ratio_empleado_individual(codsalon, codempleado, fecha)
             elif codsalon and fecha and codempleado and kpi_detectado:
                 respuesta = explicar_ratio_empleados(codsalon, fecha, codempleado, kpi_detectado)
             elif codsalon and fecha and kpi_detectado and "día" in mensaje_limpio:
