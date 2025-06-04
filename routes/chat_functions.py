@@ -1,6 +1,6 @@
 # handlers/chat_functions.py
 import json
-from funciones.explicar_ratio_diario import explicar_ratio_diario
+from intenciones.explicar_ratio.handler import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
