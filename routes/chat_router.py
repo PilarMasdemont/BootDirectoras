@@ -6,7 +6,7 @@ from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempl
 from funciones.explicar_ratio import explicar_ratio
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
 from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado_individual
-from funciones.explicar_ratio_diario import explicar_ratio_diario
+from intenciones.explicar_ratio.handler import explicar_ratio_diario
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from routes.chat_flujo_empleados import manejar_flujo_empleados
