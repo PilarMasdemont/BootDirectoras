@@ -77,6 +77,10 @@ def resolver(function_call, sesion: dict) -> str:
     argumentos = json.loads(function_call.arguments)
     print(f"🔍 Resolviendo: {nombre_funcion} con argumentos: {argumentos}")
 
+    # 🧠 Reforzar fecha con la que extrajo tu sistema (si está disponible en la sesión)
+    if "fecha" in sesion:
+        argumentos["fecha"] = sesion["fecha"]
+
     if nombre_funcion == "explicar_ratio_diario":
         return explicar_ratio_diario(**argumentos)
     elif nombre_funcion == "explicar_ratio_semanal":
