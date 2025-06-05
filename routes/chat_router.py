@@ -46,7 +46,7 @@ async def chat_handler(request: Request):
     logging.info(f"📊 KPI: {kpi_detectado}")
 
     # 📂 Cargar sesión
-    sesion = cargar_sesion(client_ip, fecha or "")
+    sesion = cargar_sesion(client_ip)
     logging.info(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
 
