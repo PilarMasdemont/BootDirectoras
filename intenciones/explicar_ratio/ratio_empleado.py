@@ -1,12 +1,14 @@
 # intenciones/explicar_ratio/ratio_empleado.py
 
+import os
 import pandas as pd
 from core.sheets import cargar_hoja, guardar_hoja
 
 
 def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: str) -> str:
     try:
-        df = cargar_hoja("526988839")
+        gid = os.environ["GID_RATIOS_EMPLEADO"]
+        df = cargar_hoja(gid)
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
         df = df[
