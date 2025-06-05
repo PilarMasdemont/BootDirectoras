@@ -1,15 +1,18 @@
 import pandas as pd
 import gspread
+import os
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 from io import StringIO
 import requests
 
-# 🔢 Autenticación para Google Sheets
+# 🔢 Autenticación para Google Sheets desde variable de entorno
 alcance = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
-credenciales = ServiceAccountCredentials.from_json_keyfile_name("creds.json", alcance)
+credenciales_info = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+credenciales = ServiceAccountCredentials.from_json_keyfile_dict(credenciales_info, alcance)
 cliente = gspread.authorize(credenciales)
 
 
@@ -41,4 +44,4 @@ def guardar_hoja(nombre_documento, nombre_hoja, df):
         sheet.update([df.columns.values.tolist()] + df.values.tolist())
         print("✅ Hoja actualizada correctamente.")
     except Exception as e:
-        print(f"❌ Error al guardar hoja: {e}")
+        print(f"❌ Error al guardar hoja: {e}")l guardar hoja: {e}")
