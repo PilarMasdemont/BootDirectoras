@@ -1,11 +1,10 @@
 # handlers/chat_functions.py
 import json
-from intenciones.explicar_ratio.handler import explicar_ratio_diario
+from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
-from funciones.explicar_ratio_empleado_individual import explicar_ratio_empleado_individual
-
+from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
 
 def get_definiciones_funciones():
     return [
@@ -73,7 +72,6 @@ def get_definiciones_funciones():
         }
     ]
 
-
 def resolver(function_call, sesion: dict) -> str:
     nombre_funcion = function_call.name
     argumentos = json.loads(function_call.arguments)
@@ -98,3 +96,4 @@ def resolver(function_call, sesion: dict) -> str:
         return resultado
     else:
         raise ValueError("Función no reconocida")
+
