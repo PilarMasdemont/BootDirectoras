@@ -1,99 +1,89 @@
-# handlers/chat_functions.py
+import logging
+from datetime import datetime
+from fastapi import APIRouter, Request, HTTPException
+from config import setup_environment, openai_client
+from routes import chat_functions
+from google_sheets_session import cargar_sesion, guardar_sesion
+from manejar_peticion_chat import manejar_peticion_chat
+
 import json
-from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
-from funciones.explicar_ratio_semanal import explicar_ratio_semanal
-from funciones.explicar_ratio_mensual import explicar_ratio_mensual
-from funciones.explicar_ratio_empleados import explicar_ratio_empleados
-from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
 
-def get_definiciones_funciones():
-    return [
-        {
-            "name": "explicar_ratio_diario",
-            "description": "Explica ratios diarios.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"}
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_semanal",
-            "description": "Explica ratios semanales.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "nsemana": {"type": "integer"}
-                },
-                "required": ["codsalon", "nsemana"]
-            }
-        },
-        {
-            "name": "explicar_ratio_mensual",
-            "description": "Explica ratios mensuales.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "mes": {"type": "string"},
-                    "codempleado": {"type": "string"}
-                },
-                "required": ["codsalon", "mes", "codempleado"]
-            }
-        },
-        {
-            "name": "explicar_ratio_empleados",
-            "description": "Explica ratios de cada trabajador de forma progresiva.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"}
-                },
-                "required": ["codsalon", "fecha"]
-            }
-        },
-        {
-            "name": "explicar_ratio_empleado_individual",
-            "description": "Explica ratio de un empleado individual.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "codsalon": {"type": "string"},
-                    "fecha": {"type": "string"},
-                    "codempleado": {"type": "string"}
-                },
-                "required": ["codsalon", "fecha", "codempleado"]
-            }
-        }
-    ]
+logging.basicConfig(level=logging.INFO)
 
-def resolver(function_call, sesion: dict) -> str:
-    nombre_funcion = function_call.name
-    argumentos = json.loads(function_call.arguments)
+router = APIRouter()
 
-    if nombre_funcion == "explicar_ratio_diario":
-        return explicar_ratio_diario(**argumentos)
-    elif nombre_funcion == "explicar_ratio_semanal":
-        return explicar_ratio_semanal(**argumentos)
-    elif nombre_funcion == "explicar_ratio_mensual":
-        return explicar_ratio_mensual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleado_individual":
-        return explicar_ratio_empleado_individual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleados":
-        indice = sesion.get("indice_empleado", 0)
-        resultado = explicar_ratio_empleados(
-            codsalon=argumentos["codsalon"],
-            fecha=argumentos["fecha"],
-            indice=indice
+@router.post("")
+async def chat_handler(request: Request):
+    client_ip = request.client.host
+    body = await request.json()
+    mensaje = body.get("mensaje", "").strip()
+    mensaje_limpio = mensaje.lower()
+
+    logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
+
+    # 🧠 Analizar petición
+    datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
+    intencion = datos["intencion"]
+    fecha = datos["fecha"]
+    codsalon = datos["codsalon"]
+    codempleado = datos["codempleado"]
+    kpi_detectado = datos["kpi"]
+
+    # 🔍 DEBUG - Verificación de extracción
+    logging.info(f"🧠 Intención: {intencion}")
+    logging.info(f"📅 Fecha extraída: {fecha}")
+    logging.info(f"🏢 Salón: {codsalon}")
+    logging.info(f"👤 Empleado: {codempleado}")
+    logging.info(f"📊 KPI: {kpi_detectado}")
+
+    # 📂 Cargar sesión
+    sesion = cargar_sesion(client_ip, fecha or "")
+    logging.info(f"📂 Sesión cargada: {sesion}")
+    sesion["ip_usuario"] = client_ip
+
+    # ✅ Modo empleados activo
+    if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
+        from routes.chat_flujo_empleados import manejar_flujo_empleados
+        respuesta = manejar_flujo_empleados(sesion)
+        guardar_sesion(sesion)
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+
+    # 📌 Actualizar sesión
+    if codsalon is not None:
+        sesion["codsalon"] = codsalon
+    if codempleado is not None:
+        sesion["codempleado"] = codempleado
+    if kpi_detectado:
+        sesion["kpi"] = kpi_detectado
+    if fecha:
+        if fecha != sesion.get("fecha_anterior"):
+            sesion["indice_empleado"] = 0
+            sesion["fecha_anterior"] = fecha
+        sesion["fecha"] = fecha
+
+    # 🎯 Procesamiento por intención a través de resolver()
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
+                {"role": "user", "content": mensaje}
+            ],
+            function_call="auto",
+            functions=chat_functions.get_definiciones_funciones()
         )
-        sesion["indice_empleado"] = indice + 1
-        sesion["modo"] = "empleados"
-        return resultado
-    else:
-        raise ValueError("Función no reconocida")
+
+        msg = response.choices[0].message
+        if msg.function_call:
+            resultado = chat_functions.resolver(msg.function_call, sesion)
+            guardar_sesion(sesion)
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+
+        guardar_sesion(sesion)
+        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
+
+    except Exception as e:
+        logging.error(f"❌ Error en chat_handler: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
