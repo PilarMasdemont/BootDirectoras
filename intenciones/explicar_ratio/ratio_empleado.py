@@ -1,7 +1,7 @@
 # intenciones/explicar_ratio/ratio_empleado.py
 
 import pandas as pd
-from core.sheets import cargar_hoja
+from sheets import cargar_hoja
 
 def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: str) -> str:
     try:
