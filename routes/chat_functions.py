@@ -75,6 +75,7 @@ def get_definiciones_funciones():
 def resolver(function_call, sesion: dict) -> str:
     nombre_funcion = function_call.name
     argumentos = json.loads(function_call.arguments)
+    print(f"🔍 Resolviendo: {nombre_funcion} con argumentos: {argumentos}")
 
     if nombre_funcion == "explicar_ratio_diario":
         return explicar_ratio_diario(**argumentos)
