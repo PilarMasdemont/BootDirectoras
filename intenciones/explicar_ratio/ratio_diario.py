@@ -1,7 +1,7 @@
 # intenciones/explicar_ratio/ratio_diario.py
 
 import pandas as pd
-from core.sheets import cargar_hoja
+from sheets import cargar_hoja
 
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     try:
