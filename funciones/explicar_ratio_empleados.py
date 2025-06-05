@@ -1,5 +1,5 @@
 import pandas as pd
-from sheets import cargar_hoja
+
 
 def explicar_ratio_empleados(codsalon: str, fecha: str, indice: int = 0) -> str:
     try:
