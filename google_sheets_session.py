@@ -1,7 +1,7 @@
 # google_sheets_session.py
 
 import pandas as pd
-from sheets_io import cargar_hoja_por_nombre, guardar_hoja
+from core.sheets import cargar_hoja, guardar_hoja
 from datetime import datetime
 
 SHEET_ID = "1YvWEySbojGoCrHqPyUb_VXNvcZOJNhfx8cEXPI4zHPc"
