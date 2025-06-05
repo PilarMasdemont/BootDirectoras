@@ -71,9 +71,7 @@ async def chat_handler(request: Request):
 
     # 📊 Procesamiento por función directa
     try:
-        if codsalon and fecha and not codempleado and not kpi_detectado:
-            resultado = explicar_ratio(codsalon, fecha, mensaje)
-        elif codsalon and fecha and codempleado and not kpi_detectado:
+        if  codsalon and fecha and codempleado and not kpi_detectado:
             resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
         elif codsalon and fecha and not codempleado and kpi_detectado:
             resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
