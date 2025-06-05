@@ -1,6 +1,6 @@
 # funciones/explicar_producto.py
 
-from google_sheets_session import buscar_producto_por_nombre_o_alias
+
 
 def explicar_producto(nombre_producto: str) -> str:
     datos = buscar_producto_por_nombre_o_alias(nombre_producto)
