@@ -1,13 +1,13 @@
 # intenciones/explicar_ratio/ratio_diario.py
 
+import os
 import pandas as pd
 from core.sheets import cargar_hoja, guardar_hoja
 
-
 def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
     try:
-        df = cargar_hoja("1882861530")
-        df = df[df["codsalon"] == int(codsalon)]
+        gid = os.environ["GID_RATIOS_DIARIO"]
+        df = cargar_hoja(gid)
         if df.empty:
             return f"No se encontraron datos para el salón {codsalon}."
 
