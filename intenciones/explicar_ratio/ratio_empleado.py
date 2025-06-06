@@ -1,27 +1,32 @@
 # intenciones/explicar_ratio/ratio_empleado.py
 
 import pandas as pd
+import logging
 from sheets import cargar_hoja
+
+logger = logging.getLogger(__name__)
 
 def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: str) -> str:
     try:
-        df = cargar_hoja("526988839")
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        logger.info(f"[RATIO] Procesando ratio para empleado {codempleado} en salón {codsalon} el {fecha}")
 
-        df = df[
-            (df["codsalon"] == int(codsalon)) &
-            (df["codempleado"] == int(codempleado))
-        ]
+        df = cargar_hoja("526988839")
+        logger.info("[RATIO] Hoja cargada exitosamente")
+
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        df = df[(df["codsalon"] == int(codsalon)) & (df["codempleado"] == int(codempleado))]
         df["fecha"] = pd.to_datetime(df["fecha"]).dt.date
         fecha = pd.to_datetime(fecha).date()
         df = df[df["fecha"] == fecha]
 
         if df.empty:
+            logger.warning("[RATIO] No se encontraron datos para la combinación especificada")
             return f"No se encontraron datos para el empleado {codempleado} en el salón {codsalon} en la fecha {fecha}."
 
         fila = df.iloc[0]
         nombre = fila["nombre_empleado"]
         ratio_real = float(str(fila["ratiogeneral"]).replace(",", "."))
+        logger.info(f"[RATIO] Ratio real: {ratio_real}")
 
         intercepto = 1.7034
         pesos = {
@@ -48,12 +53,16 @@ def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: s
             try:
                 valor = float(str(valor_raw).replace(",", "."))
             except:
+                logger.warning(f"[RATIO] No se pudo convertir valor de {var}: '{valor_raw}'")
                 valor = 0
             contrib = peso * valor
             contribuciones[var] = contrib
             ratio_estimado += contrib
+            logger.debug(f"[RATIO] {var}: valor={valor}, peso={peso}, contrib={contrib}")
 
         delta = ratio_real - ratio_estimado
+        logger.info(f"[RATIO] Ratio estimado: {ratio_estimado}, Diferencia: {delta}")
+
         ratio_pct = round(ratio_real * 100)
         positivos = sorted([(k, v) for k, v in contribuciones.items() if v > 0], key=lambda x: -x[1])
         negativos = sorted([(k, v) for k, v in contribuciones.items() if v < 0], key=lambda x: x[1])
@@ -84,4 +93,5 @@ def explicar_ratio_empleado_individual(codsalon: str, fecha: str, codempleado: s
         return "\n".join(mensaje)
 
     except Exception as e:
+        logger.error(f"[ERROR] Fallo en explicar_ratio_empleado_individual: {e}")
         return f"❌ Error al analizar el ratio del empleado: {str(e)}"
