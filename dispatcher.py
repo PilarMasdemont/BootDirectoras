@@ -28,11 +28,11 @@ def despachar_intencion(
         return explicar_ratio_diario(codsalon, fecha, None)
         
     elif intencion == "empleado":
-    if not codsalon or not codempleado:
-        logging.warning("[DISPATCHER] Falta codsalon o codempleado para intención 'empleado'")
-        return "Necesito el código de salón y del empleado para responderte correctamente."
-    from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
-    return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+        if not codsalon or not codempleado:
+            logging.warning("[DISPATCHER] Falta codsalon o codempleado para intención 'empleado'")
+            return "Necesito el código de salón y del empleado para responderte correctamente."
+        from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
+        return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
 
     
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
