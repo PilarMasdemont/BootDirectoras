@@ -14,7 +14,6 @@ from funciones.explicar_producto import explicar_producto
 from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
 from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
 
-
 import json
 
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +29,7 @@ async def chat_handler(request: Request):
 
     logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
 
-    # 🧠 Analizar petición
+    # 🧐 Analizar petición
     datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
     intencion = datos["intencion"]
     fecha = datos["fecha"]
@@ -38,9 +37,8 @@ async def chat_handler(request: Request):
     codempleado = datos["codempleado"]
     kpi_detectado = datos["kpi"]
 
-    # 🔍 DEBUG - Verificación de extracción
     logging.info(f"🧠 Intención: {intencion}")
-    logging.info(f"📅 Fecha extraída: {fecha}")
+    logging.info(f"🗕️ Fecha extraída: {fecha}")
     logging.info(f"🏢 Salón: {codsalon}")
     logging.info(f"👤 Empleado: {codempleado}")
     logging.info(f"📊 KPI: {kpi_detectado}")
@@ -50,8 +48,8 @@ async def chat_handler(request: Request):
     logging.info(f"📂 Sesión cargada: {sesion}")
     sesion["ip_usuario"] = client_ip
 
-    # ✅ Modo empleados activo
     if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
+        logging.info("[FLUJO] Ejecutando flujo de empleados")
         respuesta = manejar_flujo_empleados(sesion)
         guardar_sesion(sesion)
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
@@ -71,30 +69,39 @@ async def chat_handler(request: Request):
 
     # 📊 Procesamiento por función directa
     try:
-        if  codsalon and fecha and codempleado and not kpi_detectado:
+        if codsalon and fecha and codempleado and not kpi_detectado:
+            logging.info("[DECISION] → explicar_ratio_empleado_individual()")
             resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
         elif codsalon and fecha and not codempleado and kpi_detectado:
+            logging.info("[DECISION] → explicar_ratio_diario()")
             resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
         elif codsalon and sesion.get("nsemana") and kpi_detectado:
+            logging.info("[DECISION] → explicar_ratio_semanal()")
             resultado = explicar_ratio_semanal(codsalon, sesion["nsemana"], kpi_detectado)
         elif codsalon and sesion.get("mes") and kpi_detectado:
+            logging.info("[DECISION] → explicar_ratio_mensual()")
             resultado = explicar_ratio_mensual(codsalon, sesion["mes"], kpi_detectado)
         elif codsalon and fecha and kpi_detectado and codempleado:
+            logging.info("[DECISION] → explicar_ratio_empleados()")
             resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
         else:
+            logging.info("[FLUJO] No se ejecutó ninguna función directa")
             resultado = None
 
         if resultado:
+            logging.info("[RESPUESTA] Resultado generado exitosamente desde función directa")
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
     except Exception as e:
         logging.error(f"⚠️ Error en funciones directas: {e}")
-            # 🎯 Procesamiento para intención de producto
+
     if intencion == "explicar_producto":
         nombre_producto = datos.get("nombre_producto")
+        logging.info(f"[PRODUCTO] Intención confirmada: {nombre_producto}")
         if nombre_producto:
             try:
                 resultado = explicar_producto(nombre_producto)
+                logging.info("[PRODUCTO] Producto procesado correctamente")
                 guardar_sesion(sesion)
                 return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
             except Exception as e:
@@ -103,8 +110,8 @@ async def chat_handler(request: Request):
         else:
             return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
 
-    # 🤖 Llamada OpenAI si no hubo función directa
     try:
+        logging.info("[OPENAI] Ejecutando fallback a modelo GPT-4o")
         response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -117,6 +124,7 @@ async def chat_handler(request: Request):
 
         msg = response.choices[0].message
         if msg.function_call:
+            logging.info("[OPENAI] Llamada a función detectada desde OpenAI")
             resultado = chat_functions.resolver(msg.function_call, sesion)
             guardar_sesion(sesion)
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
@@ -127,7 +135,3 @@ async def chat_handler(request: Request):
     except Exception as e:
         logging.error(f"❌ Error en chat_handler: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
