@@ -4,7 +4,7 @@ import logging
 
 from dispatcher import despachar_intencion
 from funciones.intencion import clasificar_intencion
-from extractores import (
+from funciones.extractores import (
     extraer_fecha_desde_texto,
     extraer_codsalon,
     extraer_codempleado,
@@ -14,7 +14,7 @@ from google_sheets_session import cargar_sesion
 
 router = APIRouter()
 
-@router.post("")  # o "/"
+@router.post("")
 async def chat(request: Request):
     body = await request.json()
     mensaje_usuario = body.get("mensaje", "")
@@ -28,7 +28,7 @@ async def chat(request: Request):
     logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
 
     fecha = extraer_fecha_desde_texto(mensaje_usuario)
-    codsalon = extraer_codsalon(mensaje_usuario)
+    codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
     codempleado = extraer_codempleado(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
@@ -55,3 +55,4 @@ async def chat(request: Request):
 
     logging.info("[FLUJO] No se ejecutó ninguna función directa")
     return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
+
