@@ -20,13 +20,11 @@ def despachar_intencion(
         from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
         return explicar_ratio_diario(codsalon, fecha, kpi)
         
-   elif intencion == "general":
-    if not codsalon:
-        return "Necesito que me indiques el código de salón para poder analizar el ratio."
-    from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
-    return explicar_ratio_diario(codsalon, fecha, None)
-
-
+    elif intencion == "general":
+        if not codsalon:
+            return "Necesito que me indiques el código de salón para poder analizar el ratio."
+        from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
+        return explicar_ratio_diario(codsalon, fecha, None)
 
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
