@@ -4,7 +4,7 @@ import logging
 
 from dispatcher import despachar_intencion
 from funciones.intencion import clasificar_intencion
-from funciones.extractores import (
+from extractores import (
     extraer_fecha_desde_texto,
     extraer_codsalon,
     extraer_codempleado,
