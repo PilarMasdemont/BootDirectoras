@@ -1,140 +1,57 @@
+
+from fastapi import APIRouter, Request
 import logging
-from datetime import datetime
-from fastapi import APIRouter, Request, HTTPException
-from config import setup_environment, openai_client
-from extractores import detectar_kpi, extraer_fecha_desde_texto, extraer_codempleado, extraer_codsalon
-from funciones.explicar_ratio_empleados import explicar_ratio_empleados
-from funciones.explicar_ratio_mensual import explicar_ratio_mensual
-from funciones.explicar_ratio_semanal import explicar_ratio_semanal
-from routes.chat_flujo_empleados import manejar_flujo_empleados
-from routes import chat_functions
-from google_sheets_session import cargar_sesion, guardar_sesion
-from manejar_peticion_chat import manejar_peticion_chat
-from funciones.explicar_producto import explicar_producto
-from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
-from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
 
-import json
-
-logging.basicConfig(level=logging.INFO)
+from dispatcher import despachar_intencion
+from funciones.intencion import clasificar_intencion
+from funciones.extractores import (
+    extraer_fecha_desde_texto,
+    extraer_codsalon,
+    extraer_codempleado,
+    detectar_kpi,
+)
+from funciones.sheets_io import cargar_sesion
 
 router = APIRouter()
 
-@router.post("")
-async def chat_handler(request: Request):
-    client_ip = request.client.host
+@router.post("/chat")
+async def chat(request: Request):
     body = await request.json()
-    mensaje = body.get("mensaje", "").strip()
-    mensaje_limpio = mensaje.lower()
+    mensaje_usuario = body.get("mensaje", "")
+    ip_usuario = request.client.host
 
-    logging.info(f"📥 Petición recibida de {client_ip}: '{mensaje}'")
+    logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
-    # 🧐 Analizar petición
-    datos = manejar_peticion_chat({"mensaje": mensaje, "codsalon": body.get("codsalon")})
-    intencion = datos["intencion"]
-    fecha = datos["fecha"]
-    codsalon = datos["codsalon"]
-    codempleado = datos["codempleado"]
-    kpi_detectado = datos["kpi"]
+    intencion_info = clasificar_intencion(mensaje_usuario)
+    intencion = intencion_info["intencion"]
 
-    logging.info(f"🧠 Intención: {intencion}")
-    logging.info(f"🗕️ Fecha extraída: {fecha}")
-    logging.info(f"🏢 Salón: {codsalon}")
-    logging.info(f"👤 Empleado: {codempleado}")
-    logging.info(f"📊 KPI: {kpi_detectado}")
+    logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
 
-    # 📂 Cargar sesión
-    sesion = cargar_sesion(client_ip, fecha or "")
-    logging.info(f"📂 Sesión cargada: {sesion}")
-    sesion["ip_usuario"] = client_ip
+    fecha = extraer_fecha_desde_texto(mensaje_usuario)
+    codsalon = extraer_codsalon(mensaje_usuario)
+    codempleado = extraer_codempleado(mensaje_usuario)
+    kpi = detectar_kpi(mensaje_usuario)
 
-    if mensaje_limpio in ["sí", "si", "siguiente", "ok", "vale"] and sesion.get("modo") == "empleados":
-        logging.info("[FLUJO] Ejecutando flujo de empleados")
-        respuesta = manejar_flujo_empleados(sesion)
-        guardar_sesion(sesion)
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+    logging.info(f"[FECHA] Extraída: {fecha}")
+    logging.info(f"[SALON] Código detectado: {codsalon}")
+    logging.info(f"[KPI] Detectado: {kpi}")
+    logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
-    # 📌 Actualizar sesión
-    if codsalon is not None:
-        sesion["codsalon"] = codsalon
-    if codempleado is not None:
-        sesion["codempleado"] = codempleado
-    if kpi_detectado:
-        sesion["kpi"] = kpi_detectado
-    if fecha:
-        if fecha != sesion.get("fecha_anterior"):
-            sesion["indice_empleado"] = 0
-            sesion["fecha_anterior"] = fecha
-        sesion["fecha"] = fecha
+    sesion = cargar_sesion(ip_usuario, fecha)
 
-    # 📊 Procesamiento por función directa
-    try:
-        if codsalon and fecha and codempleado and not kpi_detectado:
-            logging.info("[DECISION] → explicar_ratio_empleado_individual()")
-            resultado = explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
-        elif codsalon and fecha and not codempleado and kpi_detectado:
-            logging.info("[DECISION] → explicar_ratio_diario()")
-            resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
-        elif codsalon and fecha and not codempleado and not kpi_detectado:
-            logging.info("[DECISION] → explicar_ratio_diario() (por ausencia de KPI y empleado)")
-            resultado = explicar_ratio_diario(codsalon, fecha, None)
-        elif codsalon and sesion.get("nsemana") and kpi_detectado:
-            logging.info("[DECISION] → explicar_ratio_semanal()")
-            resultado = explicar_ratio_semanal(codsalon, sesion["nsemana"], kpi_detectado)
-        elif codsalon and sesion.get("mes") and kpi_detectado:
-            logging.info("[DECISION] → explicar_ratio_mensual()")
-            resultado = explicar_ratio_mensual(codsalon, sesion["mes"], kpi_detectado)
-        elif codsalon and fecha and kpi_detectado and codempleado:
-            logging.info("[DECISION] → explicar_ratio_empleados()")
-            resultado = explicar_ratio_empleados(codsalon, fecha, kpi_detectado, codempleado)
-        else:
-            logging.info("[FLUJO] No se ejecutó ninguna función directa")
-            resultado = None
+    resultado = despachar_intencion(
+        intencion=intencion,
+        texto_usuario=mensaje_usuario,
+        fecha=fecha,
+        codsalon=codsalon,
+        codempleado=codempleado,
+        kpi=kpi,
+        sesion=sesion
+    )
 
-        if resultado:
-            logging.info("[RESPUESTA] Resultado generado exitosamente desde función directa")
-            guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-    except Exception as e:
-        logging.error(f"⚠️ Error en funciones directas: {e}")
+    if resultado:
+        logging.info("[RESPUESTA] Resultado generado exitosamente desde función directa")
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-    if intencion == "explicar_producto":
-        nombre_producto = datos.get("nombre_producto")
-        logging.info(f"[PRODUCTO] Intención confirmada: {nombre_producto}")
-        if nombre_producto:
-            try:
-                resultado = explicar_producto(nombre_producto)
-                logging.info("[PRODUCTO] Producto procesado correctamente")
-                guardar_sesion(sesion)
-                return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-            except Exception as e:
-                logging.error(f"❌ Error al procesar producto: {e}")
-                raise HTTPException(status_code=500, detail="Error al procesar el producto.")
-        else:
-            return {"respuesta": "No pude identificar el producto del que me hablas. ¿Puedes repetirlo con más detalle?"}
-
-    try:
-        logging.info("[OPENAI] Ejecutando fallback a modelo GPT-4o")
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Eres una asistente especializada en explicar indicadores de gestión de salones de belleza."},
-                {"role": "user", "content": mensaje}
-            ],
-            function_call="auto",
-            functions=chat_functions.get_definiciones_funciones()
-        )
-
-        msg = response.choices[0].message
-        if msg.function_call:
-            logging.info("[OPENAI] Llamada a función detectada desde OpenAI")
-            resultado = chat_functions.resolver(msg.function_call, sesion)
-            guardar_sesion(sesion)
-            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
-
-        guardar_sesion(sesion)
-        return {"respuesta": msg.content or "No se recibió contenido del asistente."}
-
-    except Exception as e:
-        logging.error(f"❌ Error en chat_handler: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    logging.info("[FLUJO] No se ejecutó ninguna función directa")
+    return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
