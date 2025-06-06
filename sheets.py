@@ -1,6 +1,9 @@
 import pandas as pd
+import logging
 
 BASE_URL = "https://docs.google.com/spreadsheets/d/1RjMSyAnstLidHhziswtQWPCwbvFAHYFtA30wsg2BKZ0/export?format=csv"
+
+logger = logging.getLogger(__name__)
 
 def cargar_hoja(gid):
     """
@@ -8,19 +11,18 @@ def cargar_hoja(gid):
     Devuelve un DataFrame con columnas normalizadas y datos limpios.
     """
     url = f"{BASE_URL}&gid={gid}"
-    print(f"📥 Cargando hoja con GID: {gid}")
+    logger.info(f"[SHEETS] Cargando hoja con GID: {gid}")
     try:
         df = pd.read_csv(url)
-        print("🧾 Columnas originales:", df.columns.tolist())
+        logger.info(f"[SHEETS] Columnas originales: {df.columns.tolist()}")
 
         # Normalizar nombres de columnas
         df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
-        print("📋 Columnas normalizadas:", df.columns.tolist())
+        logger.info(f"[SHEETS] Columnas normalizadas: {df.columns.tolist()}")
 
         # Limpiar valores no válidos
         df = df.replace(["(en blanco)", "", "NA", "n/a"], pd.NA)
 
-        # Convertir numéricos
         for col in df.columns:
             df[col] = (
                 df[col].astype(str)
@@ -35,5 +37,5 @@ def cargar_hoja(gid):
         return df
 
     except Exception as e:
-        print("❌ Error cargando hoja:", e)
+        logger.error(f"[SHEETS] ❌ Error cargando hoja con GID {gid}: {e}")
         raise
