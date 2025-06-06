@@ -1,27 +1,38 @@
 # extractores.py
 import re
 import calendar
+import logging
 from datetime import datetime, timedelta
 from dateutil import parser
 
+logger = logging.getLogger(__name__)
+
 def detectar_kpi(texto: str):
     texto = texto.lower()
+    logger.info(f"[KPI] Texto recibido: '{texto}'")
     if "productividad" in texto:
+        logger.info("[KPI] Detectado: productividad")
         return "productividad"
     elif "clientes nuevos" in texto or "nuevos clientes" in texto:
+        logger.info("[KPI] Detectado: clientes_nuevos")
         return "clientes_nuevos"
     elif "servicio" in texto:
+        logger.info("[KPI] Detectado: servicios")
         return "servicios"
+    logger.info("[KPI] Ningún KPI detectado")
     return None
 
 def extraer_codempleado(texto: str):
     texto = texto.lower()
     match = re.search(r"(emplead[oa]|trabajador[a]?)\s*(\d+)", texto)
     if match:
+        logger.info(f"[EXTRACCION] Código de empleado extraído: {match.group(2)}")
         return match.group(2)
+    logger.info("[EXTRACCION] No se detectó código de empleado")
     return None
 
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
+    logger.info(f"[FECHA] Texto recibido para análisis: '{texto}'")
     texto = texto.lower()
 
     meses_es_en = {
@@ -49,23 +60,30 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
     hoy = datetime.today()
 
     if "hoy" in texto:
-        return hoy.strftime("%Y-%m-%d")
+        fecha = hoy.strftime("%Y-%m-%d")
+        logger.info(f"[FECHA] Detectado 'hoy': {fecha}")
+        return fecha
 
     if "ayer" in texto:
-        return (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
+        fecha = (hoy - timedelta(days=1)).strftime("%Y-%m-%d")
+        logger.info(f"[FECHA] Detectado 'ayer': {fecha}")
+        return fecha
 
     match = re.search(r"hace\s+(\d+)\s+d[ií]as?", texto)
     if match:
         dias = int(match.group(1))
-        return (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
+        fecha = (hoy - timedelta(days=dias)).strftime("%Y-%m-%d")
+        logger.info(f"[FECHA] Detectado 'hace X días': {fecha}")
+        return fecha
 
     match = re.search(r"el\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+pasado", texto)
     if match:
         dia_nombre = match.group(1)
         dia_target = dias_semana[dia_nombre]
         dias_diferencia = (hoy.weekday() - dia_target + 7) % 7 or 7
-        fecha_objetivo = hoy - timedelta(days=dias_diferencia)
-        return fecha_objetivo.strftime("%Y-%m-%d")
+        fecha = (hoy - timedelta(days=dias_diferencia)).strftime("%Y-%m-%d")
+        logger.info(f"[FECHA] Detectado 'el {dia_nombre} pasado': {fecha}")
+        return fecha
 
     match = re.search(r"el\s+último\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\s+de\s+(\w+)", texto)
     if match:
@@ -78,15 +96,15 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
             for dia in range(ultimo_dia, 0, -1):
                 fecha = datetime(anio, mes, dia)
                 if fecha.weekday() == dias_semana[dia_nombre]:
-                    return fecha.strftime("%Y-%m-%d")
+                    resultado = fecha.strftime("%Y-%m-%d")
+                    logger.info(f"[FECHA] Detectado 'último {dia_nombre} de {mes_nombre}': {resultado}")
+                    return resultado
         except KeyError:
-            pass
+            logger.warning(f"[FECHA] Error al interpretar mes: {mes_nombre}")
 
-    # NUEVO: limpiar menciones a empleados antes del parser
     texto = re.sub(r"(emplead[oa]|trabajador[a]?)\s*\d+", "", texto)
     texto = re.sub(r"\s{2,}", " ", texto).strip()
 
-    # Extraer patrones explícitos tipo "27 de mayo" o "27 de mayo de 2025"
     patron_fecha = re.search(r"\b(\d{1,2})\s+de\s+([a-zA-Z]+)(?:\s+de\s+(\d{4}))?\b", texto)
     if patron_fecha:
         dia, mes_str, anio = patron_fecha.groups()
@@ -95,26 +113,28 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
             mes = list(meses_es_en.keys()).index(mes_str) + 1
             anio = int(anio) if anio else anio_por_defecto
             try:
-                fecha = datetime(anio, mes, int(dia))
-                return fecha.strftime("%Y-%m-%d")
-            except:
-                pass
+                fecha = datetime(anio, mes, int(dia)).strftime("%Y-%m-%d")
+                logger.info(f"[FECHA] Fecha explícita detectada: {fecha}")
+                return fecha
+            except Exception as e:
+                logger.warning(f"[FECHA] Error al crear fecha explícita: {e}")
 
     try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
         if not re.search(r"\b\d{4}\b", texto):
             fecha = fecha.replace(year=anio_por_defecto)
-        return fecha.strftime("%Y-%m-%d")
+        fecha_str = fecha.strftime("%Y-%m-%d")
+        logger.info(f"[FECHA] Fecha interpretada con parser: {fecha_str}")
+        return fecha_str
     except Exception as e:
-        print(f"❌ Error al interpretar la fecha en el texto '{texto}': {e}")
+        logger.error(f"[FECHA] ❌ Error al interpretar la fecha: {e}")
         return "FECHA_NO_VALIDA"
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
-    match = re.search(r"sal[oó]n\s*(\d+)", texto)
+    match = re.search(r"sal[oó]n\\s*(\\d+)", texto)
     if match:
+        logger.info(f"[SALON] Código de salón extraído: {match.group(1)}")
         return match.group(1)
+    logger.info("[SALON] No se detectó código de salón")
     return None
-
-
-
