@@ -7,6 +7,21 @@ from dateutil import parser
 
 logger = logging.getLogger(__name__)
 
+def detectar_kpi(texto: str):
+    texto = texto.lower()
+    logger.info(f"[KPI] Texto recibido: '{texto}'")
+    if "productividad" in texto:
+        logger.info("[KPI] Detectado: productividad")
+        return "productividad"
+    elif "clientes nuevos" in texto or "nuevos clientes" in texto:
+        logger.info("[KPI] Detectado: clientes_nuevos")
+        return "clientes_nuevos"
+    elif "servicio" in texto:
+        logger.info("[KPI] Detectado: servicios")
+        return "servicios"
+    logger.info("[KPI] Ningún KPI detectado")
+    return None
+
 def extraer_codempleado(texto: str):
     texto = texto.lower()
     match = re.search(r"(emplead[oa]|trabajador[a]?)\s*(\d+)", texto)
@@ -37,7 +52,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10
     }
     for palabra, numero in numeros_texto.items():
-        texto = re.sub(rf"\b{palabra}\b", str(numero), texto)
+        texto = re.sub(rf"\\b{palabra}\\b", str(numero), texto)
 
     for es, en in meses_es_en.items():
         texto = texto.replace(es, en)
@@ -117,9 +132,10 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
-    match = re.search(r"sal[oó]n\s*(\d+)", texto)
+    match = re.search(r"sal[oó]n\\s*(\\d+)", texto)
     if match:
         logger.info(f"[SALON] Código de salón extraído: {match.group(1)}")
         return match.group(1)
     logger.info("[SALON] No se detectó código de salón")
     return None
+
