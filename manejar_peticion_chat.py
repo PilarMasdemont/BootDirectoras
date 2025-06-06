@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 def manejar_peticion_chat(datos: dict) -> dict:
     mensaje_usuario = datos.get("mensaje", "")
+    logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
     # Paso 1: Clasificar la intención
     datos_intencion = clasificar_intencion(mensaje_usuario)
@@ -17,6 +18,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     # Paso 2: Preparar texto según intención
     if intencion == "empleado":
         codempleado = extraer_codempleado(mensaje_usuario)
+        logging.info(f"[EXTRACCION] Código de empleado detectado: {codempleado}")
         texto_limpio = re.sub(r"emplead[oa]\s*\d+", "", mensaje_usuario)
         texto_limpio = re.sub(r"\s{2,}", " ", texto_limpio).strip()
     else:
@@ -30,7 +32,10 @@ def manejar_peticion_chat(datos: dict) -> dict:
     logging.info(f"[FECHA] Extraída: {fecha}")
 
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
+    logging.info(f"[SALON] Código detectado: {codsalon}")
+
     kpi = detectar_kpi(mensaje_usuario)
+    logging.info(f"[KPI] Detectado: {kpi}")
 
     # Paso 4: Preparar retorno
     resultado = {
@@ -42,12 +47,12 @@ def manejar_peticion_chat(datos: dict) -> dict:
         "kpi": kpi
     }
 
-    # ✅ EXTRA: Si es intención de producto, extraer nombre
     if intencion == "explicar_producto":
         resultado["nombre_producto"] = extraer_nombre_producto(mensaje_usuario)
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
 
 
 
