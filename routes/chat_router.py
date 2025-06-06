@@ -10,7 +10,7 @@ from extractores import (
     extraer_codempleado,
     detectar_kpi,
 )
-from funciones.sheets_io import cargar_sesion
+from sheets_io import cargar_sesion
 
 router = APIRouter()
 
