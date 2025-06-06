@@ -1,10 +1,13 @@
 # handlers/chat_functions.py
 import json
+import logging
 from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
 from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
 from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
+
+logger = logging.getLogger(__name__)
 
 def get_definiciones_funciones():
     return [
@@ -75,29 +78,36 @@ def get_definiciones_funciones():
 def resolver(function_call, sesion: dict) -> str:
     nombre_funcion = function_call.name
     argumentos = json.loads(function_call.arguments)
-    print(f"🔍 Resolviendo: {nombre_funcion} con argumentos: {argumentos}")
+    logger.info(f"[CALL] Resolviendo: {nombre_funcion} con argumentos iniciales: {argumentos}")
 
-    # 🧠 Reforzar fecha con la que extrajo tu sistema (si está disponible en la sesión)
     if "fecha" in sesion:
         argumentos["fecha"] = sesion["fecha"]
+        logger.info(f"[CALL] Fecha reforzada desde sesión: {argumentos['fecha']}")
 
-    if nombre_funcion == "explicar_ratio_diario":
-        return explicar_ratio_diario(**argumentos)
-    elif nombre_funcion == "explicar_ratio_semanal":
-        return explicar_ratio_semanal(**argumentos)
-    elif nombre_funcion == "explicar_ratio_mensual":
-        return explicar_ratio_mensual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleado_individual":
-        return explicar_ratio_empleado_individual(**argumentos)
-    elif nombre_funcion == "explicar_ratio_empleados":
-        indice = sesion.get("indice_empleado", 0)
-        resultado = explicar_ratio_empleados(
-            codsalon=argumentos["codsalon"],
-            fecha=argumentos["fecha"],
-            indice=indice
-        )
-        sesion["indice_empleado"] = indice + 1
-        sesion["modo"] = "empleados"
-        return resultado
-    else:
-        raise ValueError("Función no reconocida")
+    try:
+        if nombre_funcion == "explicar_ratio_diario":
+            return explicar_ratio_diario(**argumentos)
+        elif nombre_funcion == "explicar_ratio_semanal":
+            return explicar_ratio_semanal(**argumentos)
+        elif nombre_funcion == "explicar_ratio_mensual":
+            return explicar_ratio_mensual(**argumentos)
+        elif nombre_funcion == "explicar_ratio_empleado_individual":
+            return explicar_ratio_empleado_individual(**argumentos)
+        elif nombre_funcion == "explicar_ratio_empleados":
+            indice = sesion.get("indice_empleado", 0)
+            logger.info(f"[CALL] Índice empleado actual: {indice}")
+            resultado = explicar_ratio_empleados(
+                codsalon=argumentos["codsalon"],
+                fecha=argumentos["fecha"],
+                indice=indice
+            )
+            sesion["indice_empleado"] = indice + 1
+            sesion["modo"] = "empleados"
+            return resultado
+        else:
+            logger.error(f"[ERROR] Función no reconocida: {nombre_funcion}")
+            raise ValueError("Función no reconocida")
+    except Exception as e:
+        logger.error(f"[ERROR] Fallo al resolver función {nombre_funcion}: {e}")
+        raise
+
