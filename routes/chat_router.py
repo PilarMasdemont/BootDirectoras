@@ -75,6 +75,9 @@ async def chat_handler(request: Request):
         elif codsalon and fecha and not codempleado and kpi_detectado:
             logging.info("[DECISION] → explicar_ratio_diario()")
             resultado = explicar_ratio_diario(codsalon, fecha, kpi_detectado)
+        elif codsalon and fecha and not codempleado and not kpi_detectado:
+            logging.info("[DECISION] → explicar_ratio_diario() (por ausencia de KPI y empleado)")
+            resultado = explicar_ratio_diario(codsalon, fecha, None)
         elif codsalon and sesion.get("nsemana") and kpi_detectado:
             logging.info("[DECISION] → explicar_ratio_semanal()")
             resultado = explicar_ratio_semanal(codsalon, sesion["nsemana"], kpi_detectado)
