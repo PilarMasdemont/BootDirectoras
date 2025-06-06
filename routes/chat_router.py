@@ -14,7 +14,7 @@ from google_sheets_session import cargar_sesion
 
 router = APIRouter()
 
-@router.post("/chat")
+@router.post("")  # o "/"
 async def chat(request: Request):
     body = await request.json()
     mensaje_usuario = body.get("mensaje", "")
