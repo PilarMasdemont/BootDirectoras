@@ -3,7 +3,7 @@
 import pandas as pd
 from sheets import cargar_hoja
 
-def explicar_ratio_diario(codsalon: str, fecha: str) -> str:
+def explicar_ratio_diario(codsalon: str, fecha: str, kpi: str = None) -> str:
     try:
         df = cargar_hoja("1882861530")
         df = df[df["codsalon"] == int(codsalon)]
