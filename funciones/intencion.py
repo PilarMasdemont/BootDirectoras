@@ -39,4 +39,3 @@ def clasificar_intencion(texto: str) -> dict:
         "tiene_fecha": False,
         "comentario": "Respuesta no interpretable"
     }
-
