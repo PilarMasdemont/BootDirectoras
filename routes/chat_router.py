@@ -10,7 +10,7 @@ from extractores import (
     extraer_codempleado,
     detectar_kpi,
 )
-from google_sheets_session import cargar_sesion
+from memory import user_context  # ← cambiado
 
 router = APIRouter()
 
@@ -24,6 +24,7 @@ async def chat(request: Request):
 
     intencion_info = clasificar_intencion(mensaje_usuario)
     intencion = intencion_info["intencion"]
+    user_context[(ip_usuario, body.get("fecha") or "")]["intencion"] = intencion  # ← nuevo
 
     logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
 
@@ -37,7 +38,13 @@ async def chat(request: Request):
     logging.info(f"[KPI] Detectado: {kpi}")
     logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
-    sesion = cargar_sesion(ip_usuario, fecha)
+    sesion = user_context[(ip_usuario, fecha)]  # ← cambiado
+
+    # Guardar información adicional en memoria
+    sesion["codsalon"] = codsalon
+    sesion["codempleado"] = codempleado
+    sesion["kpi"] = kpi
+    sesion["fecha"] = fecha
 
     resultado = despachar_intencion(
         intencion=intencion,
@@ -55,4 +62,3 @@ async def chat(request: Request):
 
     logging.info("[FLUJO] No se ejecutó ninguna función directa")
     return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
-
