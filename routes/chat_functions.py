@@ -6,6 +6,7 @@ from funciones.explicar_ratio_semanal import explicar_ratio_semanal
 from funciones.explicar_ratio_mensual import explicar_ratio_mensual
 from funciones.explicar_ratio_empleados import explicar_ratio_empleados
 from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
+from intenciones.Definiciones.ratios import definicion_kpi
 
 logger = logging.getLogger(__name__)
 
