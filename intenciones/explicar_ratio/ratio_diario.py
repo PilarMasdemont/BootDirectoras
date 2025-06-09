@@ -1,5 +1,6 @@
 # intenciones/explicar_ratio/ratio_diario.py
-
+import logging
+logger = logging.getLogger(__name__)
 import pandas as pd
 from sheets import cargar_hoja
 
