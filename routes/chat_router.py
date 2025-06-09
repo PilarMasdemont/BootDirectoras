@@ -13,6 +13,14 @@ from memory import user_context
 
 router = APIRouter()
 
+REQUISITOS = {
+    "ratio_dia": ["fecha", "codsalon"],
+    "ratio_empleado": ["fecha", "codsalon", "codempleado"],
+    "empleado": ["fecha", "codsalon", "codempleado"],
+    "general": ["codsalon"],
+    "kpi": ["kpi"]
+}
+
 @router.post("")
 async def chat(request: Request):
     body = await request.json()
@@ -47,6 +55,10 @@ async def chat(request: Request):
     sesion["codempleado"] = codempleado
     sesion["kpi"] = kpi
     sesion["fecha"] = fecha
+
+    faltantes = [campo for campo in REQUISITOS.get(intencion, []) if not locals().get(campo)]
+    if faltantes:
+        return {"respuesta": f"Necesito que me indiques: {', '.join(faltantes)} para poder responder correctamente."}
 
     resultado = despachar_intencion(
         intencion=intencion,
