@@ -1,4 +1,3 @@
-
 import logging
 
 def despachar_intencion(
@@ -17,6 +16,8 @@ def despachar_intencion(
         return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
 
     elif intencion == "ratio_dia":
+        if not fecha:
+            return "Necesito una fecha válida para poder explicarte el ratio del día."
         from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
         return explicar_ratio_diario(codsalon, fecha, kpi)
 
@@ -33,11 +34,10 @@ def despachar_intencion(
             return "Necesito el código de salón y del empleado para responderte correctamente."
         from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
         return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+
     elif intencion == "kpi":
         from intenciones.explicar_kpi import definicion_kpi
         return definicion_kpi(kpi)
 
-
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
-
