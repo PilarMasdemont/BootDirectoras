@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 import logging
 import json
 import openai
-from router.chat_functions import resolver, get_definiciones_funciones
+from routes.chat_functions import resolver, get_definiciones_funciones
 from memory import user_context
 
 router = APIRouter()
