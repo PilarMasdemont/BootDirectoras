@@ -3,7 +3,7 @@ import os
 
 def definicion_kpi(nombre_kpi: str) -> str:
     ruta_base = os.path.dirname(__file__)
-    ruta_json = os.path.abspath(os.path.join(ruta_base, "../../datosestaticos/definicionratios.txt"))
+    ruta_json = os.path.abspath(os.path.join(ruta_base, "../../datosestaticos/definicionratios.json"))
     
     try:
         with open(ruta_json, 'r', encoding='utf-8') as f:
