@@ -24,7 +24,15 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Consulta general de indicadores"
         }
 
-    # ✅ NUEVO BLOQUE: detectar intención de producto
+    # ✅ NUEVO BLOQUE: detectar intención de explicar KPI o ratio
+    if any(palabra in texto for palabra in ["qué es", "define", "definición de", "explica"]):
+        return {
+            "intencion": "kpi",
+            "tiene_fecha": False,
+            "comentario": "Detectada intención de explicar un KPI o ratio"
+        }
+
+    # Detectar intención de producto
     if any(palabra in texto for palabra in [
         "glatt", "producto", "alisador", "tratamiento", "beneficio", "cómo se usa", "opiniones", "comentarios", "hidrata", "schwarzkopf"
     ]):
@@ -39,6 +47,6 @@ def clasificar_intencion(texto: str) -> dict:
         "tiene_fecha": False,
         "comentario": "Respuesta no interpretable"
     }
-    elif any(palabra in texto.lower() for palabra in ["qué es", "define", "definición de", "explica"]):
+
     return {'intencion': 'kpi', 'comentario': 'Detectada intención de explicar un KPI o ratio'}
 
