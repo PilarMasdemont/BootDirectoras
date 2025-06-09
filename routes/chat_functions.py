@@ -72,6 +72,17 @@ def get_definiciones_funciones():
                 },
                 "required": ["codsalon", "fecha", "codempleado"]
             }
+        },
+        {
+            "name": "definir_kpi",
+            "description": "Devuelve la definición de un KPI concreto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "kpi": {"type": "string"}
+                },
+                "required": ["kpi"]
+            }
         }
     ]
 
@@ -104,6 +115,9 @@ def resolver(function_call, sesion: dict) -> str:
             sesion["indice_empleado"] = indice + 1
             sesion["modo"] = "empleados"
             return resultado
+        elif nombre_funcion == "definir_kpi":
+            from intenciones.explicar_kpi import definicion_kpi
+            return definicion_kpi(argumentos["kpi"])
         else:
             logger.error(f"[ERROR] Función no reconocida: {nombre_funcion}")
             raise ValueError("Función no reconocida")
