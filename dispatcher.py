@@ -18,6 +18,7 @@ def despachar_intencion(
     elif intencion == "ratio_dia":
         if not fecha:
             return "Necesito una fecha válida para poder explicarte el ratio del día."
+        logging.info(f"[DEBUG] Llamada a explicar_ratio_diario con fecha={fecha} tipo={type(fecha)}")
         from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
         return explicar_ratio_diario(codsalon, fecha, kpi)
 
