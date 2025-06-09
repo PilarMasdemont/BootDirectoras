@@ -1,4 +1,3 @@
-
 import logging
 
 def despachar_intencion(
@@ -33,6 +32,21 @@ def despachar_intencion(
             return "Necesito el código de salón y del empleado para responderte correctamente."
         from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
         return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+
+    elif intencion == "consultar_proceso":
+        logging.info("[DISPATCHER] Ejecutando flujo de proceso")
+        from funciones.consultar_proceso import consultar_proceso
+        from Archivos_estaticos.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
+
+        nombre_proceso = extraer_nombre_proceso(texto_usuario)
+        atributo_duda = extraer_duda_proceso(texto_usuario)
+
+        if not nombre_proceso:
+            return "No pude identificar el proceso al que te refieres."
+        if not atributo_duda:
+            return f"¿Qué parte del proceso '{nombre_proceso}' quieres consultar? (por ejemplo: duración, pasos...)"
+
+        return consultar_proceso(nombre_proceso, atributo_duda)
 
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
