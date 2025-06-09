@@ -39,8 +39,12 @@ def manejar_peticion_chat(datos: dict) -> dict:
         fecha = extraer_fecha_desde_texto(texto_limpio, anio_por_defecto=anio_actual)
         logging.info(f"[FECHA] Extraída: {fecha}")
 
-    codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
-    logging.info(f"[SALON] Código detectado: {codsalon}")
+    if "codsalon" in datos and datos["codsalon"]:
+        codsalon = datos["codsalon"]
+        logging.info(f"[SALON] Usando codsalon recibido desde el frontend: {codsalon}")
+    else:
+        codsalon = extraer_codsalon(mensaje_usuario)
+        logging.info(f"[SALON] Extraído codsalon desde el mensaje: {codsalon}")
 
     kpi = extraer_kpi(mensaje_usuario) if intencion == "kpi" else None
     logging.info(f"[KPI] Detectado: {kpi}")
@@ -61,7 +65,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
     logging.info(f"[RESULTADO] Resultado ensamblado: {resultado}")
 
     return resultado
-
 
 
 
