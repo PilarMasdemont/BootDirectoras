@@ -15,11 +15,12 @@ async def chat(request: Request):
     codsalon = body.get("codsalon")
     ip_usuario = request.client.host
 
-    logging.info(f"📥 Petición recibida: '{mensaje}' (salón: {codsalon})")
+    logging.info(f"📥 Petición recibida: '{mensaje}' (salón: {codsalon}, IP: {ip_usuario})")
 
     funciones_llm = get_definiciones_funciones()
+    logging.info(f"🔧 Funciones LLM disponibles: {[f['name'] for f in funciones_llm]}")
 
-    respuesta_llm = client.chat.completions.create(  # Cambio aquí
+    respuesta_llm = client.chat.completions.create(
         model="gpt-4-1106-preview",
         messages=[
             {
@@ -36,21 +37,27 @@ async def chat(request: Request):
     )
 
     respuesta = respuesta_llm.choices[0].message
+    logging.info(f"🤖 Respuesta LLM recibida. Function call: {respuesta.function_call}")
 
     if respuesta.function_call:
         nombre_funcion = respuesta.function_call.name
         argumentos = respuesta.function_call.arguments
-        logging.info(f"[CALL] {nombre_funcion} con argumentos {argumentos}")
+        logging.info(f"📞 Llamada a función: {nombre_funcion} con argumentos {argumentos}")
 
-        sesion = user_context[(ip_usuario, json.loads(argumentos).get("fecha", ""))]
+        fecha_llamada = json.loads(argumentos).get("fecha", "")
+        logging.info(f"🕓 Fecha usada en sesión: {fecha_llamada}")
+
+        sesion = user_context[(ip_usuario, fecha_llamada)]
         sesion["codsalon"] = codsalon
 
         try:
             resultado = resolver(respuesta.function_call, sesion)
+            logging.info(f"✅ Resultado generado: {resultado}")
             return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
         except Exception as e:
             logging.exception("[ERROR] Al ejecutar función:")
             return {"respuesta": f"Ocurrió un error al procesar tu petición: {str(e)}"}
 
+    logging.info("📭 Respuesta directa del modelo sin función.")
     return {"respuesta": respuesta.content or "No he entendido tu mensaje."}
 
