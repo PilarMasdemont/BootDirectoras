@@ -1,22 +1,20 @@
 from funciones.intencion import clasificar_intencion
-from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto
+from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
 from extractores_producto import extraer_nombre_producto
-from extractor_definicion_ratio import extraer_kpi  # ✅ CORRECTO
-
 import re
 import logging
+from extractor_definicion_ratio import extraer_kpi
+
 logging.basicConfig(level=logging.INFO)
 
 def manejar_peticion_chat(datos: dict) -> dict:
     mensaje_usuario = datos.get("mensaje", "")
     logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
-    # Paso 1: Clasificar la intención
     datos_intencion = clasificar_intencion(mensaje_usuario)
     intencion = datos_intencion.get("intencion", "general")
     logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {datos_intencion}")
 
-    # Paso 2: Preparar texto según intención
     if intencion == "empleado":
         codempleado = extraer_codempleado(mensaje_usuario)
         logging.info(f"[EXTRACCION] Código de empleado detectado: {codempleado}")
@@ -28,18 +26,17 @@ def manejar_peticion_chat(datos: dict) -> dict:
 
     logging.info(f"[LIMPIEZA] Texto para extracción de fecha: '{texto_limpio}'")
 
-    # Paso 3: Extraer parámetros condicionalmente
-    if intencion == "kpi":
-        fecha = None
-        logging.info("[FECHA] No se extrae fecha para intención 'kpi'")
-    else:
-        fecha = extraer_fecha_desde_texto(texto_limpio)
-        logging.info(f"[FECHA] Extraída: {fecha}")
+    fecha = extraer_fecha_desde_texto(texto_limpio)
+    if not fecha or "no_valida" in str(fecha).lower():
+        logging.warning(f"[FECHA] Fecha inválida detectada: {fecha}")
+        fecha = ""
+
+    logging.info(f"[FECHA] Extraída: {fecha}")
 
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     logging.info(f"[SALON] Código detectado: {codsalon}")
 
-    kpi = extraer_kpi(mensaje_usuario)
+    kpi = detectar_kpi(mensaje_usuario)
     logging.info(f"[KPI] Detectado: {kpi}")
 
     resultado = {
@@ -56,6 +53,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
 
 
 
