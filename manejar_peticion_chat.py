@@ -27,6 +27,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     logging.info(f"[LIMPIEZA] Texto para extracción de fecha: '{texto_limpio}'")
 
     fecha = extraer_fecha_desde_texto(texto_limpio)
+    logging.info(f"[DEBUG] Valor bruto de fecha extraída: {fecha} tipo: {type(fecha)}")
     if not fecha or "no_valida" in str(fecha).lower():
         logging.warning(f"[FECHA] Fecha inválida detectada: {fecha}")
         fecha = ""
@@ -53,7 +54,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
-
 
 
 
