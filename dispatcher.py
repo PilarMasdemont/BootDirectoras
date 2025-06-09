@@ -33,6 +33,9 @@ def despachar_intencion(
             return "Necesito el código de salón y del empleado para responderte correctamente."
         from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
         return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+    elif intencion == "kpi":
+        from intenciones.explicar_kpi import definicion_kpi
+        return definicion_kpi(nombre_kpi)
 
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
