@@ -1,0 +1,38 @@
+[
+  {
+    "name": "explicar_ratio_diario",
+    "description": "Explica el ratio general de un día dado para un salón.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "codsalon": { "type": "string" },
+        "fecha": { "type": "string" }
+      },
+      "required": ["codsalon", "fecha"]
+    }
+  },
+  {
+    "name": "explicar_ratio_empleado",
+    "description": "Explica el ratio de un empleado en un día determinado.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "codsalon": { "type": "string" },
+        "fecha": { "type": "string" },
+        "codempleado": { "type": "string" }
+      },
+      "required": ["codsalon", "fecha", "codempleado"]
+    }
+  },
+  {
+    "name": "definir_kpi",
+    "description": "Devuelve la definición de un KPI concreto.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "kpi": { "type": "string" }
+      },
+      "required": ["kpi"]
+    }
+  }
+]
