@@ -5,7 +5,6 @@ from dispatcher import despachar_intencion
 from funciones.intencion import clasificar_intencion
 from extractores import (
     extraer_fecha_desde_texto,
-    extraer_codsalon,
     extraer_codempleado,
 )
 from extractor_definicion_ratio import extraer_kpi
@@ -40,7 +39,7 @@ async def chat(request: Request):
         logging.warning(f"[FECHA] Fecha inválida detectada: {fecha}")
         fecha = ""
 
-    codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
+    codsalon = body.get("codsalon")
     codempleado = extraer_codempleado(mensaje_usuario)
     kpi = extraer_kpi(mensaje_usuario)
 
@@ -76,5 +75,4 @@ async def chat(request: Request):
 
     logging.info("[FLUJO] No se ejecutó ninguna función directa")
     return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
-
 
