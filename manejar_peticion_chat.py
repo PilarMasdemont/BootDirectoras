@@ -42,7 +42,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     logging.info(f"[SALON] Código detectado: {codsalon}")
 
-    kpi = extraer_kpi(mensaje_usuario)
+    kpi = extraer_kpi(mensaje_usuario) if intencion == "kpi" else None
     logging.info(f"[KPI] Detectado: {kpi}")
 
     resultado = {
@@ -58,7 +58,10 @@ def manejar_peticion_chat(datos: dict) -> dict:
         resultado["nombre_producto"] = extraer_nombre_producto(mensaje_usuario)
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
+    logging.info(f"[RESULTADO] Resultado ensamblado: {resultado}")
+
     return resultado
+
 
 
 
