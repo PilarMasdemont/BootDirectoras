@@ -39,3 +39,6 @@ def clasificar_intencion(texto: str) -> dict:
         "tiene_fecha": False,
         "comentario": "Respuesta no interpretable"
     }
+    elif any(palabra in texto.lower() for palabra in ["qué es", "define", "definición de", "explica"]):
+    return {'intencion': 'kpi', 'comentario': 'Detectada intención de explicar un KPI o ratio'}
+
