@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Request
 import logging
 import json
-import openai
+from openai import OpenAI
 from routes.chat_functions import resolver, get_definiciones_funciones
 from memory import user_context
 
 router = APIRouter()
+client = OpenAI()  # Nuevo cliente requerido en openai>=1.0.0
 
 @router.post("")
 async def chat(request: Request):
@@ -18,11 +19,17 @@ async def chat(request: Request):
 
     funciones_llm = get_definiciones_funciones()
 
-    respuesta_llm = openai.ChatCompletion.create(
+    respuesta_llm = client.chat.completions.create(  # Cambio aquí
         model="gpt-4-1106-preview",
         messages=[
-            {"role": "system", "content": "Eres Mont Dirección. Si detectas intención de explicar un ratio, llama a la función correspondiente. Si detectas que te piden definir un KPI, usa la función definir_kpi."},
-            {"role": "user", "content": mensaje}
+            {
+                "role": "system",
+                "content": "Eres Mont Dirección. Si detectas intención de explicar un ratio, llama a la función correspondiente. Si detectas que te piden definir un KPI, usa la función definir_kpi."
+            },
+            {
+                "role": "user",
+                "content": mensaje
+            }
         ],
         functions=funciones_llm,
         function_call="auto"
@@ -30,14 +37,13 @@ async def chat(request: Request):
 
     respuesta = respuesta_llm.choices[0].message
 
-    if respuesta.get("function_call"):
+    if respuesta.function_call:
         nombre_funcion = respuesta.function_call.name
         argumentos = respuesta.function_call.arguments
         logging.info(f"[CALL] {nombre_funcion} con argumentos {argumentos}")
 
-        # Recuperar sesión
         sesion = user_context[(ip_usuario, json.loads(argumentos).get("fecha", ""))]
-        sesion["codsalon"] = codsalon  # asegurar codsalon se mantiene desde frontend
+        sesion["codsalon"] = codsalon
 
         try:
             resultado = resolver(respuesta.function_call, sesion)
@@ -46,4 +52,5 @@ async def chat(request: Request):
             logging.exception("[ERROR] Al ejecutar función:")
             return {"respuesta": f"Ocurrió un error al procesar tu petición: {str(e)}"}
 
-    return {"respuesta": respuesta.get("content", "No he entendido tu mensaje.") }
+    return {"respuesta": respuesta.content or "No he entendido tu mensaje."}
+
