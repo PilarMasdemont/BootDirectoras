@@ -1,8 +1,0 @@
-{
-  "FacturacionSIva": "Facturación total sin incluir el I.V.A.",
-  "HorasFichadas": "Horas que ficha cada trabajador a lo largo de la unidad de tiempo (día o mes).",
-  "RatioDesviacionTiempoTeorico": "% de desviación del tiempo real dedicado respecto al tiempo teórico asignado en agenda por servicio. Positivo (+) indica más tiempo, negativo (-) menos tiempo.",
-  "RatioTiempoIndirecto": "% del total de horas fichadas que se dedican a tareas indirectas no relacionadas directamente con el cliente (inventario, organización, tiempos muertos, etc.).",
-  "RatioTicketsInferior20": "% de tickets con importe inferior a 20€, respecto al total de tickets.",
-  "TicketSIvaMedio": "Facturación sin I.V.A. dividida por el número total de tickets."
-}
