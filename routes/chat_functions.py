@@ -117,8 +117,9 @@ def resolver(function_call, sesion: dict) -> str:
             sesion["modo"] = "empleados"
             return resultado
         elif nombre_funcion == "definir_kpi":
-            from intenciones.explicar_kpi import definicion_kpi
+            from intenciones.Definiciones.ratios import definicion_kpi
             return definicion_kpi(argumentos["kpi"])
+
         else:
             logger.error(f"[ERROR] Función no reconocida: {nombre_funcion}")
             raise ValueError("Función no reconocida")
