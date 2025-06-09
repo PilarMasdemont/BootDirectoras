@@ -1,10 +1,10 @@
 from funciones.intencion import clasificar_intencion
-from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto, detectar_kpi
-from extractores_producto import extraer_nombre_producto  # ✅ NUEVA IMPORTACIÓN
+from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto
+from extractores_producto import extraer_nombre_producto
+from extractor_definicion_ratio import extraer_kpi  # ✅ CORRECTO
+
 import re
 import logging
-from extractor_definicion_ratio.py import extraer_kpi
-
 logging.basicConfig(level=logging.INFO)
 
 def manejar_peticion_chat(datos: dict) -> dict:
@@ -28,17 +28,20 @@ def manejar_peticion_chat(datos: dict) -> dict:
 
     logging.info(f"[LIMPIEZA] Texto para extracción de fecha: '{texto_limpio}'")
 
-    # Paso 3: Extraer parámetros
-    fecha = extraer_fecha_desde_texto(texto_limpio)
-    logging.info(f"[FECHA] Extraída: {fecha}")
+    # Paso 3: Extraer parámetros condicionalmente
+    if intencion == "kpi":
+        fecha = None
+        logging.info("[FECHA] No se extrae fecha para intención 'kpi'")
+    else:
+        fecha = extraer_fecha_desde_texto(texto_limpio)
+        logging.info(f"[FECHA] Extraída: {fecha}")
 
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     logging.info(f"[SALON] Código detectado: {codsalon}")
 
-    kpi = detectar_kpi(mensaje_usuario)
+    kpi = extraer_kpi(mensaje_usuario)
     logging.info(f"[KPI] Detectado: {kpi}")
 
-    # Paso 4: Preparar retorno
     resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
