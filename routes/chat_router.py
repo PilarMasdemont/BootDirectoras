@@ -10,6 +10,7 @@ from extractores import (
     extraer_codempleado,
     detectar_kpi,
 )
+from extractor_definicion_ratio import extraer_kpi
 from memory import user_context  # ← cambiado
 
 router = APIRouter()
