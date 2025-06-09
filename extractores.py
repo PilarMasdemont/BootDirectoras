@@ -52,7 +52,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10
     }
     for palabra, numero in numeros_texto.items():
-        texto = re.sub(rf"\\b{palabra}\\b", str(numero), texto)
+        texto = re.sub(rf"\b{palabra}\b", str(numero), texto)
 
     for es, en in meses_es_en.items():
         texto = texto.replace(es, en)
@@ -128,6 +128,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         return fecha_str
     except Exception as e:
         logger.error(f"[FECHA] ❌ Error al interpretar la fecha: {e}")
+        logger.debug(f"[FECHA] Resultado final: FECHA_NO_VALIDA ({type('FECHA_NO_VALIDA')})")
         return "FECHA_NO_VALIDA"
 
 def extraer_codsalon(texto: str):
@@ -138,4 +139,3 @@ def extraer_codsalon(texto: str):
         return match.group(1)
     logger.info("[SALON] No se detectó código de salón")
     return None
-
