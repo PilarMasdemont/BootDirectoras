@@ -40,13 +40,13 @@ def despachar_intencion(
 
     if intencion == "ratio_empleado":
         logging.info(f"[DISPATCHER] Despachando a ratio_empleado con codsalon={codsalon}, fecha={fecha}, codempleado={codempleado}")
-        from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
-        return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+        from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado
+        return explicar_ratio_empleado(codsalon=codsalon, fecha=fecha, codempleado=codempleado)
 
     elif intencion == "ratio_dia":
         logging.info(f"[DISPATCHER] Despachando a ratio_dia con codsalon={codsalon}, fecha={fecha}, kpi={kpi}")
         from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
-        return explicar_ratio_diario(codsalon, fecha, kpi)
+        return explicar_ratio_diario(codsalon=codsalon, fecha=fecha, kpi=kpi)
 
     elif intencion == "general":
         if not fecha:
@@ -57,12 +57,12 @@ def despachar_intencion(
             return "Necesito que me indiques el código de salón para poder analizar el ratio."
         logging.info(f"[DISPATCHER] Despachando a general con codsalon={codsalon}, fecha={fecha}")
         from intenciones.explicar_ratio.ratio_diario import explicar_ratio_diario
-        return explicar_ratio_diario(codsalon, fecha, None)
+        return explicar_ratio_diario(codsalon=codsalon, fecha=fecha, kpi=None)
 
     elif intencion == "empleado":
         logging.info(f"[DISPATCHER] Despachando a empleado con codsalon={codsalon}, fecha={fecha}, codempleado={codempleado}")
-        from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado_individual
-        return explicar_ratio_empleado_individual(codsalon, fecha, codempleado)
+        from intenciones.explicar_ratio.ratio_empleado import explicar_ratio_empleado
+        return explicar_ratio_empleado(codsalon=codsalon, fecha=fecha, codempleado=codempleado)
 
     elif intencion == "kpi":
         logging.info(f"[DISPATCHER] Despachando a definición de KPI: {kpi}")
