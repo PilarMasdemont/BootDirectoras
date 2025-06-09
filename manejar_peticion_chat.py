@@ -3,7 +3,7 @@ from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_des
 from extractores_producto import extraer_nombre_producto  # ✅ NUEVA IMPORTACIÓN
 import re
 import logging
-from extractores_kpi import extraer_kpi
+from extractor_definicion_ratio.py import extraer_kpi
 
 logging.basicConfig(level=logging.INFO)
 
