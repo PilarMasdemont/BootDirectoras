@@ -1,15 +1,8 @@
 from fastapi import APIRouter, Request
 import logging
-import re
-
-from dispatcher import despachar_intencion
-from extractores import (
-    extraer_fecha_desde_texto,
-    extraer_codsalon,
-    extraer_codempleado,
-    detectar_kpi,
-)
-from extractor_definicion_ratio import extraer_kpi
+import json
+import openai
+from chat_functions import resolver, get_definiciones_funciones
 from memory import user_context
 
 router = APIRouter()
@@ -23,51 +16,34 @@ async def chat(request: Request):
 
     logging.info(f"📥 Petición recibida: '{mensaje}' (salón: {codsalon})")
 
-    # Extraer código de empleado y limpiar mensaje para fecha
-    texto_limpio = mensaje
-    codempleado = extraer_codempleado(mensaje)
-    if codempleado:
-        texto_limpio = re.sub(r"emplead[oa]\s*\d+", "", mensaje)
-        texto_limpio = re.sub(r"\s{2,}", " ", texto_limpio).strip()
+    funciones_llm = get_definiciones_funciones()
 
-    # Extraer fecha
-    fecha = extraer_fecha_desde_texto(texto_limpio)
-    if not fecha or "no_valida" in str(fecha).lower():
-        logging.warning(f"[FECHA] Inválida o ausente: {fecha}")
-        fecha = ""
-    else:
-        logging.info(f"[FECHA] Extraída: {fecha}")
-
-    # Extraer KPI
-    kpi = extraer_kpi(mensaje) or detectar_kpi(mensaje)
-    if kpi:
-        logging.info(f"[KPI] Detectado: {kpi}")
-
-    # Deducción de intención
-    if fecha:
-        intencion = "ratio_empleado" if codempleado else "ratio_dia"
-    else:
-        intencion = "kpi" if kpi else "general"
-    logging.info(f"[INTENCION] Determinada: {intencion}")
-
-    # Preparar sesión
-    sesion = user_context[(ip_usuario, fecha)]
-    sesion.update({"codsalon": codsalon, "codempleado": codempleado, "fecha": fecha, "kpi": kpi})
-
-    # Llamar al dispatcher
-    resultado = despachar_intencion(
-        intencion=intencion,
-        texto_usuario=mensaje,
-        fecha=fecha,
-        codsalon=codsalon,
-        codempleado=codempleado,
-        kpi=kpi,
-        sesion=sesion
+    respuesta_llm = openai.ChatCompletion.create(
+        model="gpt-4-1106-preview",
+        messages=[
+            {"role": "system", "content": "Eres Mont Dirección. Si detectas intención de explicar un ratio, llama a la función correspondiente. Si detectas que te piden definir un KPI, usa la función definir_kpi."},
+            {"role": "user", "content": mensaje}
+        ],
+        functions=funciones_llm,
+        function_call="auto"
     )
 
-    if resultado:
-        logging.info("[RESPUESTA] Resultado generado exitosamente")
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+    respuesta = respuesta_llm.choices[0].message
 
-    logging.info("[FLUJO] No se ejecutó ninguna función directa")
-    return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
+    if respuesta.get("function_call"):
+        nombre_funcion = respuesta.function_call.name
+        argumentos = respuesta.function_call.arguments
+        logging.info(f"[CALL] {nombre_funcion} con argumentos {argumentos}")
+
+        # Recuperar sesión
+        sesion = user_context[(ip_usuario, json.loads(argumentos).get("fecha", ""))]
+        sesion["codsalon"] = codsalon  # asegurar codsalon se mantiene desde frontend
+
+        try:
+            resultado = resolver(respuesta.function_call, sesion)
+            return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        except Exception as e:
+            logging.exception("[ERROR] Al ejecutar función:")
+            return {"respuesta": f"Ocurrió un error al procesar tu petición: {str(e)}"}
+
+    return {"respuesta": respuesta.get("content", "No he entendido tu mensaje.") }
