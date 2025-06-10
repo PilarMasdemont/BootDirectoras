@@ -1,13 +1,9 @@
 # intenciones/explicar_ratio/ratio_diario.py
+
 import pandas as pd
-import logging
 from sheets import cargar_hoja
 
-logger = logging.getLogger(__name__)
-
 def explicar_ratio_diario(codsalon: str, fecha: str, kpi: str = None) -> str:
-    logger.info(f"[RATIO_DIARIO] Argumento recibido - fecha: {fecha}, tipo: {type(fecha)}")
-
     try:
         df = cargar_hoja("1882861530")
         df = df[df["codsalon"] == int(codsalon)]
