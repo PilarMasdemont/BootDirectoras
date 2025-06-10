@@ -120,6 +120,20 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
             except Exception as e:
                 logger.warning(f"[FECHA] Error al crear fecha explícita: {e}")
 
+    # Nuevo patrón para "7 junio", "día 7 junio", etc.
+    patron_alt = re.search(r"\b(\d{1,2})\s+([a-zA-Z]+)\b", texto)
+    if patron_alt:
+        dia, mes_str = patron_alt.groups()
+        mes_str = mes_str.lower()
+        if mes_str in meses_es_en:
+            mes = list(meses_es_en.keys()).index(mes_str) + 1
+            try:
+                fecha = datetime(anio_por_defecto, mes, int(dia)).strftime("%Y-%m-%d")
+                logger.info(f"[FECHA] Fecha alternativa detectada (sin 'de'): {fecha}")
+                return fecha
+            except Exception as e:
+                logger.warning(f"[FECHA] Error al crear fecha alternativa: {e}")
+
     try:
         fecha = parser.parse(texto, fuzzy=True, dayfirst=True)
         if not re.search(r"\b\d{4}\b", texto):
@@ -140,3 +154,4 @@ def extraer_codsalon(texto: str):
         return match.group(1)
     logger.info("[SALON] No se detectó código de salón")
     return None
+
