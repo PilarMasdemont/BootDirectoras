@@ -28,7 +28,7 @@ async def chat(request: Request):
     logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
     # Detectar intención (unificada: KPI / Producto / Proceso)
-    intencion_info = clasificar_intencion_completa(mensaje_usuario)
+    datos_intencion = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
     logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
 
