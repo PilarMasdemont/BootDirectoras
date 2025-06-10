@@ -41,6 +41,9 @@ def despachar_intencion(
         nombre_proceso = extraer_nombre_proceso(texto_usuario)
         atributo_duda = extraer_duda_proceso(texto_usuario)
 
+        logging.info(f"[PROCESO] Nombre detectado: {nombre_proceso}")
+        logging.info(f"[PROCESO] Atributo detectado: {atributo_duda}")
+
         if not nombre_proceso:
             return "No pude identificar el proceso al que te refieres."
         if not atributo_duda:
@@ -50,4 +53,5 @@ def despachar_intencion(
 
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
+
 
