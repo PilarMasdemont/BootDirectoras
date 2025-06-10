@@ -6,19 +6,6 @@ import re
 from datetime import datetime
 import logging
 
-
-def manejar_peticion_chat(texto_limpio: str, intencion: str):
-    # Paso 3: Extraer parámetros
-    if intencion == "kpi":
-        fecha = None
-        logging.info("[FECHA] No se extrae fecha para intención 'kpi'")
-    else:
-        # Usamos el anio_por_defecto = 2025 que está en la firma de extraer_fecha_desde_texto
-        fecha = extraer_fecha_desde_texto(texto_limpio)
-        logging.info(f"[FECHA] Extraída con default de extractores (2025): {fecha}")
-
-    return fecha
-
 logging.basicConfig(level=logging.INFO)
 
 def manejar_peticion_chat(datos: dict) -> dict:
@@ -42,7 +29,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
 
     logging.info(f"[LIMPIEZA] Texto para extracción de fecha: '{texto_limpio}'")
 
-       # Paso 3: Extraer parámetros
+    # Paso 3: Extraer parámetros
     if intencion == "kpi":
         fecha = None
         logging.info("[FECHA] No se extrae fecha para intención 'kpi'")
@@ -50,13 +37,13 @@ def manejar_peticion_chat(datos: dict) -> dict:
         # No pasamos el año: usamos el valor por defecto (2025) de la función en extractores.py
         fecha = extraer_fecha_desde_texto(texto_limpio)
         logging.info(f"[FECHA] Extraída con default de extractores (2025): {fecha}")
-    
+
     codsalon = datos.get("codsalon") or extraer_codsalon(mensaje_usuario)
     logging.info(f"[SALON] Código detectado: {codsalon}")
-    
+
     kpi = extraer_kpi(mensaje_usuario) if intencion == "kpi" else None
     logging.info(f"[KPI] Detectado: {kpi}")
-    
+
     resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
@@ -66,7 +53,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
         "kpi": kpi
     }
 
-
     if intencion == "explicar_producto":
         resultado["nombre_producto"] = extraer_nombre_producto(mensaje_usuario)
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
@@ -74,6 +60,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     logging.info(f"[RESULTADO] Resultado ensamblado: {resultado}")
 
     return resultado
+
 
 
 
