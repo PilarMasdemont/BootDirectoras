@@ -53,6 +53,12 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Mención directa de un proceso conocido"
         }
 
+    if len(texto.split()) <= 2:
+    return {
+        "intencion": "desconocida",
+        "comentario": "Mensaje demasiado corto para detectar un proceso"
+    }
+
     # ❌ Nada detectado
     return {
         "intencion": "desconocida",
