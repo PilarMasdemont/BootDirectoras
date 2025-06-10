@@ -2,10 +2,22 @@ from funciones.intencion import clasificar_intencion
 from extractores import extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto
 from extractores_producto import extraer_nombre_producto
 from extractor_definicion_ratio import extraer_kpi
-
 import re
-import logging
 from datetime import datetime
+import logging
+
+
+def manejar_peticion_chat(texto_limpio: str, intencion: str):
+    # Paso 3: Extraer parámetros
+    if intencion == "kpi":
+        fecha = None
+        logging.info("[FECHA] No se extrae fecha para intención 'kpi'")
+    else:
+        # Usamos el anio_por_defecto = 2025 que está en la firma de extraer_fecha_desde_texto
+        fecha = extraer_fecha_desde_texto(texto_limpio)
+        logging.info(f"[FECHA] Extraída con default de extractores (2025): {fecha}")
+
+    return fecha
 
 logging.basicConfig(level=logging.INFO)
 
