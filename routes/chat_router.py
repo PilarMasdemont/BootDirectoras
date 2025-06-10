@@ -27,18 +27,18 @@ async def chat(request: Request):
 
     logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
-    # Detectar intención (unificada: KPI / Producto / Proceso)
-    datos_intencion = clasificar_intencion_completa(mensaje_usuario)
+    # Clasificación combinada (KPI, Producto, Proceso)
+    intencion_info = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
-    logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
+    logging.info(f"[INTENCION] Detectada: {intencion} | Comentario: {intencion_info.get('comentario')}")
 
-    # Si la intención es consultar proceso, usar flujo especializado directamente
+    # Si la intención es proceso, ejecuta directamente ese flujo
     if intencion == "consultar_proceso":
         nombre_proceso = extraer_nombre_proceso(mensaje_usuario)
         atributo_duda = extraer_duda_proceso(mensaje_usuario)
         respuesta = consultar_proceso(nombre_proceso, atributo_duda)
 
-        logging.info(f"[PROCESO] Proceso: {nombre_proceso} | Duda: {atributo_duda}")
+        logging.info(f"[PROCESO] Proceso detectado: {nombre_proceso} | Atributo: {atributo_duda}")
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
     # Si es sobre productos
@@ -46,7 +46,7 @@ async def chat(request: Request):
         nombre_producto = extraer_nombre_producto(mensaje_usuario)
         logging.info(f"[PRODUCTO] Detectado: {nombre_producto}")
 
-    # Flujo KPI / Producto (con contexto)
+    # Flujo KPI / Producto (extraer contexto)
     fecha = extraer_fecha_desde_texto(mensaje_usuario)
     codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
     codempleado = extraer_codempleado(mensaje_usuario)
@@ -57,6 +57,7 @@ async def chat(request: Request):
     logging.info(f"[KPI] Detectado: {kpi}")
     logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
+    # Guardar contexto en memoria
     sesion = user_context[(ip_usuario, fecha)]
     sesion["codsalon"] = codsalon
     sesion["codempleado"] = codempleado
@@ -64,7 +65,7 @@ async def chat(request: Request):
     sesion["fecha"] = fecha
     sesion["intencion"] = intencion
 
-    # Ejecutar función principal
+    # Despachar lógica si hay función asociada
     resultado = despachar_intencion(
         intencion=intencion,
         texto_usuario=mensaje_usuario,
@@ -76,10 +77,10 @@ async def chat(request: Request):
     )
 
     if resultado:
-        logging.info("[RESPUESTA] Resultado generado exitosamente desde función directa")
+        logging.info("[RESPUESTA] Generada correctamente desde función directa")
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-    logging.info("[FLUJO] No se ejecutó ninguna función directa")
+    logging.info("[FLUJO] No se ejecutó ninguna función directa para esta intención")
     return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
 
 
