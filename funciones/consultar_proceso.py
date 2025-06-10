@@ -2,7 +2,7 @@ import json
 from difflib import get_close_matches
 
 # Carga del archivo JSON una única vez (podrías moverlo a una función si necesitas recargar dinámicamente)
-with open("data/process_prueba.json", "r", encoding="utf-8") as f:
+with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
     PROCESOS = json.load(f)
 
 def consultar_proceso(nombre_proceso: str, atributo_dudado: str) -> str:
