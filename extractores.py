@@ -32,8 +32,9 @@ def extraer_codempleado(texto: str):
     return None
 
 def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
+    logger = logging.getLogger(__name__)
     logger.info(f"[FECHA] Texto recibido para análisis: '{texto}'")
-    texto = texto.lower()
+    logger.info(f"[FECHA] anio_por_defecto recibido: {anio_por_defecto}")
 
     meses_es_en = {
         "enero": "january", "febrero": "february", "marzo": "march",
