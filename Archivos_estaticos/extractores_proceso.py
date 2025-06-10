@@ -16,8 +16,8 @@ DUDAS_COMUNES = [
 
 def extraer_nombre_proceso(texto: str) -> str:
     texto = texto.lower()
-    coincidencias = get_close_matches(texto, LISTA_PROCESOS, n=1, cutoff=0.4)
-    return coincidencias[0] if coincidencias else None
+    posibles = get_close_matches(texto, LISTA_PROCESOS, n=1, cutoff=0.7)  # Subido de 0.4 a 0.7
+    return posibles[0] if posibles else None
 
 def extraer_duda_proceso(texto: str) -> str:
     texto = texto.lower()
