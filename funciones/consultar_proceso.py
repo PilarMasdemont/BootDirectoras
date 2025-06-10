@@ -7,10 +7,14 @@ with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
 
 def consultar_proceso(nombre_proceso: str, atributo_dudado: str) -> str:
     if not nombre_proceso:
-        return "No pude identificar el proceso al que te refieres."
+        return "No estoy segura a qué proceso te refieres. ¿Podrías darme un poco más de contexto?"
+    if not nombre_proceso and not atributo_dudado:
+        return "¿Podrías especificar sobre qué proceso o tema quieres saber más (por ejemplo: inventario, agenda, caja)?"
+
+
 
     # Buscar el proceso más similar
-    coincidencias = get_close_matches(nombre_proceso.lower(), PROCESOS.keys(), n=1, cutoff=0.4)
+    coincidencias = get_close_matches(nombre_proceso.lower(), PROCESOS.keys(), n=1, cutoff=0.7)
     if not coincidencias:
         return f"No encontré ningún proceso que se parezca a '{nombre_proceso}'."
 
