@@ -3,7 +3,7 @@ import logging
 
 from funciones.intencion_total import clasificar_intencion_completa
 from funciones.consultar_proceso import consultar_proceso
-from Archivos_estaticos.extractores_proceso import (
+from funciones.extractores_proceso import (
     extraer_nombre_proceso,
     extraer_duda_proceso
 )
