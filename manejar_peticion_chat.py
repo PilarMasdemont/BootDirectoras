@@ -9,8 +9,8 @@ from extractores import (
 )
 from extractores_producto import extraer_nombre_producto
 from funciones.intencion_total import clasificar_intencion_completa
-from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt as consultar_proceso  # ✅ Importación correcta
-from memory import obtener_contexto, actualizar_contexto  # ✅ Directorio correcto para memoria
+from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt
+from memory import obtener_contexto, actualizar_contexto
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,22 +29,23 @@ def manejar_peticion_chat(datos: dict) -> dict:
     codsalon = codsalon or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
+    # 🧠 Si es consulta de proceso, extrae info del contexto y consulta usando ChatGPT
     if intencion == "consultar_proceso":
         nombre_proceso = datos_intencion.get("proceso")
         atributo_dudado = datos_intencion.get("atributo")
 
         contexto = obtener_contexto(codsalon)
-        if not nombre_proceso and contexto.get("proceso"):
-            nombre_proceso = contexto["proceso"]
-        if not atributo_dudado and contexto.get("atributo"):
-            atributo_dudado = contexto["atributo"]
+        if not nombre_proceso:
+            nombre_proceso = contexto.get("proceso")
+        if not atributo_dudado:
+            atributo_dudado = contexto.get("atributo")
 
         if nombre_proceso:
             actualizar_contexto(codsalon, "proceso", nombre_proceso)
         if atributo_dudado:
             actualizar_contexto(codsalon, "atributo", atributo_dudado)
 
-        respuesta = consultar_proceso(nombre_proceso, atributo_dudado)  # 🤖 Usa GPT internamente
+        respuesta = consultar_proceso_chatgpt(nombre_proceso, atributo_dudado)
         return {
             "intencion": intencion,
             "respuesta": respuesta,
@@ -53,6 +54,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
             "codempleado": codempleado
         }
 
+    # 🧪 Otras intenciones: KPI, producto, etc.
     resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
@@ -67,14 +69,3 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
-
-
-
-
-
-
-
-
-
-
-
