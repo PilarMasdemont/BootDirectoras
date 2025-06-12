@@ -3,7 +3,6 @@ import json
 from openai import OpenAI
 from difflib import get_close_matches
 
-# 🔐 Obtener la API key desde las variables de entorno de Render
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
@@ -23,28 +22,26 @@ def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
 
     prompt = f"""
 Eres Mont Dirección, una asistente especializada en gestión de salones de belleza. 
-Una usuaria del equipo te ha preguntado sobre el proceso **{proceso_clave}**, específicamente sobre: **{atributo_dudado}**.
+Una usuaria te ha preguntado sobre el proceso **{proceso_clave}**, específicamente sobre: **{atributo_dudado}**.
 
-A continuación tienes el contenido completo del procedimiento:
+A continuación tienes el contenido del procedimiento:
 \"\"\"
 {contenido}
 \"\"\"
 
-Usando esta información, responde de forma clara, profesional y práctica solo con lo que aparece en el texto. 
-No inventes datos que no estén presentes. Sé directa y cercana.
+Con esta información, responde de forma clara, profesional y práctica. No inventes información que no aparezca.
 
 Respuesta:
 """
 
     try:
-        respuesta = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.5
         )
-        return respuesta.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
+
 
