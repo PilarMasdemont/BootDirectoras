@@ -2,27 +2,25 @@
 #la parte específica de la duda (como "duración", "pasos", etc.) desde el texto del usuario.
 
 
-import json
 from difflib import get_close_matches
+import json
 
-# Cargar dinámicamente los nombres desde el JSON real
 with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
     LISTA_PROCESOS = list(json.load(f).keys())
 
-DUDAS_COMUNES = [
-    "duración", "pasos", "cómo se hace", "quién lo hace", "responsable",
-    "materiales", "instrucciones", "qué se necesita", "orden", "funciona", "flujo", "procedimiento"
-]
-
 def extraer_nombre_proceso(texto: str) -> str:
-    texto = texto.lower()
-    posibles = get_close_matches(texto, LISTA_PROCESOS, n=1, cutoff=0.7)  # Subido de 0.4 a 0.7
-    return posibles[0] if posibles else None
-
-def extraer_duda_proceso(texto: str) -> str:
-    texto = texto.lower()
-    for duda in DUDAS_COMUNES:
-        if duda in texto:
-            return duda
+    texto = texto.lower().strip()
+    lista_lower = {k.lower(): k for k in LISTA_PROCESOS}
+    
+    # Coincidencia exacta
+    if texto in lista_lower:
+        return lista_lower[texto]
+    
+    # Coincidencia aproximada
+    coincidencias = get_close_matches(texto, lista_lower.keys(), n=1, cutoff=0.5)
+    if coincidencias:
+        return lista_lower[coincidencias[0]]
+    
     return None
+
 
