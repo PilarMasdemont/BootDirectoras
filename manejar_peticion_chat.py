@@ -1,5 +1,6 @@
 import re
 import logging
+
 from extractores import (
     extraer_codempleado,
     extraer_codsalon,
@@ -8,8 +9,8 @@ from extractores import (
 )
 from extractores_producto import extraer_nombre_producto
 from funciones.intencion_total import clasificar_intencion_completa
-from funciones.consultar_proceso_chatgpt import consultar_proceso_chatgpt  # 👈 se reemplazó el módulo
-from funciones.memoria_contexto import obtener_contexto, actualizar_contexto
+from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt as consultar_proceso  # ✅ Importación correcta
+from memory import obtener_contexto, actualizar_contexto  # ✅ Directorio correcto para memoria
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,9 +44,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
         if atributo_dudado:
             actualizar_contexto(codsalon, "atributo", atributo_dudado)
 
-        # 🧠 Respuesta generada por GPT
-        respuesta = consultar_proceso_chatgpt(nombre_proceso, atributo_dudado)
-
+        respuesta = consultar_proceso(nombre_proceso, atributo_dudado)  # 🤖 Usa GPT internamente
         return {
             "intencion": intencion,
             "respuesta": respuesta,
@@ -68,6 +67,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
 
 
 
