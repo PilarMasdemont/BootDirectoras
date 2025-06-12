@@ -1,6 +1,5 @@
 import re
 import logging
-
 from extractores import (
     extraer_codempleado,
     extraer_codsalon,
@@ -9,8 +8,8 @@ from extractores import (
 )
 from extractores_producto import extraer_nombre_producto
 from funciones.intencion_total import clasificar_intencion_completa
-from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt as consultar_proceso
-from memory import obtener_contexto, actualizar_contexto
+from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt as consultar_proceso  # ✅ asegurado
+from memory import obtener_contexto, actualizar_contexto  # ✅ memoria activa
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +28,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
     codsalon = codsalon or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
-    # 🧠 Si es consulta de proceso, extrae info del contexto y consulta usando ChatGPT
+    # 🧠 GPT: Intención de proceso
     if intencion == "consultar_proceso":
         nombre_proceso = datos_intencion.get("proceso")
         atributo_dudado = datos_intencion.get("atributo")
@@ -45,7 +44,8 @@ def manejar_peticion_chat(datos: dict) -> dict:
         if atributo_dudado:
             actualizar_contexto(codsalon, "atributo", atributo_dudado)
 
-        respuesta = consultar_proceso_chatgpt(nombre_proceso, atributo_dudado)
+        logging.info(f"🧠 Procesando con GPT: proceso='{nombre_proceso}', atributo='{atributo_dudado}'")
+        respuesta = consultar_proceso(nombre_proceso, atributo_dudado)
         return {
             "intencion": intencion,
             "respuesta": respuesta,
@@ -54,7 +54,7 @@ def manejar_peticion_chat(datos: dict) -> dict:
             "codempleado": codempleado
         }
 
-    # 🧪 Otras intenciones: KPI, producto, etc.
+    # ⚙️ KPI / Producto u otras intenciones
     resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
@@ -69,3 +69,4 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
