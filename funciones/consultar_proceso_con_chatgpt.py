@@ -4,13 +4,13 @@ import openai
 import logging
 from difflib import get_close_matches
 
-# Setup logging
+# Configura los logs para debug
 logging.basicConfig(level=logging.INFO)
 
-# API Key desde variable de entorno
+# ✅ Usar variable de entorno segura
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Carga el contenido del JSON
+# ✅ Cargar procesos desde archivo
 with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
     PROCESOS = json.load(f)
 
@@ -18,10 +18,11 @@ def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
     if not nombre_proceso:
         return "❗️No estoy segura a qué proceso te refieres. ¿Podrías especificarlo un poco más?"
 
-    if not atributo_dudado:
+    # ✅ Si el atributo es None o vacío
+    if not atributo_dudado or not atributo_dudado.strip():
         atributo_dudado = "información general"
 
-    # Normalización de claves
+    # Buscar proceso más cercano
     claves_lower = {k.lower(): k for k in PROCESOS}
     coincidencias = get_close_matches(nombre_proceso.lower(), claves_lower.keys(), n=1, cutoff=0.5)
     if not coincidencias:
@@ -30,7 +31,7 @@ def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
     proceso_clave = claves_lower[coincidencias[0]]
     contenido = PROCESOS[proceso_clave]
 
-    # Construcción del prompt
+    # ✅ Construcción del prompt
     prompt = f"""
 Eres Mont Dirección, una asistente especializada en gestión de salones de belleza. 
 Una usuaria del equipo te ha preguntado sobre el proceso **{proceso_clave}**, específicamente sobre: **{atributo_dudado}**.
@@ -46,7 +47,7 @@ No inventes datos que no estén presentes. Sé directa y cercana.
 Respuesta:
 """.strip()
 
-    logging.info("🧠 Prompt enviado a ChatGPT:\n" + prompt)
+    logging.info(f"🧠 PROMPT ENVIADO A GPT:\n{prompt}")
 
     try:
         response = openai.ChatCompletion.create(
@@ -54,12 +55,12 @@ Respuesta:
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5
         )
-        # logging.info("📩 Respuesta completa GPT:\n" + str(response))  # opcional
+        logging.info(f"🧠 RESPUESTA GPT: {response}")
         return response["choices"][0]["message"]["content"].strip()
-
     except Exception as e:
-        logging.error(f"❌ Error al consultar ChatGPT: {e}")
+        logging.error(f"❌ Error al consultar GPT: {e}")
         return f"❌ Error al consultar GPT: {e}"
+
 
 
 
