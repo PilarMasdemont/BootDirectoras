@@ -9,7 +9,7 @@ from extractores import (
 )
 from extractores_producto import extraer_nombre_producto
 from funciones.intencion_total import clasificar_intencion_completa
-from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt
+from funciones.consultar_proceso_gpt import consultar_proceso_chatgpt as consultar_proceso
 from memory import obtener_contexto, actualizar_contexto
 
 logging.basicConfig(level=logging.INFO)
