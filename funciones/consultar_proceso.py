@@ -47,3 +47,4 @@ def consultar_proceso(nombre_proceso: str, atributo_dudado: str) -> str:
     return f"No encontré información específica sobre **{atributo_dudado}** en el proceso **{proceso_clave}**."
 
 
+
