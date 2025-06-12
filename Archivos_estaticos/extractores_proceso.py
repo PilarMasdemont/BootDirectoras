@@ -1,5 +1,7 @@
 # Este módulo se encargará de extraer automáticamente el nombre del proceso y 
 #la parte específica de la duda (como "duración", "pasos", etc.) desde el texto del usuario.
+
+
 import json
 from difflib import get_close_matches
 
@@ -38,6 +40,7 @@ def extraer_duda_proceso(texto: str) -> str:
         if patron in texto:
             return patron
     return None
+
 
 
 
