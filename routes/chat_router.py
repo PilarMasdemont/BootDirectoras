@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 import logging
 
 from funciones.intencion_total import clasificar_intencion_completa
-from funciones.consultar_proceso import consultar_proceso
+from funciones.consultar_proceso_con_chatgpt import consultar_proceso_chatgpt as consultar_proceso
 from funciones.extractores_proceso import (
     extraer_nombre_proceso,
     extraer_duda_proceso
