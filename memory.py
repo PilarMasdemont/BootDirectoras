@@ -1,19 +1,16 @@
-from collections import defaultdict
+# funciones/memoria_contexto.py
 
-# Estructura base para cada sesión en memoria
-estructura_base = lambda: {
-    "modo": None,
-    "codsalon": None,
-    "indice_empleado": 0,
-    "ultima_interaccion": None,
-    "codempleado": None,
-    "nsemana": None,
-    "mes": None,
-    "kpi": None,
-    "fecha_anterior": None,
-    "hoja_consultada": None,     # ← Nuevo campo
-    "funcion_utilizada": None,   # ← Nuevo campo
-    "intencion": None            # ← Nuevo campo
-}
+# Diccionario global (puedes migrarlo a Redis o DB si escalas)
+estado_usuarios = {}
 
-user_context = defaultdict(estructura_base)
+def obtener_contexto(codsalon: str) -> dict:
+    return estado_usuarios.get(codsalon, {})
+
+def actualizar_contexto(codsalon: str, clave: str, valor: str):
+    if codsalon not in estado_usuarios:
+        estado_usuarios[codsalon] = {}
+    estado_usuarios[codsalon][clave] = valor
+
+def limpiar_contexto(codsalon: str):
+    if codsalon in estado_usuarios:
+        del estado_usuarios[codsalon]
