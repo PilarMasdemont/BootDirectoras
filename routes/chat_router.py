@@ -14,7 +14,7 @@ from extractores import (
     detectar_kpi,
 )
 from extractores_producto import extraer_nombre_producto
-from memory import user_context
+from memory import obtener_contexto, actualizar_contexto
 from dispatcher import despachar_intencion
 
 router = APIRouter()
@@ -27,28 +27,12 @@ async def chat(request: Request):
 
     logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
-    # Clasificación combinada (KPI, Producto, Proceso)
     intencion_info = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
     logging.info(f"[INTENCION] Detectada: {intencion} | Comentario: {intencion_info.get('comentario')}")
 
-    # Si la intención es proceso, ejecuta directamente ese flujo
-    if intencion == "consultar_proceso":
-        nombre_proceso = extraer_nombre_proceso(mensaje_usuario)
-        atributo_duda = extraer_duda_proceso(mensaje_usuario)
-        respuesta = consultar_proceso(nombre_proceso, atributo_duda)
-
-        logging.info(f"[PROCESO] Proceso detectado: {nombre_proceso} | Atributo: {atributo_duda}")
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
-
-    # Si es sobre productos
-    if intencion == "explicar_producto":
-        nombre_producto = extraer_nombre_producto(mensaje_usuario)
-        logging.info(f"[PRODUCTO] Detectado: {nombre_producto}")
-
-    # Flujo KPI / Producto (extraer contexto)
-    fecha = extraer_fecha_desde_texto(mensaje_usuario)
     codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
+    fecha = extraer_fecha_desde_texto(mensaje_usuario)
     codempleado = extraer_codempleado(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
@@ -57,15 +41,35 @@ async def chat(request: Request):
     logging.info(f"[KPI] Detectado: {kpi}")
     logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
-    # Guardar contexto en memoria
-    sesion = user_context[(ip_usuario, fecha)]
-    sesion["codsalon"] = codsalon
-    sesion["codempleado"] = codempleado
-    sesion["kpi"] = kpi
-    sesion["fecha"] = fecha
-    sesion["intencion"] = intencion
+    if intencion == "consultar_proceso":
+        nombre_proceso = intencion_info.get("proceso") or extraer_nombre_proceso(mensaje_usuario)
+        atributo_duda = intencion_info.get("atributo") or extraer_duda_proceso(mensaje_usuario)
 
-    # Despachar lógica si hay función asociada
+        contexto = obtener_contexto(codsalon)
+        if not nombre_proceso and contexto.get("proceso"):
+            nombre_proceso = contexto["proceso"]
+        if not atributo_duda and contexto.get("atributo"):
+            atributo_duda = contexto["atributo"]
+
+        if nombre_proceso:
+            actualizar_contexto(codsalon, "proceso", nombre_proceso)
+        if atributo_duda:
+            actualizar_contexto(codsalon, "atributo", atributo_duda)
+
+        respuesta = consultar_proceso(nombre_proceso, atributo_duda)
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+
+    if intencion == "explicar_producto":
+        nombre_producto = extraer_nombre_producto(mensaje_usuario)
+        logging.info(f"[PRODUCTO] Detectado: {nombre_producto}")
+
+    contexto = obtener_contexto(codsalon)
+    actualizar_contexto(codsalon, "codsalon", codsalon)
+    actualizar_contexto(codsalon, "fecha", fecha)
+    actualizar_contexto(codsalon, "codempleado", codempleado)
+    actualizar_contexto(codsalon, "kpi", kpi)
+    actualizar_contexto(codsalon, "intencion", intencion)
+
     resultado = despachar_intencion(
         intencion=intencion,
         texto_usuario=mensaje_usuario,
@@ -73,14 +77,14 @@ async def chat(request: Request):
         codsalon=codsalon,
         codempleado=codempleado,
         kpi=kpi,
-        sesion=sesion
+        sesion=contexto
     )
 
     if resultado:
         logging.info("[RESPUESTA] Generada correctamente desde función directa")
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-    logging.info("[FLUJO] No se ejecutó ninguna función directa para esta intención")
     return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
+
 
 
