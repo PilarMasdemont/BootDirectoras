@@ -5,27 +5,21 @@ from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_p
 def clasificar_intencion_completa(texto: str) -> dict:
     texto = texto.strip().lower()
 
-    # Paso 1: Clasificación general
+    # Paso 1: Primero intentamos clasificar como proceso
+    resultado_proceso = clasificar_proceso(texto)
+    if resultado_proceso.get("intencion") == "consultar_proceso":
+        return {
+            "intencion": "consultar_proceso",
+            "comentario": resultado_proceso.get("comentario"),
+            "proceso": extraer_nombre_proceso(texto),
+            "atributo": extraer_duda_proceso(texto),
+            "tiene_fecha": False
+        }
+
+    # Paso 2: Si no es proceso, intentamos clasificación general
     resultado_general = clasificar_general(texto)
-    intencion = resultado_general.get("intencion", "desconocida")
-
-    # Si no se reconoce claramente, probar con procesos
-    if intencion == "desconocida":
-        resultado_proceso = clasificar_proceso(texto)
-        intencion = resultado_proceso.get("intencion", intencion)
-    else:
-        resultado_proceso = {}
-
-    resultado = {
-        "intencion": intencion,
-        "comentario": resultado_proceso.get("comentario") or resultado_general.get("comentario"),
-        "tiene_fecha": any(p in texto for p in ["hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]),
+    return {
+        "intencion": resultado_general.get("intencion", "desconocida"),
+        "comentario": resultado_general.get("comentario"),
+        "tiene_fecha": any(p in texto for p in ["hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"])
     }
-
-    if intencion == "consultar_proceso":
-        proceso = extraer_nombre_proceso(texto)
-        atributo = extraer_duda_proceso(texto)
-        resultado["proceso"] = proceso
-        resultado["atributo"] = atributo
-
-    return resultado
