@@ -14,3 +14,4 @@ def actualizar_contexto(codsalon: str, clave: str, valor: str):
 def limpiar_contexto(codsalon: str):
     if codsalon in estado_usuarios:
         del estado_usuarios[codsalon]
+
