@@ -1,9 +1,10 @@
 import os
 import json
-import openai
+from openai import OpenAI
 from difflib import get_close_matches
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# 🔐 Obtener la API key desde las variables de entorno de Render
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
     PROCESOS = json.load(f)
@@ -35,19 +36,15 @@ No inventes datos que no estén presentes. Sé directa y cercana.
 Respuesta:
 """
 
-    # 🧠 Aquí van los logs que quieres
-    print("🧠 Procesando proceso:", proceso_clave)
-    print("📄 Prompt enviado a ChatGPT:\n", prompt)
-
     try:
-        response = openai.ChatCompletion.create(
+        respuesta = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.5
         )
-        return response["choices"][0]["message"]["content"].strip()
+        return respuesta.choices[0].message.content.strip()
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
-
-
 
