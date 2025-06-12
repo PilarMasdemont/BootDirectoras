@@ -28,7 +28,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
     codsalon = codsalon or extraer_codsalon(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
-    # 🧠 GPT: Intención de proceso
     if intencion == "consultar_proceso":
         nombre_proceso = datos_intencion.get("proceso")
         atributo_dudado = datos_intencion.get("atributo")
@@ -44,7 +43,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
         if atributo_dudado:
             actualizar_contexto(codsalon, "atributo", atributo_dudado)
 
-        logging.info(f"🧠 Procesando con GPT: proceso='{nombre_proceso}', atributo='{atributo_dudado}'")
         respuesta = consultar_proceso(nombre_proceso, atributo_dudado)
         return {
             "intencion": intencion,
@@ -54,7 +52,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
             "codempleado": codempleado
         }
 
-    # ⚙️ KPI / Producto u otras intenciones
     resultado = {
         "intencion": intencion,
         "tiene_fecha": datos_intencion.get("tiene_fecha", False),
@@ -69,4 +66,5 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
 
