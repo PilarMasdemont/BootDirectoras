@@ -43,15 +43,15 @@ def consultar_proceso_chatgpt(nombre_proceso: str, pregunta_usuario: str) -> str
         )
 
         prompt = f"""
-Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
+Eres Mont Dirección, una asistente experta en gestión de salones de belleza. Estas repsondiendo a una de las peluqueras del salón.
 
-A continuación tienes varios procesos relacionados con tratamientos:
+A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
 
 \"\"\"
 {contenido_multiple}
 \"\"\"
 
-Tu tarea es responder a la siguiente duda planteada por una usuaria:
+Tu tarea es responder a la siguiente duda planteada por la peluquera:
 
 **{pregunta_usuario}**
 
@@ -74,7 +74,7 @@ Solo responde con lo que aparece en el contenido anterior, reordenado de forma c
         contenido = PROCESOS[proceso_clave]
 
         prompt = f"""
-Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
+Eres Mont Dirección, una asistente experta en gestión de salones de belleza. Estas repsondiendo a una de las peluqueras del salón.
 
 A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
 
@@ -82,7 +82,7 @@ A continuación tienes el contenido completo del proceso llamado **{proceso_clav
 {contenido}
 \"\"\"
 
-Una usuaria ha preguntado lo siguiente:
+Una peluquera te ha preguntado lo siguiente:
 
 **{pregunta_usuario}**
 
