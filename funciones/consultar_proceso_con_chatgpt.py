@@ -14,14 +14,12 @@ def normalizar(texto):
 
 def encontrar_proceso(nombre_usuario: str) -> str:
     nombre_norm = normalizar(nombre_usuario)
-
     claves_lower = {normalizar(k): k for k in PROCESOS}
     coincidencias = get_close_matches(nombre_norm, claves_lower.keys(), n=1, cutoff=0.6)
 
     if coincidencias:
         return claves_lower[coincidencias[0]]
 
-    # Si no hay coincidencia fuerte, buscar por inclusión
     for key_norm, original_key in claves_lower.items():
         if nombre_norm in key_norm or key_norm in nombre_norm:
             return original_key
@@ -31,7 +29,7 @@ def encontrar_proceso(nombre_usuario: str) -> str:
 def consultar_proceso_chatgpt(nombre_proceso: str, pregunta_usuario: str) -> str:
     nombre_normalizado = normalizar(nombre_proceso)
 
-    # Si contiene "tratamiento", busca múltiples procesos
+    # 🔍 Buscar varios procesos si es algo general como "tratamiento"
     if "tratamiento" in nombre_normalizado:
         procesos_relacionados = {
             k: v for k, v in PROCESOS.items() if "tratamiento" in normalizar(k)
@@ -57,21 +55,21 @@ Tu tarea es responder a la siguiente duda planteada por una usuaria:
 
 **{pregunta_usuario}**
 
-🔹 Usa un **tono claro y profesional**, pero cercano.
-🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.
-🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.
+🔹 Usa un **tono claro y profesional**, pero cercano.  
+🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.  
+🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.  
 🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo relevante.
 
 Tu respuesta debe ser informativa y visualmente fácil de leer.
 """
-else:
-    proceso_clave = encontrar_proceso(nombre_proceso)
-    if not proceso_clave:
-        return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
+    else:
+        proceso_clave = encontrar_proceso(nombre_proceso)
+        if not proceso_clave:
+            return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
 
-    contenido = PROCESOS[proceso_clave]
+        contenido = PROCESOS[proceso_clave]
 
-    prompt = f"""
+        prompt = f"""
 Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
 
 A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
@@ -84,14 +82,13 @@ Una usuaria ha preguntado lo siguiente:
 
 **{pregunta_usuario}**
 
-🔹 Usa un **tono claro y profesional**, pero cercano.
-🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.
-🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.
+🔹 Usa un **tono claro y profesional**, pero cercano.  
+🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.  
+🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.  
 🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo más relevante.
 
 Tu respuesta debe ser útil y fácil de leer.
 """
-
 
     try:
         response = client.chat.completions.create(
@@ -100,8 +97,10 @@ Tu respuesta debe ser útil y fácil de leer.
             temperature=0.4
         )
         return response.choices[0].message.content.strip()
+
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
+
 
 
 
