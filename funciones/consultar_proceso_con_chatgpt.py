@@ -28,7 +28,7 @@ def encontrar_proceso(nombre_usuario: str) -> str:
 
     return None
 
-def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
+def consultar_proceso_chatgpt(nombre_proceso: str, pregunta_usuario: str) -> str:
     proceso_clave = encontrar_proceso(nombre_proceso)
 
     if not proceso_clave:
@@ -37,28 +37,30 @@ def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
     contenido = PROCESOS[proceso_clave]
 
     prompt = f"""
-Eres Mont Dirección, una asistente experta en gestión de salones de belleza. 
-Una usuaria te ha preguntado sobre el proceso **{proceso_clave}**, específicamente sobre: **{atributo_dudado}**.
+Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
 
-A continuación tienes el contenido del procedimiento:
+A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
 \"\"\"
 {contenido}
 \"\"\"
 
-Con esta información, responde de forma clara, profesional y práctica. No inventes información que no aparezca.
+Con esta información, responde de forma clara, profesional y práctica a esta pregunta que hizo una usuaria:
 
-Respuesta:
+**{pregunta_usuario}**
+
+No inventes nada que no aparezca en el texto.
 """
 
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
+            temperature=0.4
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
+
 
 
 
