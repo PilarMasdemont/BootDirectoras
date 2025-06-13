@@ -19,13 +19,11 @@ from dispatcher import despachar_intencion
 
 router = APIRouter()
 
-def formato_html(texto: str) -> str:
-    # 🔧 Formato visual para HTML: negritas, viñetas, saltos de línea
-    texto = texto.replace("**", "<b>").replace("</b><b>", "")
-    texto = texto.replace("🔹", "•")
-    texto = texto.replace("\n\n", "<br><br>")
-    texto = texto.replace("\n", "<br>")
-    return texto
+def formato_markdown(texto: str) -> str:
+    texto = texto.replace("🔹", "-")  # conviértelo a viñetas tipo lista
+    texto = texto.replace("•", "-")   # viñetas estándar
+    texto = texto.replace("\n\n", "\n")  # evita dobles saltos
+    return texto.strip()
 
 @router.post("")
 async def chat(request: Request):
@@ -64,12 +62,11 @@ async def chat(request: Request):
         if atributo_duda:
             actualizar_contexto(codsalon, "atributo", atributo_duda)
 
-        # ✅ Enviamos la pregunta completa, no solo el atributo
         respuesta = consultar_proceso(nombre_proceso, mensaje_usuario)
-        respuesta_html = formato_html(respuesta)
+        respuesta_markdown = formato_markdown(respuesta)
 
         return {
-            "respuesta": f"<p><b>Hola, soy Mont Dirección.</b></p><br>{respuesta_html}"
+            "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
         }
 
     if intencion == "explicar_producto":
@@ -95,14 +92,13 @@ async def chat(request: Request):
 
     if resultado:
         logging.info("[RESPUESTA] Generada correctamente desde función directa")
-        respuesta_html = formato_html(resultado)
-        return {
-            "respuesta": f"<p><b>Hola, soy Mont Dirección.</b></p><br>{respuesta_html}"
-        }
+        resultado_final = formato_markdown(resultado)
+        return {"respuesta": f"**Hola, soy Mont Dirección.**\n\n{resultado_final}"}
 
     return {
-        "respuesta": "<p><b>Estoy pensando cómo responderte mejor.</b></p><br>Pronto te daré una respuesta."
+        "respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."
     }
+
 
 
 
