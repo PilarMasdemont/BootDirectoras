@@ -29,14 +29,46 @@ def encontrar_proceso(nombre_usuario: str) -> str:
     return None
 
 def consultar_proceso_chatgpt(nombre_proceso: str, pregunta_usuario: str) -> str:
-    proceso_clave = encontrar_proceso(nombre_proceso)
+    nombre_normalizado = normalizar(nombre_proceso)
 
-    if not proceso_clave:
-        return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
+    # Si contiene "tratamiento", busca múltiples procesos
+    if "tratamiento" in nombre_normalizado:
+        procesos_relacionados = {
+            k: v for k, v in PROCESOS.items() if "tratamiento" in normalizar(k)
+        }
 
-    contenido = PROCESOS[proceso_clave]
+        if not procesos_relacionados:
+            return "❗️No encontré procesos relacionados con tratamientos."
 
-    prompt = f"""
+        contenido_multiple = "\n\n".join(
+            [f"Proceso: {k}\n{v}" for k, v in procesos_relacionados.items()]
+        )
+
+        prompt = f"""
+Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
+
+A continuación tienes varios procesos relacionados con tratamientos:
+
+\"\"\"
+{contenido_multiple}
+\"\"\"
+
+Con esta información, responde de forma clara, profesional y práctica a esta pregunta que hizo una usuaria:
+
+**{pregunta_usuario}**
+
+No inventes nada que no esté en los textos anteriores.
+"""
+
+    else:
+        # Comportamiento estándar con un solo proceso
+        proceso_clave = encontrar_proceso(nombre_proceso)
+        if not proceso_clave:
+            return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
+
+        contenido = PROCESOS[proceso_clave]
+
+        prompt = f"""
 Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
 
 A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
@@ -60,6 +92,7 @@ No inventes nada que no aparezca en el texto.
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
+
 
 
 
