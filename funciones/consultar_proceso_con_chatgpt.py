@@ -54,16 +54,8 @@ A continuación tienes el contenido completo del proceso llamado **{proceso_clav
 Tu tarea es responder a la siguiente duda planteada por la peluquera:
 
 **{pregunta_usuario}**
-
-✅ Usa un tono **claro, profesional y cercano**.  
-📌 Si puedes, **estructura tu respuesta en forma de lista con saltos de línea**:
-
-- Usa guiones o números.  
-- Deja **una línea en blanco** entre cada punto.  
-- Agrupa ideas similares en párrafos separados.  
-
-⛔️ No inventes nada.  
-Solo responde con lo que aparece en el contenido anterior, reordenado de forma clara.
+  
+Solo responde con lo que aparece en el contenido anterior, no des informacion que no aparezca en los documentos, reordenado de forma clara.
 
 """
     else:
@@ -85,16 +77,8 @@ A continuación tienes el contenido completo del proceso llamado **{proceso_clav
 Una peluquera te ha preguntado lo siguiente:
 
 **{pregunta_usuario}**
-
-✅ Usa un tono **claro, profesional y cercano**.  
-📌 Si puedes, **estructura tu respuesta en forma de lista con saltos de línea**:
-
-- Usa guiones o números.  
-- Deja **una línea en blanco** entre cada punto.  
-- Agrupa ideas similares en párrafos separados.  
-
-⛔️ No inventes nada.  
-Solo responde con lo que aparece en el contenido anterior, reordenado de forma clara.
+  
+Solo responde con lo que aparece en el contenido anterior, no des informacion que no aparezca en los documentos, reordenado de forma clara.
 """
 
     try:
