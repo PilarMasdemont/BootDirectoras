@@ -53,35 +53,45 @@ A continuación tienes varios procesos relacionados con tratamientos:
 {contenido_multiple}
 \"\"\"
 
-Con esta información, responde de forma clara, profesional y práctica a esta pregunta que hizo una usuaria:
+Tu tarea es responder a la siguiente duda planteada por una usuaria:
 
 **{pregunta_usuario}**
 
-No inventes nada que no esté en los textos anteriores.
+🔹 Usa un **tono claro y profesional**, pero cercano.
+🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.
+🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.
+🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo relevante.
+
+Tu respuesta debe ser informativa y visualmente fácil de leer.
 """
+else:
+    proceso_clave = encontrar_proceso(nombre_proceso)
+    if not proceso_clave:
+        return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
 
-    else:
-        # Comportamiento estándar con un solo proceso
-        proceso_clave = encontrar_proceso(nombre_proceso)
-        if not proceso_clave:
-            return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
+    contenido = PROCESOS[proceso_clave]
 
-        contenido = PROCESOS[proceso_clave]
-
-        prompt = f"""
+    prompt = f"""
 Eres Mont Dirección, una asistente experta en gestión de salones de belleza.
 
 A continuación tienes el contenido completo del proceso llamado **{proceso_clave}**:
+
 \"\"\"
 {contenido}
 \"\"\"
 
-Con esta información, responde de forma clara, profesional y práctica a esta pregunta que hizo una usuaria:
+Una usuaria ha preguntado lo siguiente:
 
 **{pregunta_usuario}**
 
-No inventes nada que no aparezca en el texto.
+🔹 Usa un **tono claro y profesional**, pero cercano.
+🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.
+🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.
+🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo más relevante.
+
+Tu respuesta debe ser útil y fácil de leer.
 """
+
 
     try:
         response = client.chat.completions.create(
