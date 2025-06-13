@@ -55,12 +55,16 @@ Tu tarea es responder a la siguiente duda planteada por una usuaria:
 
 **{pregunta_usuario}**
 
-🔹 Usa un **tono claro y profesional**, pero cercano.  
-🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.  
-🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.  
-🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo relevante.
+✅ Usa un tono **claro, profesional y cercano**.  
+📌 Si puedes, **estructura tu respuesta en forma de lista con saltos de línea**:
 
-Tu respuesta debe ser informativa y visualmente fácil de leer.
+- Usa guiones o números.  
+- Deja **una línea en blanco** entre cada punto.  
+- Agrupa ideas similares en párrafos separados.  
+
+⛔️ No inventes nada.  
+Solo responde con lo que aparece en el contenido anterior, reordenado de forma clara.
+
 """
     else:
         proceso_clave = encontrar_proceso(nombre_proceso)
@@ -82,12 +86,15 @@ Una usuaria ha preguntado lo siguiente:
 
 **{pregunta_usuario}**
 
-🔹 Usa un **tono claro y profesional**, pero cercano.  
-🔹 Si puedes estructurar tu respuesta como lista, **usa puntos o números**.  
-🔹 **Agrega saltos de línea** entre bloques de contenido para facilitar la lectura.  
-🔹 No inventes datos. **Limítate al contenido anterior**, pero reorganiza y destaca lo más relevante.
+✅ Usa un tono **claro, profesional y cercano**.  
+📌 Si puedes, **estructura tu respuesta en forma de lista con saltos de línea**:
 
-Tu respuesta debe ser útil y fácil de leer.
+- Usa guiones o números.  
+- Deja **una línea en blanco** entre cada punto.  
+- Agrupa ideas similares en párrafos separados.  
+
+⛔️ No inventes nada.  
+Solo responde con lo que aparece en el contenido anterior, reordenado de forma clara.
 """
 
     try:
