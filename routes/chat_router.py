@@ -56,7 +56,9 @@ async def chat(request: Request):
         if atributo_duda:
             actualizar_contexto(codsalon, "atributo", atributo_duda)
 
-        respuesta = consultar_proceso(nombre_proceso, atributo_duda)
+        # ✅ Enviamos la pregunta completa, no solo el atributo
+        respuesta = consultar_proceso(nombre_proceso, mensaje_usuario)
+
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
     if intencion == "explicar_producto":
