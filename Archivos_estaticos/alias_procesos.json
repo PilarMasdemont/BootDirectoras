@@ -38,6 +38,7 @@
   "fuerza alisador": "manual de queratina y alisadores",
   "queratina uso": "manual de queratina y alisadores",
   "efecto queratina": "manual de queratina y alisadores",
+  "alisador": "manual de queratina y alisadores",
 
   "agenda turnos": "MANUAL TURNOS AGENDA PONER",
   "gestión turnos": "MANUAL TURNOS AGENDA PONER",
@@ -66,10 +67,16 @@
   "tratamiento frío": "Tratamientos en frio conocimiento para las chicas",
   "función frío": "Tratamientos en frio conocimiento para las chicas",
   "frío pelo": "Tratamientos en frio conocimiento para las chicas",
+  "tratamiento": "Tratamientos en frio conocimiento para las chicas",
 
   "tratamiento calor": "tratamientos frios y calor conocemos mejor",
   "calor salón": "tratamientos frios y calor conocemos mejor",
   "frío calor diferencia": "tratamientos frios y calor conocemos mejor",
+  "tratamiento": "tratamientos frios y calor conocemos mejor",
+  "tratamiento hidratante": "tratamientos frios y calor conocemos mejor",
+  "reparar cabello": "tratamientos frios y calor conocemos mejor",
+  "cuidado cabello dañado": "tratamientos frios y calor conocemos mejor",
+  "tratamiento vegano": "Tratamientos en frio conocimiento para las chicas"
 
   "tinte queratina verano": "whatsap consejo cabello tintado y queratina verano",
   "consejo verano": "whatsap consejo cabello tintado y queratina verano",
