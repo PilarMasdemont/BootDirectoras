@@ -1,28 +1,79 @@
 {
+  "caja": "CERRAR CAJA MANUAL",
+  "arqueo": "CERRAR CAJA MANUAL",
+  "cierre caja": "CERRAR CAJA MANUAL",
   "cerrar caja": "CERRAR CAJA MANUAL",
-  "cerrar caja manual": "CERRAR CAJA MANUAL",
-  "cierre de caja": "CERRAR CAJA MANUAL",
-  "coger citas": "COGER CITAS MANUAL",
-  "coger citas manual": "COGER CITAS MANUAL",
-  "conectar whatsap": "Manual conectar Whatsap a Pilar",
-  "conocimiento alisador queratina chicas": "conocimiento alisador queratina chicas",
-  "de queratina y alisadores": "manual de queratina y alisadores",
-  "fidelizacion y satisfaccion cliente nuevo": "Fidelizacion y satisfaccion de cliente nuevo",
-  "fidelizacion y satisfaccion de cliente nuevo": "Fidelizacion y satisfaccion de cliente nuevo",
+  "dinero del día": "CERRAR CAJA MANUAL",
+  "cash cierre": "CERRAR CAJA MANUAL",
+  "datáfono": "CERRAR CAJA MANUAL",
+
+  "agendar cita": "COGER CITAS MANUAL",
+  "reservar cliente": "COGER CITAS MANUAL",
+  "pedir hora": "COGER CITAS MANUAL",
+  "dar cita": "COGER CITAS MANUAL",
+
+  "productos alisador": "conocimiento alisador queratina chicas",
+  "tipos alisador": "conocimiento alisador queratina chicas",
+  "conocimiento queratina": "conocimiento alisador queratina chicas",
+  "diferencias queratina": "conocimiento alisador queratina chicas",
+
+  "cliente nuevo": "Fidelizacion y satisfaccion de cliente nuevo",
+  "fidelización": "Fidelizacion y satisfaccion de cliente nuevo",
+  "satisfacción": "Fidelizacion y satisfaccion de cliente nuevo",
+  "encuesta cliente": "Fidelizacion y satisfaccion de cliente nuevo",
+  "bienvenida cliente": "Fidelizacion y satisfaccion de cliente nuevo",
+
+  "control stock": "INVENTARIO MANUAL",
   "inventario": "INVENTARIO MANUAL",
-  "inventario manual": "INVENTARIO MANUAL",
+  "productos disponibles": "INVENTARIO MANUAL",
+  "faltantes": "INVENTARIO MANUAL",
+
+  "whatsapp pilar": "Manual conectar Whatsap a Pilar",
+  "conectar whatsapp": "Manual conectar Whatsap a Pilar",
+  "whats app negocio": "Manual conectar Whatsap a Pilar",
   "manual conectar whatsap": "Manual conectar Whatsap a Pilar",
-  "manual de queratina y alisadores": "manual de queratina y alisadores",
-  "manual turnos agenda poner": "MANUAL TURNOS AGENDA PONER",
-  "mechas, tipos de mechas y precios": "Mechas, Tipos de mechas y Precios",
-  "mechas, tipos mechas y precios": "Mechas, Tipos de mechas y Precios",
-  "metodo masdemont": "Metodo Masdemont",
-  "niñas que hago _": "niñas que hago _",
-  "niñas que hago": "niñas que hago",
-  "proceso caja": "CERRAR CAJA MANUAL",
-  "quien se va": "quien se va",
-  "tratamientos en frio conocimiento para las chicas": "Tratamientos en frio conocimiento para las chicas",
-  "tratamientos frios y calor conocemos mejor": "tratamientos frios y calor conocemos mejor",
-  "turnos agenda poner": "MANUAL TURNOS AGENDA PONER",
-  "whatsap consejo cabello tintado y queratina verano": "whatsap consejo cabello tintado y queratina verano"
+  "conectar whatsap": "Manual conectar Whatsap a Pilar",
+
+  "tipos queratina": "manual de queratina y alisadores",
+  "fuerza alisador": "manual de queratina y alisadores",
+  "queratina uso": "manual de queratina y alisadores",
+  "efecto queratina": "manual de queratina y alisadores",
+
+  "agenda turnos": "MANUAL TURNOS AGENDA PONER",
+  "gestión turnos": "MANUAL TURNOS AGENDA PONER",
+  "organizar horario": "MANUAL TURNOS AGENDA PONER",
+  "poner turnos": "MANUAL TURNOS AGENDA PONER",
+
+  "tipos mechas": "Mechas, Tipos de mechas y Precios",
+  "colores mechas": "Mechas, Tipos de mechas y Precios",
+  "mechas balayage": "Mechas, Tipos de mechas y Precios",
+  "precios mechas": "Mechas, Tipos de mechas y Precios",
+
+  "metodología": "Metodo Masdemont",
+  "pasos método": "Metodo Masdemont",
+  "estructura salón": "Metodo Masdemont",
+  "filosofía trabajo": "Metodo Masdemont",
+
+  "qué hago": "niñas que hago _",
+  "situación cliente": "niñas que hago _",
+  "resolución dudas": "niñas que hago _",
+  "problema cliente": "niñas que hago _",
+
+  "salida compañera": "quien se va",
+  "baja personal": "quien se va",
+  "sustitución": "quien se va",
+
+  "tratamiento frío": "Tratamientos en frio conocimiento para las chicas",
+  "función frío": "Tratamientos en frio conocimiento para las chicas",
+  "frío pelo": "Tratamientos en frio conocimiento para las chicas",
+
+  "tratamiento calor": "tratamientos frios y calor conocemos mejor",
+  "calor salón": "tratamientos frios y calor conocemos mejor",
+  "frío calor diferencia": "tratamientos frios y calor conocemos mejor",
+
+  "tinte queratina verano": "whatsap consejo cabello tintado y queratina verano",
+  "consejo verano": "whatsap consejo cabello tintado y queratina verano",
+  "color verano": "whatsap consejo cabello tintado y queratina verano"
 }
+
+
