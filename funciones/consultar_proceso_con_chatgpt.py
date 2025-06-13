@@ -2,24 +2,45 @@ import os
 import json
 from openai import OpenAI
 from difflib import get_close_matches
+from unidecode import unidecode  # ✅ para normalizar texto
 
+# Cliente OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Cargar los procesos desde el JSON
 with open("Archivos_estaticos/process_prueba.json", "r", encoding="utf-8") as f:
     PROCESOS = json.load(f)
+
+def normalizar(texto: str) -> str:
+    return unidecode(texto.strip().lower())
 
 def consultar_proceso_chatgpt(nombre_proceso: str, atributo_dudado: str) -> str:
     if not nombre_proceso:
         return "❗️No estoy segura a qué proceso te refieres. ¿Podrías especificarlo un poco más?"
 
-    claves_lower = {k.lower(): k for k in PROCESOS}
-    coincidencias = get_close_matches(nombre_proceso.lower(), claves_lower.keys(), n=1, cutoff=0.5)
-    if not coincidencias:
-        return f"❗️No encontré ningún proceso que se parezca a '{nombre_proceso}'."
+    # Crear diccionario normalizado de claves
+    claves_normalizadas = {normalizar(k): k for k in PROCESOS}
+    entrada_normalizada = normalizar(nombre_proceso)
 
-    proceso_clave = claves_lower[coincidencias[0]]
+    # Buscar coincidencia flexible
+    coincidencias = get_close_matches(entrada_normalizada, claves_normalizadas.keys(), n=1, cutoff=0.3)
+
+    if coincidencias:
+        proceso_clave = claves_normalizadas[coincidencias[0]]
+    else:
+        # Buscar en el contenido
+        proceso_clave = None
+        for k, v in PROCESOS.items():
+            if entrada_normalizada in normalizar(v):
+                proceso_clave = k
+                break
+
+        if not proceso_clave:
+            return f"❗️No encontré ningún proceso relacionado con '{nombre_proceso}'."
+
     contenido = PROCESOS[proceso_clave]
 
+    # Prompt para el modelo
     prompt = f"""
 Eres Mont Dirección, una asistente especializada en gestión de salones de belleza. 
 Una usuaria te ha preguntado sobre el proceso **{proceso_clave}**, específicamente sobre: **{atributo_dudado}**.
@@ -43,5 +64,6 @@ Respuesta:
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"❌ Error al consultar GPT: {e}"
+
 
 
