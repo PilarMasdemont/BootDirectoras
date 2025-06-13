@@ -19,6 +19,14 @@ from dispatcher import despachar_intencion
 
 router = APIRouter()
 
+def formato_html(texto: str) -> str:
+    # 🔧 Formato visual para HTML: negritas, viñetas, saltos de línea
+    texto = texto.replace("**", "<b>").replace("</b><b>", "")
+    texto = texto.replace("🔹", "•")
+    texto = texto.replace("\n\n", "<br><br>")
+    texto = texto.replace("\n", "<br>")
+    return texto
+
 @router.post("")
 async def chat(request: Request):
     body = await request.json()
@@ -58,8 +66,11 @@ async def chat(request: Request):
 
         # ✅ Enviamos la pregunta completa, no solo el atributo
         respuesta = consultar_proceso(nombre_proceso, mensaje_usuario)
+        respuesta_html = formato_html(respuesta)
 
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+        return {
+            "respuesta": f"<p><b>Hola, soy Mont Dirección.</b></p><br>{respuesta_html}"
+        }
 
     if intencion == "explicar_producto":
         nombre_producto = extraer_nombre_producto(mensaje_usuario)
@@ -84,9 +95,15 @@ async def chat(request: Request):
 
     if resultado:
         logging.info("[RESPUESTA] Generada correctamente desde función directa")
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        respuesta_html = formato_html(resultado)
+        return {
+            "respuesta": f"<p><b>Hola, soy Mont Dirección.</b></p><br>{respuesta_html}"
+        }
 
-    return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
+    return {
+        "respuesta": "<p><b>Estoy pensando cómo responderte mejor.</b></p><br>Pronto te daré una respuesta."
+    }
+
 
 
 
