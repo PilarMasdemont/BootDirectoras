@@ -1,7 +1,4 @@
-from funciones.extractores_proceso import (
-    extraer_duda_proceso,
-    extraer_nombre_proceso_desde_alias
-)
+from funciones.extractores_proceso import extraer_nombre_proceso_desde_alias
 from funciones.intention_process import es_consulta_proceso
 from extractores import detectar_kpi, extraer_codempleado, extraer_codsalon, extraer_fecha_desde_texto
 from extractores_producto import extraer_nombre_producto
@@ -39,4 +36,5 @@ def clasificar_intencion_completa(texto_usuario: str) -> dict:
         "codsalon": codsalon,
         "fecha": fecha,
     }
+
 
