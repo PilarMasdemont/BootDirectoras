@@ -2,28 +2,21 @@
 #la parte específica de la duda (como "duración", "pasos", etc.) desde el texto del usuario.
 
 import json
+from unidecode import unidecode
 
-# Cargar diccionario de alias desde el archivo alias_procesos.json
 with open("Archivos_estaticos/alias_procesos.json", "r", encoding="utf-8") as f:
     ALIASES_PROCESOS = json.load(f)
 
-def extraer_nombre_proceso(texto: str) -> str:
-    texto = texto.lower()
-    for alias, real in ALIASES_PROCESOS.items():
-        if alias in texto:
-            return real
+def normalizar(texto: str) -> str:
+    return unidecode(texto.lower().strip())
+
+def extraer_nombre_proceso_desde_alias(texto_usuario: str) -> str:
+    texto_norm = normalizar(texto_usuario)
+    for alias, nombre_proceso in ALIASES_PROCESOS.items():
+        if normalizar(alias) in texto_norm:
+            return nombre_proceso
     return None
 
-def extraer_duda_proceso(texto: str) -> str:
-    texto = texto.lower()
-    posibles = [
-        "duración", "cuánto tarda", "pasos", "cómo se hace", "instrucciones",
-        "quién lo hace", "responsable", "materiales", "herramientas", "orden", "funciona", "flujo"
-    ]
-    for p in posibles:
-        if p in texto:
-            return p
-    return None
 
 
 
