@@ -55,13 +55,19 @@ def clasificar_intencion(texto: str) -> dict:
 
     if len(texto.split()) <= 2:
         return {
-        "intencion": "desconocida",
-        "comentario": "Mensaje demasiado corto para detectar un proceso"
-    }
+            "intencion": "desconocida",
+            "comentario": "Mensaje demasiado corto para detectar un proceso"
+        }
 
     # ❌ Nada detectado
     return {
         "intencion": "desconocida",
         "comentario": "No se detecta intención clara sobre procesos"
     }
+
+# ✅ Esta función permite importarla sin error en otros módulos
+def es_consulta_proceso(texto: str) -> bool:
+    resultado = clasificar_intencion(texto)
+    return resultado["intencion"] == "consultar_proceso"
+
 
