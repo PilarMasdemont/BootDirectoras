@@ -1,3 +1,20 @@
+from fastapi import APIRouter, Request
+import logging
+
+from funciones.intencion_total import clasificar_intencion_completa
+from funciones.consultar_proceso_con_chatgpt import consultar_proceso_chatgpt as consultar_proceso
+from funciones.extractores_proceso import (
+    extraer_nombre_proceso,
+    extraer_duda_proceso,
+    extraer_nombre_proceso_desde_alias  # asegúrate de tener esta función implementada
+)
+from extractores import (
+    extraer_fecha_desde_texto,
+    extraer_codsalon,
+    extraer_codempleado,
+    detectar_kpi,
+)
+from extractores_producto import extraer_nombre_producto
 from memory import obtener_contexto, actualizar_contexto
 from dispatcher import despachar_intencion
 
@@ -11,21 +28,23 @@ async def chat(request: Request):
     intencion_info = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
 
-    # Detectar proceso incluso si la intención no está clara
+    # Detectar proceso por alias o texto
     nombre_proceso = intencion_info.get("proceso") or extraer_nombre_proceso_desde_alias(mensaje_usuario)
     if not nombre_proceso:
         nombre_proceso = extraer_nombre_proceso(mensaje_usuario)
 
     # Validar fecha
-    fecha_raw = extraer_fecha_desde_texto(mensaje_usuario)
-    fecha = fecha_raw if fecha_raw != "FECHA_NO_VALIDA" else None
+    fecha_detectada = extraer_fecha_desde_texto(mensaje_usuario)
+    fecha = fecha_detectada if fecha_detectada != "FECHA_NO_VALIDA" else None
 
-    # Responder por proceso si se detecta
+    # Evitar errores usando solo fechas válidas
+    if fecha:
+        actualizar_contexto(codsalon, "fecha", fecha)
+
     if nombre_proceso:
         respuesta = consultar_proceso(nombre_proceso, mensaje_usuario)
         return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
 
-    # Enviar a dispatcher si no se detectó proceso
     resultado = despachar_intencion(
         intencion=intencion,
         texto_usuario=mensaje_usuario,
@@ -37,6 +56,7 @@ async def chat(request: Request):
     )
 
     return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado or 'Estoy pensando cómo responderte mejor.'}"}
+
 
 
 
