@@ -19,6 +19,12 @@ from dispatcher import despachar_intencion
 
 router = APIRouter()
 
+def formato_markdown(texto: str) -> str:
+    texto = texto.replace("🔹", "-")  # conviértelo a viñetas tipo lista
+    texto = texto.replace("•", "-")   # viñetas estándar
+    texto = texto.replace("\n\n", "\n")  # evita dobles saltos
+    return texto.strip()
+
 @router.post("")
 async def chat(request: Request):
     body = await request.json()
@@ -56,8 +62,12 @@ async def chat(request: Request):
         if atributo_duda:
             actualizar_contexto(codsalon, "atributo", atributo_duda)
 
-        respuesta = consultar_proceso(nombre_proceso, atributo_duda)
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{respuesta}"}
+        respuesta = consultar_proceso(nombre_proceso, mensaje_usuario)
+        respuesta_markdown = formato_markdown(respuesta)
+
+        return {
+            "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
+        }
 
     if intencion == "explicar_producto":
         nombre_producto = extraer_nombre_producto(mensaje_usuario)
@@ -82,9 +92,12 @@ async def chat(request: Request):
 
     if resultado:
         logging.info("[RESPUESTA] Generada correctamente desde función directa")
-        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
+        resultado_final = formato_markdown(resultado)
+        return {"respuesta": f"**Hola, soy Mont Dirección.**\n\n{resultado_final}"}
 
-    return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
+    return {
+        "respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."
+    }
 
 
 
