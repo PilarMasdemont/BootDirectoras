@@ -1,0 +1,33 @@
+import json
+import os
+
+# Asegúrate de que este path apunte correctamente al archivo JSON cargado
+PRODUCTOS_PATH = "datos/Archivos_estaticos/productos_diccionario.json"
+
+def cargar_productos():
+    with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+PRODUCTOS = cargar_productos()
+
+def consultar_producto_chatgpt(nombre_producto: str, atributo_duda: str = None) -> str:
+    nombre = nombre_producto.lower().strip()
+    producto = PRODUCTOS.get(nombre)
+
+    if not producto:
+        return f"No tengo información sobre el producto **{nombre_producto}** en la base de datos."
+
+    if atributo_duda:
+        atributo = atributo_duda.lower()
+        coincidencias = [clave for clave in producto if atributo in clave.lower()]
+        if coincidencias:
+            respuesta = producto[coincidencias[0]]
+            return f"Sobre **{nombre_producto}**, esto es lo que encontré sobre *{coincidencias[0]}*:\n\n{respuesta}"
+        else:
+            return f"No encontré información específica sobre *{atributo_duda}* en **{nombre_producto}**. Pero esto es lo que tengo:\n\n{json.dumps(producto, indent=2, ensure_ascii=False)}"
+    
+    # Si no hay atributo, devolver todo el producto
+    partes = [f"**{nombre_producto.title()}**"]
+    for clave, valor in producto.items():
+        partes.append(f"- **{clave.capitalize()}**: {valor}")
+    return "\n".join(partes)
