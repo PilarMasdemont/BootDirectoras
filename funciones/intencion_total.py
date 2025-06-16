@@ -5,7 +5,7 @@ import json
 import os
 
 # Cargar lista de productos desde el diccionario JSON
-PRODUCTOS_PATH = "datos/productos_diccionario.json"
+PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES = list(json.load(f).keys())
 
