@@ -6,12 +6,17 @@ from .ratio_empleado import explicar_ratio_empleado_individual
 
 logger = logging.getLogger(__name__)
 
-# Este archivo actualmente solo importa funciones. No tiene lógica ejecutable
-de momento.
-# Para añadir logging útil, deberías implementar aquí funciones que hagan uso de esas importaciones
-y dejen trazabilidad de cómo y cuándo se llaman.
+def manejar_explicacion_diaria(codsalon: str, fecha: str) -> str:
+    if fecha == "FECHA_NO_VALIDA":
+        return "No entendí bien la fecha que mencionaste. ¿Puedes repetirla con más claridad?"
+    
+    logger.info(f"[HANDLER] Ejecutando explicación diaria para salón {codsalon} en fecha {fecha}")
+    return explicar_ratio_diario(codsalon=codsalon, fecha=fecha)
 
-# Ejemplo (si se amplía en el futuro):
-# def manejar_explicacion_diaria(codsalon, fecha):
-#     logger.info(f"[HANDLER] Ejecutando explicación diaria para salón {codsalon} en fecha {fecha}")
-#     return explicar_ratio_diario(codsalon=codsalon, fecha=fecha)
+
+def manejar_explicacion_empleado(codsalon: str, fecha: str, codempleado: str) -> str:
+    if fecha == "FECHA_NO_VALIDA":
+        return "No entendí bien la fecha que mencionaste. ¿Puedes repetirla con más claridad?"
+    
+    logger.info(f"[HANDLER] Ejecutando explicación de empleado {codempleado} para salón {codsalon} en fecha {fecha}")
+    return explicar_ratio_empleado_individual(codsalon=codsalon, fecha=fecha, codempleado=codempleado)
