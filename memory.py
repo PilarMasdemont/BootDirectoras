@@ -1,6 +1,6 @@
-# funciones/memoria_contexto.py
+# funciones/memory.py
 
-# Diccionario global (puedes migrarlo a Redis o DB si escalas)
+# Diccionario global de contexto por codsalon
 estado_usuarios = {}
 
 def obtener_contexto(codsalon: str) -> dict:
@@ -14,4 +14,3 @@ def actualizar_contexto(codsalon: str, clave: str, valor: str):
 def limpiar_contexto(codsalon: str):
     if codsalon in estado_usuarios:
         del estado_usuarios[codsalon]
-
