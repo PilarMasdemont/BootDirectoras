@@ -23,14 +23,15 @@ def clasificar_intencion_completa(texto: str) -> dict:
 
     # 🧴 CONSULTAR PRODUCTO desde el diccionario
     for nombre in PRODUCTOS_NOMBRES:
-        if nombre.lower() in texto_limpio:
+        if any(pal in texto for pal in nombre.lower().split()):
             return {
                 "intencion": "consultar_producto",
                 "producto": nombre,
                 "atributo": extraer_duda_proceso(texto),
-                "comentario": f"Detectado producto '{nombre}' desde JSON",
+                "comentario": f"Detectado producto '{nombre}' desde JSON (coincidencia parcial)",
                 "tiene_fecha": False
-            }
+        }
+
 
     # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
