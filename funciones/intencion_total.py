@@ -18,8 +18,19 @@ def clasificar_intencion_completa(texto: str) -> dict:
 
     # Paso 2: Si no es proceso, intentamos clasificación general
     resultado_general = clasificar_general(texto)
+
+    # Validación especial para evitar errores de fechas en preguntas NO relacionadas con ratios
+    palabras_clave_ratio = ["ratio", "rendimiento", "productividad"]
+    intencion_detectada = resultado_general.get("intencion", "desconocida")
+    
+    if any(p in texto for p in palabras_clave_ratio):
+        tiene_fecha = any(p in texto for p in ["hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"])
+    else:
+        tiene_fecha = False  # Evitamos que dispare funciones que requieren fecha
+
     return {
-        "intencion": resultado_general.get("intencion", "desconocida"),
+        "intencion": intencion_detectada,
         "comentario": resultado_general.get("comentario"),
-        "tiene_fecha": any(p in texto for p in ["hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"])
+        "tiene_fecha": tiene_fecha
     }
+
