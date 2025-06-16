@@ -2,7 +2,7 @@ import json
 import os
 
 # Asegúrate de que este path apunte correctamente al archivo JSON cargado
-PRODUCTOS_PATH = "datos/Archivos_estaticos/productos_diccionario.json"
+PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 
 def cargar_productos():
     with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
