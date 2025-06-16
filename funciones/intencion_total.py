@@ -5,32 +5,37 @@ from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_p
 def clasificar_intencion_completa(texto: str) -> dict:
     texto = texto.strip().lower()
 
-    # Paso 1: Primero intentamos clasificar como proceso
-    resultado_proceso = clasificar_proceso(texto)
-    if resultado_proceso.get("intencion") == "consultar_proceso":
+    # Palabras clave que indican que es una técnica de peluquería o un servicio
+    palabras_producto = [
+        "mechas", "queratina", "alisado", "coloración", "tratamiento", "brillo",
+        "masdemont", "hidratar", "reparar", "cabello", "pelo", "tinte", "vegana"
+    ]
+
+    # Palabras clave que indican procesos internos o tareas administrativas
+    palabras_proceso = [
+        "caja", "inventario", "cerrar", "cuadrar", "proceso", "tarea", "pedido", "stock"
+    ]
+
+    # Clasificación forzada si se detectan palabras clave específicas
+    if any(p in texto for p in palabras_proceso):
         return {
             "intencion": "consultar_proceso",
-            "comentario": resultado_proceso.get("comentario"),
+            "comentario": "Detectado como proceso interno",
             "proceso": extraer_nombre_proceso(texto),
             "atributo": extraer_duda_proceso(texto),
             "tiene_fecha": False
         }
 
-    # Paso 2: Si no es proceso, intentamos clasificación general
-    resultado_general = clasificar_general(texto)
+    if any(p in texto for p in palabras_producto):
+        return {
+            "intencion": "explicar_producto",
+            "comentario": "Detectado como técnica o servicio de peluquería",
+            "tiene_fecha": False
+        }
 
-    # Validación especial para evitar errores de fechas en preguntas NO relacionadas con ratios
-    palabras_clave_ratio = ["ratio", "rendimiento", "productividad"]
-    intencion_detectada = resultado_general.get("intencion", "desconocida")
-    
-    if any(p in texto for p in palabras_clave_ratio):
-        tiene_fecha = any(p in texto for p in ["hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"])
-    else:
-        tiene_fecha = False  # Evitamos que dispare funciones que requieren fecha
-
-    return {
-        "intencion": intencion_detectada,
-        "comentario": resultado_general.get("comentario"),
-        "tiene_fecha": tiene_fecha
-    }
+    # Si no se puede forzar, se prueba clasificación general y proceso
+    resultado_proceso = clasificar_proceso(texto)
+    if resultado_proceso.get("intencion") == "consultar_proceso":
+        return {
+            "intencion": "consultar_proceso",
 
