@@ -3,6 +3,7 @@ import logging
 
 from funciones.intencion_total import clasificar_intencion_completa
 from funciones.consultar_proceso_con_chatgpt import consultar_proceso_chatgpt as consultar_proceso
+from funciones.consultar_producto_con_chatgpt import consultar_producto_chatgpt
 from funciones.extractores_proceso import (
     extraer_nombre_proceso,
     extraer_duda_proceso
@@ -47,6 +48,7 @@ async def chat(request: Request):
     logging.info(f"[KPI] Detectado: {kpi}")
     logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
+    # 🧾 CONSULTAR PROCESO
     if intencion == "consultar_proceso":
         nombre_proceso = intencion_info.get("proceso") or extraer_nombre_proceso(mensaje_usuario)
         atributo_duda = intencion_info.get("atributo") or extraer_duda_proceso(mensaje_usuario)
@@ -69,13 +71,31 @@ async def chat(request: Request):
             "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
         }
 
+    # 🧴 CONSULTAR PRODUCTO
+    if intencion == "consultar_producto":
+        nombre_producto = intencion_info.get("producto")
+        atributo_duda = intencion_info.get("atributo")
+
+        if nombre_producto:
+            actualizar_contexto(codsalon, "producto", nombre_producto)
+        if atributo_duda:
+            actualizar_contexto(codsalon, "atributo", atributo_duda)
+
+        respuesta = consultar_producto_chatgpt(nombre_producto, atributo_duda)
+        respuesta_markdown = formato_markdown(respuesta)
+
+        return {
+            "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
+        }
+
+    # ✂️ SERVICIOS ESTÉTICOS / PRODUCTOS COSMÉTICOS
     if intencion == "explicar_producto":
         nombre_producto = extraer_nombre_producto(mensaje_usuario)
         logging.info(f"[PRODUCTO] Detectado: {nombre_producto}")
 
     contexto = obtener_contexto(codsalon)
 
-    # 🔁 RESET: limpia si la intención ha cambiado
+    # 🔁 RESET CONTEXTO si cambió la intención
     if intencion != contexto.get("intencion"):
         limpiar_contexto(codsalon)
 
@@ -103,6 +123,7 @@ async def chat(request: Request):
     return {
         "respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."
     }
+
 
 
 
