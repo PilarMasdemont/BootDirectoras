@@ -19,13 +19,11 @@ from dispatcher import despachar_intencion
 
 router = APIRouter()
 
-
 def formato_markdown(texto: str) -> str:
     texto = texto.replace("🔹", "-")  # conviértelo a viñetas tipo lista
     texto = texto.replace("•", "-")   # viñetas estándar
     texto = texto.replace("\n\n", "\n")  # evita dobles saltos
     return texto.strip()
-
 
 @router.post("")
 async def chat(request: Request):
