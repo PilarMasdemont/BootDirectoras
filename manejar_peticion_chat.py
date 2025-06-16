@@ -8,7 +8,9 @@ from extractores import (
 )
 from extractores_producto import extraer_nombre_producto
 from funciones.intencion_total import clasificar_intencion_completa
+from funciones.consultar_json_conocimiento import consultar_json_conocimiento
 from funciones.consultar_proceso_con_chatgpt import consultar_proceso_chatgpt as consultar_proceso
+from knowledge_base import base_conocimiento
 from memory import obtener_contexto, actualizar_contexto  # ✅ memoria activa
 
 logging.basicConfig(level=logging.INFO)
@@ -29,21 +31,16 @@ def manejar_peticion_chat(datos: dict) -> dict:
     kpi = detectar_kpi(mensaje_usuario)
 
     if intencion == "consultar_proceso":
-        nombre_proceso = datos_intencion.get("proceso")
-        atributo_dudado = datos_intencion.get("atributo")
+        # ✅ Recuperar el mejor contenido del JSON estructurado
+        fragmento_base = consultar_json_conocimiento(mensaje_usuario, base_conocimiento)
 
-        contexto = obtener_contexto(codsalon)
-        if not nombre_proceso:
-            nombre_proceso = contexto.get("proceso")
-        if not atributo_dudado:
-            atributo_dudado = contexto.get("atributo")
+        # ✅ Usar el fragmento como contexto para generar respuesta natural
+        respuesta = consultar_proceso(
+            proceso=mensaje_usuario,  # puede usarse como pregunta
+            contexto=fragmento_base,
+            atributo=None
+        )
 
-        if nombre_proceso:
-            actualizar_contexto(codsalon, "proceso", nombre_proceso)
-        if atributo_dudado:
-            actualizar_contexto(codsalon, "atributo", atributo_dudado)
-
-        respuesta = consultar_proceso(nombre_proceso, atributo_dudado)
         return {
             "intencion": intencion,
             "respuesta": respuesta,
@@ -66,5 +63,6 @@ def manejar_peticion_chat(datos: dict) -> dict:
         logging.info(f"[PRODUCTO] Detectado: {resultado['nombre_producto']}")
 
     return resultado
+
 
 
