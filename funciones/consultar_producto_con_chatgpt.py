@@ -1,7 +1,5 @@
 import json
-import os
 
-# Asegúrate de que este path apunte correctamente al archivo JSON cargado
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 
 def cargar_productos():
@@ -11,32 +9,36 @@ def cargar_productos():
 PRODUCTOS = cargar_productos()
 
 def consultar_producto_chatgpt(nombre_producto: str, atributo_duda: str = None) -> str:
-    nombre_buscado = nombre_producto.strip().lower()
+    nombre = nombre_producto.lower().strip()
 
-    # Buscar nombre ignorando mayúsculas
-    producto = None
-    nombre_real = None
-    for nombre_real_candidato in PRODUCTOS:
-        if nombre_real_candidato.lower() == nombre_buscado:
-            nombre_real = nombre_real_candidato
-            producto = PRODUCTOS[nombre_real]
-            break
-
-    if not producto:
+    # Buscar coincidencia flexible
+    coincidencia = next((key for key in PRODUCTOS if nombre in key.lower()), None)
+    if not coincidencia:
         return f"No tengo información sobre el producto **{nombre_producto}** en la base de datos."
 
+    info_producto = PRODUCTOS[coincidencia]
+
+    # Atributo específico
     if atributo_duda:
         atributo = atributo_duda.lower()
-        coincidencias = [clave for clave in producto if atributo in clave.lower()]
-        if coincidencias:
-            respuesta = producto[coincidencias[0]]
-            return f"Sobre **{nombre_real}**, esto es lo que encontré sobre *{coincidencias[0]}*:\n\n{respuesta}"
-        else:
-            return f"No encontré información específica sobre *{atributo_duda}* en **{nombre_real}**. Pero esto es lo que tengo:\n\n{json.dumps(producto, indent=2, ensure_ascii=False)}"
+        resultados = []
 
-    # Sin atributo → responder todo el contenido del producto
-    partes = [f"**{nombre_real}**"]
-    for clave, valor in producto.items():
-        partes.append(f"- **{clave.capitalize()}**: {valor}")
-    return "\n".join(partes)
+        for presentacion, detalles in info_producto.items():
+            lineas = detalles.split("\n")
+            bloque_filtrado = "\n".join(l for l in lineas if atributo in l.lower())
+            if bloque_filtrado.strip():
+                resultados.append(f"**{presentacion}**:\n{bloque_filtrado}")
+
+        if resultados:
+            return f"**{coincidencia}** - Resultados sobre *{atributo_duda}*:\n\n" + "\n\n".join(resultados)
+        else:
+            resumen = "\n".join(f"- {k}" for k in info_producto)
+            return f"No encontré detalles sobre *{atributo_duda}* en **{coincidencia}**. Presentaciones disponibles: {resumen}"
+
+    # Mostrar todo el contenido por tamaño
+    partes = [f"**{coincidencia}**"]
+    for presentacion, descripcion in info_producto.items():
+        partes.append(f"**{presentacion}**:\n{descripcion}")
+    return "\n\n".join(partes)
+
 
