@@ -21,6 +21,10 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES_NORMALIZADOS = {
         normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
     }
+    logging.info("🔍 Lista de productos normalizados:")
+    for n in PRODUCTOS_NOMBRES_NORMALIZADOS:
+        logging.info(f"- {n}")
+
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
