@@ -3,14 +3,21 @@ from funciones.intention_process import clasificar_intencion as clasificar_proce
 from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
 import json
 import os
+import re
 
 # 📦 Cargar nombres de productos del JSON
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES = list(json.load(f).keys())
 
+def normalizar(texto: str) -> str:
+    texto = texto.lower()
+    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
+    texto = re.sub(r"\b\d+ml\b", "", texto)  # elimina "200ml", "300ml", etc.
+    return texto.strip()
+
 def clasificar_intencion_completa(texto: str) -> dict:
-    texto_limpio = texto.strip().lower()
+    texto_limpio = normalizar(texto)
 
     palabras_servicio = [
         "mechas", "queratina", "alisado", "coloración", "tratamiento", "brillo",
@@ -21,17 +28,17 @@ def clasificar_intencion_completa(texto: str) -> dict:
         "caja", "inventario", "cerrar", "cuadrar", "proceso", "tarea", "pedido", "stock"
     ]
 
-    # 🧴 CONSULTAR PRODUCTO desde el diccionario
+    # 🧴 CONSULTAR PRODUCTO desde el diccionario (coincidencia parcial inteligente)
     for nombre in PRODUCTOS_NOMBRES:
-        if any(pal in texto for pal in nombre.lower().split()):
+        nombre_normalizado = normalizar(nombre)
+        if nombre_normalizado in texto_limpio:
             return {
                 "intencion": "consultar_producto",
                 "producto": nombre,
                 "atributo": extraer_duda_proceso(texto),
-                "comentario": f"Detectado producto '{nombre}' desde JSON (coincidencia parcial)",
+                "comentario": f"Detectado producto '{nombre}' desde JSON (coincidencia inteligente)",
                 "tiene_fecha": False
-        }
-
+            }
 
     # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
@@ -43,7 +50,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # ✂️ SERVICIO ESTÉTICO (mechas, queratina, etc.)
+    # ✂️ SERVICIO ESTÉTICO
     if any(p in texto_limpio for p in palabras_servicio):
         return {
             "intencion": "explicar_producto",
@@ -51,7 +58,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # 🔄 Fallback a clasificador de procesos si aplica
+    # 🔄 Fallback: clasificador específico de procesos
     resultado_proceso = clasificar_proceso(texto)
     if resultado_proceso.get("intencion") == "consultar_proceso":
         return {
@@ -72,6 +79,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "jueves", "viernes", "sábado", "domingo"
         ])
     }
+
 
 
 
