@@ -5,28 +5,20 @@ from sheets_io import cargar_hoja_por_nombre
 SHEET_PRODUCTOS_ID = "1GcTc0MJsLE-UKS1TylYkn8qF_wjurxV2pKfGbugtb5M"
 PESTANA_PRODUCTOS = "ProductosBoot"
 
-def extraer_nombre_producto(texto_usuario: str) -> dict:
-    print(f"🔍 Buscando producto en texto: '{texto_usuario}'")
-
+def extraer_nombre_producto(texto_usuario: str) -> str:
     try:
         productos_df = cargar_hoja_por_nombre(SHEET_PRODUCTOS_ID, PESTANA_PRODUCTOS)
-        print("📋 Columnas originales:", productos_df.columns.tolist())
     except Exception as e:
         print("❌ Error al cargar hoja de productos:", e)
-        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Error al acceder a los datos"}
+        return ""
 
     if productos_df.empty:
-        print("❌ El DataFrame de productos está vacío")
-        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Catálogo vacío o inaccesible"}
+        return ""
 
-    # Normalizar columnas
     productos_df.columns = [col.lower().strip().replace(" ", "_") for col in productos_df.columns]
-    print("📋 Columnas normalizadas:", productos_df.columns.tolist())
 
-    # Verificar columnas requeridas
     if "nombre" not in productos_df.columns or "aliases" not in productos_df.columns:
-        print("❌ Faltan columnas requeridas: 'nombre' y/o 'aliases'")
-        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "Estructura de hoja inválida"}
+        return ""
 
     productos_df["nombre"] = productos_df["nombre"].fillna("").str.strip()
     productos_df["aliases"] = productos_df["aliases"].fillna("").str.strip()
@@ -41,17 +33,12 @@ def extraer_nombre_producto(texto_usuario: str) -> dict:
 
         for candidato in candidatos:
             score = fuzz.partial_ratio(candidato.lower(), texto_usuario.lower())
-            print(f"🔎 Evaluando: '{candidato}' vs. '{texto_usuario}' → score: {score}")
             if score > mejor_score:
                 mejor_score = score
                 mejor_nombre = nombre
 
-    if mejor_score >= 80:
-        print(f"✅ Producto encontrado: {mejor_nombre} (score: {mejor_score})")
-        return {"nombre_producto": mejor_nombre, "comentario": "Coincidencia encontrada"}
-    else:
-        print(f"❌ No se encontró coincidencia suficiente. Mejor score: {mejor_score}")
-        return {"nombre_producto": "PRODUCTO_NO_ENCONTRADO", "comentario": "No se identificó el producto"}
+    return mejor_nombre if mejor_score >= 80 else ""
+
 
 def explicar_producto(nombre_producto: str) -> str:
     try:
