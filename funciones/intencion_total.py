@@ -8,7 +8,12 @@ import re
 # 📦 Cargar nombres de productos del JSON
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
-    PRODUCTOS_NOMBRES = list(json.load(f).keys())
+    PRODUCTOS_JSON = json.load(f)
+    PRODUCTOS_NOMBRES = list(PRODUCTOS_JSON.keys())
+    PRODUCTOS_NOMBRES_NORMALIZADOS = {
+        normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
+}
+
 
 def normalizar(texto: str) -> str:
     texto = texto.lower()
@@ -29,16 +34,16 @@ def clasificar_intencion_completa(texto: str) -> dict:
     ]
 
     # 🧴 CONSULTAR PRODUCTO desde el diccionario (coincidencia parcial inteligente)
-    for nombre in PRODUCTOS_NOMBRES:
-        nombre_normalizado = normalizar(nombre)
-        if nombre_normalizado in texto_limpio:
+    for nombre_norm, nombre_original in PRODUCTOS_NOMBRES_NORMALIZADOS.items():
+        if nombre_norm in texto_limpio:
             return {
                 "intencion": "consultar_producto",
-                "producto": nombre,
+                "producto": nombre_original,
                 "atributo": extraer_duda_proceso(texto),
-                "comentario": f"Detectado producto '{nombre}' desde JSON (coincidencia inteligente)",
+                "comentario": f"Detectado producto '{nombre_original}' desde JSON (coincidencia normalizada)",
                 "tiene_fecha": False
             }
+
 
     # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
