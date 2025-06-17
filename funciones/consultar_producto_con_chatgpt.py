@@ -12,7 +12,14 @@ def consultar_producto_chatgpt(nombre_producto: str, atributo_duda: str = None) 
     nombre = nombre_producto.lower().strip()
 
     # Buscar coincidencia flexible
-    coincidencia = next((key for key in PRODUCTOS if nombre in key.lower()), None)
+    coincidencia = next(
+        (key for key in PRODUCTOS if nombre == key.lower()),
+        None
+    ) or next(
+        (key for key in PRODUCTOS if nombre in key.lower()),
+         None
+    )
+
     if not coincidencia:
         return f"No tengo información sobre el producto **{nombre_producto}** en la base de datos."
 
