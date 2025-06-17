@@ -33,8 +33,14 @@ def buscar_producto_fuzzy(texto_limpio: str) -> str:
     return mejor_nombre if mejor_score >= 80 else None
 
 def clasificar_intencion_completa(texto: str) -> dict:
-    print("⚠️ EJECUTANDO FUNCION: clasificar_intencion_completa")  # 👈 LÍNEA NUEVA
-    print(f"📩 Texto recibido: {texto}")  # 👈 LÍNEA NUEVA
+    print("🛠️ FUNCIÓN CLASIFICAR_INTENCION_COMPLETA ACTIVADA")
+    print(f"📝 TEXTO DE ENTRADA: {texto}")
+    return {
+        "intencion": "debug",
+        "comentario": "Esto es una prueba de despliegue de intencion_total",
+        "tiene_fecha": False
+    }
+
     texto_limpio = normalizar(texto)
 
     palabras_servicio = [
