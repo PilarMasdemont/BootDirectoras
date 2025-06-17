@@ -1,17 +1,17 @@
-from funciones.intencion import clasificar_intencion as clasificar_general
-from funciones.intention_process import clasificar_intencion as clasificar_proceso
-from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
 import json
 import os
 import re
-import logging
 
+from funciones.intencion import clasificar_intencion as clasificar_general
+from funciones.intention_process import clasificar_intencion as clasificar_proceso
+from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
+
+# 🧼 Normalización de texto
 def normalizar(texto: str) -> str:
     texto = texto.lower()
-    texto = re.sub(r"[^\w\sáéíóúüñ]", "", texto)  # eliminar puntuación excepto tildes y letras válidas
-    texto = re.sub(r"\b\d+\s?(ml|g|gr|kg|l|litros)?\b", "", texto)  # elimina unidades
-    texto = re.sub(r"\s+", " ", texto).strip()
-    return texto
+    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
+    texto = re.sub(r"\b\d+ml\b", "", texto)
+    return texto.strip()
 
 # 📦 Cargar nombres de productos del JSON
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
@@ -21,9 +21,7 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES_NORMALIZADOS = {
         normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
     }
-    logging.info("🔍 Lista de productos normalizados:")
-    for n in PRODUCTOS_NOMBRES_NORMALIZADOS:
-        logging.info(f"- {n}")
+
 
 
 def clasificar_intencion_completa(texto: str) -> dict:
