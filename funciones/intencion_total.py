@@ -5,6 +5,12 @@ import json
 import os
 import re
 
+def normalizar(texto: str) -> str:
+    texto = texto.lower()
+    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
+    texto = re.sub(r"\b\d+ml\b", "", texto)  # elimina "200ml", "300ml", etc.
+    return texto.strip()
+    
 # 📦 Cargar nombres de productos del JSON
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
@@ -14,12 +20,6 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
         normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
 }
 
-
-def normalizar(texto: str) -> str:
-    texto = texto.lower()
-    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
-    texto = re.sub(r"\b\d+ml\b", "", texto)  # elimina "200ml", "300ml", etc.
-    return texto.strip()
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
