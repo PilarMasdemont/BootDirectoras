@@ -1,16 +1,15 @@
+from funciones.intencion import clasificar_intencion as clasificar_general
+from funciones.intention_process import clasificar_intencion as clasificar_proceso
+from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
 import json
 import os
 import re
 
-from funciones.intencion import clasificar_intencion as clasificar_general
-from funciones.intention_process import clasificar_intencion as clasificar_proceso
-from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
-
-# 🧼 Normalización de texto
+# 🛠️ Función de normalización antes de ser usada
 def normalizar(texto: str) -> str:
     texto = texto.lower()
     texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
-    texto = re.sub(r"\b\d+ml\b", "", texto)
+    texto = re.sub(r"\b\d+ml\b", "", texto)  # elimina "200ml", "300ml", etc.
     return texto.strip()
 
 # 📦 Cargar nombres de productos del JSON
@@ -21,8 +20,6 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES_NORMALIZADOS = {
         normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
     }
-
-
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
@@ -39,7 +36,6 @@ def clasificar_intencion_completa(texto: str) -> dict:
     # 🧴 CONSULTAR PRODUCTO desde el diccionario (coincidencia parcial inteligente)
     for nombre_norm, nombre_original in PRODUCTOS_NOMBRES_NORMALIZADOS.items():
         if nombre_norm in texto_limpio:
-            logging.info(f"[PRODUCTO] Detectado por coincidencia: {nombre_original}")
             return {
                 "intencion": "consultar_producto",
                 "producto": nombre_original,
@@ -87,6 +83,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "jueves", "viernes", "sábado", "domingo"
         ])
     }
+
 
 
 
