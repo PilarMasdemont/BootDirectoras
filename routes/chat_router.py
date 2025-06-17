@@ -96,7 +96,16 @@ async def chat(request: Request):
     # ✂️ SERVICIOS ESTÉTICOS / PRODUCTOS COSMÉTICOS
     if intencion == "explicar_producto":
         nombre_producto = extraer_nombre_producto(mensaje_usuario)
-        logging.info(f"[PRODUCTO] Detectado: {nombre_producto}")
+        if nombre_producto:
+            logging.info(f"[PRODUCTO] Detectado por alias: {nombre_producto}")
+            respuesta = consultar_producto_chatgpt(nombre_producto)
+            respuesta_markdown = formato_markdown(respuesta)
+            return {
+                "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
+            }
+        else:
+            logging.info("[PRODUCTO] No se encontró producto por alias.")
+
 
     contexto = obtener_contexto(codsalon)
 
