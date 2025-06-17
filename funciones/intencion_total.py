@@ -1,11 +1,12 @@
 from funciones.intencion import clasificar_intencion as clasificar_general
 from funciones.intention_process import clasificar_intencion as clasificar_proceso
 from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
+from rapidfuzz import fuzz
 import json
 import os
 import re
 
-# 🛠️ Función de normalización antes de ser usada
+# 🧽 Utilidad para normalizar texto
 def normalizar(texto: str) -> str:
     texto = texto.lower()
     texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
@@ -17,9 +18,19 @@ PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_JSON = json.load(f)
     PRODUCTOS_NOMBRES = list(PRODUCTOS_JSON.keys())
-    PRODUCTOS_NOMBRES_NORMALIZADOS = {
-        normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
-    }
+
+def buscar_producto_fuzzy(texto_limpio: str) -> str:
+    mejor_score = 0
+    mejor_nombre = None
+
+    for nombre in PRODUCTOS_NOMBRES:
+        nombre_norm = normalizar(nombre)
+        score = fuzz.partial_ratio(nombre_norm, texto_limpio)
+        if score > mejor_score:
+            mejor_score = score
+            mejor_nombre = nombre
+
+    return mejor_nombre if mejor_score >= 80 else None
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
@@ -33,16 +44,16 @@ def clasificar_intencion_completa(texto: str) -> dict:
         "caja", "inventario", "cerrar", "cuadrar", "proceso", "tarea", "pedido", "stock"
     ]
 
-    # 🧴 CONSULTAR PRODUCTO desde el diccionario (coincidencia parcial inteligente)
-    for nombre_norm, nombre_original in PRODUCTOS_NOMBRES_NORMALIZADOS.items():
-        if nombre_norm in texto_limpio:
-            return {
-                "intencion": "consultar_producto",
-                "producto": nombre_original,
-                "atributo": extraer_duda_proceso(texto),
-                "comentario": f"Detectado producto '{nombre_original}' desde JSON (coincidencia normalizada)",
-                "tiene_fecha": False
-            }
+    # 🧴 CONSULTAR PRODUCTO usando búsqueda fuzzy
+    producto_detectado = buscar_producto_fuzzy(texto_limpio)
+    if producto_detectado:
+        return {
+            "intencion": "consultar_producto",
+            "producto": producto_detectado,
+            "atributo": extraer_duda_proceso(texto),
+            "comentario": f"Detectado producto '{producto_detectado}' con fuzzy matching",
+            "tiene_fecha": False
+        }
 
     # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
@@ -62,7 +73,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # 🔄 Fallback: clasificador específico de procesos
+    # 🔄 Fallback específico de proceso
     resultado_proceso = clasificar_proceso(texto)
     if resultado_proceso.get("intencion") == "consultar_proceso":
         return {
@@ -83,6 +94,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "jueves", "viernes", "sábado", "domingo"
         ])
     }
+
 
 
 
