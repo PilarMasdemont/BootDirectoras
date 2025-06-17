@@ -4,13 +4,15 @@ from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_p
 import json
 import os
 import re
+import logging
 
 def normalizar(texto: str) -> str:
     texto = texto.lower()
-    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
-    texto = re.sub(r"\b\d+ml\b", "", texto)  # elimina "200ml", "300ml", etc.
-    return texto.strip()
-    
+    texto = re.sub(r"[^\w\sáéíóúüñ]", "", texto)  # eliminar puntuación excepto tildes y letras válidas
+    texto = re.sub(r"\b\d+\s?(ml|g|gr|kg|l|litros)?\b", "", texto)  # elimina unidades
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto
+
 # 📦 Cargar nombres de productos del JSON
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
@@ -18,8 +20,7 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
     PRODUCTOS_NOMBRES = list(PRODUCTOS_JSON.keys())
     PRODUCTOS_NOMBRES_NORMALIZADOS = {
         normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
-}
-
+    }
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
@@ -36,6 +37,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
     # 🧴 CONSULTAR PRODUCTO desde el diccionario (coincidencia parcial inteligente)
     for nombre_norm, nombre_original in PRODUCTOS_NOMBRES_NORMALIZADOS.items():
         if nombre_norm in texto_limpio:
+            logging.info(f"[PRODUCTO] Detectado por coincidencia: {nombre_original}")
             return {
                 "intencion": "consultar_producto",
                 "producto": nombre_original,
@@ -43,7 +45,6 @@ def clasificar_intencion_completa(texto: str) -> dict:
                 "comentario": f"Detectado producto '{nombre_original}' desde JSON (coincidencia normalizada)",
                 "tiene_fecha": False
             }
-
 
     # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
