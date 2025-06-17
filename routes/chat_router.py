@@ -36,7 +36,12 @@ async def chat(request: Request):
 
     intencion_info = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
-    logging.info(f"[INTENCION] Detectada: {intencion} | Comentario: {intencion_info.get('comentario')}")
+
+    # 🧠 Diagnóstico de clasificación
+    logging.info(f"[INTENCION] Detectada: {intencion}")
+    logging.info(f"[INFO] Clasificación completa: {intencion_info}")
+    logging.info(f"[INFO] Producto detectado: {intencion_info.get('producto')}")
+    logging.info(f"[INFO] Atributo detectado: {intencion_info.get('atributo')}")
 
     codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
     fecha = extraer_fecha_desde_texto(mensaje_usuario)
