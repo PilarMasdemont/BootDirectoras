@@ -33,6 +33,7 @@ def buscar_producto_fuzzy(texto_limpio: str) -> str:
     return mejor_nombre if mejor_score >= 80 else None
 
 def clasificar_intencion_completa(texto: str) -> dict:
+    print(f"⚠️ TEXTO RECIBIDO: {texto}")
     texto_limpio = normalizar(texto)
 
     palabras_servicio = [
