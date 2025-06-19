@@ -1,8 +1,8 @@
 import os
 import json
 from openai import OpenAI
-from src.funciones.selector_dinamico import seleccionar_apartados
-from src.funciones.util_json import extraer_fragmentos_desde_rutas
+from funciones.selector_dinamico import seleccionar_apartados
+from funciones.util_json import extraer_fragmentos_desde_rutas
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
