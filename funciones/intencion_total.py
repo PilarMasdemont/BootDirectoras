@@ -34,7 +34,9 @@ def clasificar_intencion_completa(texto: str) -> dict:
     # Paso 3: Solo si contiene fecha, clasificar como general
     contiene_fecha = any(p in texto for p in [
         "hoy", "ayer", "semana", "mes", "lunes", "martes",
-        "miércoles", "jueves", "viernes", "sábado", "domingo"
+        "miércoles", "jueves", "viernes", "sábado", "domingo",
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
     ])
 
     if contiene_fecha:
@@ -51,6 +53,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
         "comentario": "No se detecta intención clara",
         "tiene_fecha": False
     }
+
 
 
 
