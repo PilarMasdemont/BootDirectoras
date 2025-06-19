@@ -11,23 +11,41 @@ PRODUCTOS = cargar_productos()
 def consultar_producto_chatgpt(nombre_producto: str, atributo_duda: str = None) -> str:
     nombre = nombre_producto.lower().strip()
 
-    # Coincidencia flexible
-    coincidencia = next((key for key in PRODUCTOS if nombre in key.lower()), None)
+    # Buscar coincidencia exacta o parcial
+    coincidencia = next(
+        (key for key in PRODUCTOS if nombre == key.lower()), None
+    ) or next(
+        (key for key in PRODUCTOS if nombre in key.lower()), None
+    )
+
     if not coincidencia:
         return f"No tengo información sobre el producto **{nombre_producto}** en la base de datos."
 
-    descripcion = PRODUCTOS[coincidencia]
+    info_producto = PRODUCTOS[coincidencia]
 
     if atributo_duda:
-        # Extraer bloques relevantes si se menciona algo como "ingredientes", "beneficios", etc.
-        lineas = descripcion.split("\n")
-        bloques = [l for l in lineas if atributo_duda.lower() in l.lower()]
-        if bloques:
-            return f"**{coincidencia}** – Resultado sobre *{atributo_duda}*:\n\n" + "\n".join(bloques)
-        else:
-            return f"No encontré detalles sobre *{atributo_duda}* en **{coincidencia}**, pero aquí tienes toda la información:\n\n{descripcion}"
+        atributo = atributo_duda.lower()
+        resultados = []
 
-    return f"**{coincidencia}**\n\n{descripcion}"
+        for subtitulo, descripcion in info_producto.items():
+            lineas = descripcion.split("\n")
+            filtrado = "\n".join(l for l in lineas if atributo in l.lower())
+            if filtrado.strip():
+                resultados.append(f"**{subtitulo}**:\n{filtrado}")
+
+        if resultados:
+            return f"**{coincidencia}** – Resultados sobre *{atributo_duda}*:\n\n" + "\n\n".join(resultados)
+        else:
+            resumen = ", ".join(info_producto.keys())
+            return f"No encontré detalles sobre *{atributo_duda}* en **{coincidencia}**. Secciones disponibles: {resumen}"
+
+    # Si no se pide un atributo, devolver todo
+    partes = [f"**{coincidencia}**"]
+    for subtitulo, descripcion in info_producto.items():
+        partes.append(f"**{subtitulo}**:\n{descripcion.strip()}")
+
+    return "\n\n".join(partes)
+
 
 
 
