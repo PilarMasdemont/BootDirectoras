@@ -47,8 +47,13 @@ async def chat(request: Request):
     codempleado = extraer_codempleado(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
+    # ⚠️ VALIDACIÓN DE FECHA
     if not fecha:
         logging.warning("[FECHA] No se detectó una fecha válida. Se omitirá.")
+        if intencion in ["explicar_ratio_diario", "explicar_ratio_empleados", "explicar_ratio_empleado_individual"]:
+            return {
+                "respuesta": "**Hola, soy Mont Dirección.**\n\n❓ No logré identificar la fecha que mencionaste. ¿Podrías reformular la frase con una fecha clara?"
+            }
     else:
         logging.info(f"[FECHA] Extraída: {fecha}")
 
@@ -111,6 +116,7 @@ async def chat(request: Request):
     return {
         "respuesta": f"**Hola, soy Mont Dirección.**\n\n{formato_markdown(respuesta)}"
     }
+
 
 
 
