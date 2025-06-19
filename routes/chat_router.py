@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Request
 import logging
 
-from BootDirectoras.utils.consultar_con_chatgpt import consultar_con_chatgpt
-from BootDirectoras.funciones.intencion_total import clasificar_intencion_completa
-from BootDirectoras.memory import obtener_contexto, actualizar_contexto
-from BootDirectoras.dispatcher import despachar_intencion
+from src.utils.consultar_con_chatgpt import consultar_con_chatgpt
+from src.funciones.intencion_total import clasificar_intencion_completa
+from src.memory import obtener_contexto, actualizar_contexto
+from src.dispatcher import despachar_intencion
 
 router = APIRouter()
 
