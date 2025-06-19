@@ -1,5 +1,6 @@
 import json
 import re
+from rapidfuzz import process, fuzz
 
 PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
 
@@ -19,9 +20,17 @@ with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
 def extraer_nombre_producto(texto_usuario: str) -> str:
     texto_normalizado = normalizar(texto_usuario)
 
+    # Coincidencia directa
     for nombre_normalizado, original in PRODUCTOS_NORMALIZADOS.items():
         if nombre_normalizado in texto_normalizado:
             return original
+
+    # Coincidencia aproximada (fuzzy matching)
+    nombres = list(PRODUCTOS_NORMALIZADOS.keys())
+    mejor_coincidencia = process.extractOne(texto_normalizado, nombres, scorer=fuzz.partial_ratio)
+
+    if mejor_coincidencia and mejor_coincidencia[1] >= 80:
+        return PRODUCTOS_NORMALIZADOS[mejor_coincidencia[0]]
 
     return ""  # No se encontró
 
@@ -36,6 +45,7 @@ def explicar_producto(nombre_producto: str) -> str:
         partes.append(f"**{subtitulo.capitalize()}**:\n{contenido.strip()}")
 
     return "\n\n".join(partes)
+
 
 
 
