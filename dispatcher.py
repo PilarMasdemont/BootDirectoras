@@ -36,7 +36,7 @@ def despachar_intencion(
     elif intencion == "consultar_proceso":
         logging.info("[DISPATCHER] Ejecutando flujo de proceso")
         from funciones.consultar_proceso import consultar_proceso
-        from Archivos_estaticos.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
+        from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
 
         nombre_proceso = extraer_nombre_proceso(texto_usuario)
         atributo_duda = extraer_duda_proceso(texto_usuario)
@@ -51,7 +51,13 @@ def despachar_intencion(
 
         return consultar_proceso(nombre_proceso, atributo_duda)
 
+    elif intencion == "consultar_producto":
+        logging.info("[DISPATCHER] Ejecutando flujo de producto")
+        from funciones.consultar_producto import consultar_producto
+        return consultar_producto(texto_usuario)
+
     logging.warning(f"[DISPATCHER] Intención no gestionada directamente: {intencion}")
     return None
+
 
 
