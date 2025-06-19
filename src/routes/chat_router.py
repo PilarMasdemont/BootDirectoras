@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from fastapi import APIRouter, Request
 import logging
 
-from utils.consultar_con_chatgpt import consultar_con_chatgpt
+from funciones.consultar_con_chatgpt import consultar_con_chatgpt
 from funciones.intencion_total import clasificar_intencion_completa
 from memory import obtener_contexto, actualizar_contexto
 from dispatcher import despachar_intencion
