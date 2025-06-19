@@ -1,24 +1,19 @@
 import json
 import re
+import logging
+
 from funciones.intencion import clasificar_intencion as clasificar_general
 from funciones.intention_process import clasificar_intencion as clasificar_proceso
+from funciones.intention_producto import es_intencion_producto
 from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
+from funciones.extractores_producto import extraer_nombre_producto
 
-# Función para limpiar texto
 def normalizar(texto: str) -> str:
     texto = texto.lower()
-    texto = re.sub(r"[^a-záéíóúüñ0-9\s]", "", texto)
-    texto = re.sub(r"\b\d+ml\b", "", texto)
-    return texto.strip()
-
-# 📦 Cargar JSON
-PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
-with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
-    PRODUCTOS_JSON = json.load(f)
-    PRODUCTOS_NOMBRES = list(PRODUCTOS_JSON.keys())
-    PRODUCTOS_NOMBRES_NORMALIZADOS = {
-        normalizar(nombre): nombre for nombre in PRODUCTOS_NOMBRES
-    }
+    texto = re.sub(r"[^\w\sáéíóúüñ]", "", texto)  # eliminar puntuación
+    texto = re.sub(r"\b\d+\s?(ml|g|gr|kg|l|litros)?\b", "", texto)  # elimina unidades
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto
 
 def clasificar_intencion_completa(texto: str) -> dict:
     texto_limpio = normalizar(texto)
@@ -32,18 +27,17 @@ def clasificar_intencion_completa(texto: str) -> dict:
         "caja", "inventario", "cerrar", "cuadrar", "proceso", "tarea", "pedido", "stock"
     ]
 
-    # 🧴 Detección de producto desde el JSON
-    for nombre_norm, nombre_original in PRODUCTOS_NOMBRES_NORMALIZADOS.items():
-        if nombre_norm in texto_limpio:
-            return {
-                "intencion": "consultar_producto",
-                "producto": nombre_original,
-                "atributo": extraer_duda_proceso(texto),
-                "comentario": f"Detectado producto '{nombre_original}' desde JSON (match normalizado)",
-                "tiene_fecha": False
-            }
+    # 🧴 CONSULTAR PRODUCTO
+    if es_intencion_producto(texto):
+        nombre = extraer_nombre_producto(texto)
+        return {
+            "intencion": "consultar_producto",
+            "producto": nombre,
+            "comentario": f"Detectado producto '{nombre}' usando intención de producto",
+            "tiene_fecha": False
+        }
 
-    # 🔁 Detección de procesos
+    # 🔁 CONSULTAR PROCESO
     if any(p in texto_limpio for p in palabras_proceso):
         return {
             "intencion": "consultar_proceso",
@@ -53,7 +47,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # ✂️ Servicios o técnicas estéticas
+    # ✂️ SERVICIO ESTÉTICO
     if any(p in texto_limpio for p in palabras_servicio):
         return {
             "intencion": "explicar_producto",
@@ -61,7 +55,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # 🔄 Clasificación específica de procesos
+    # 🔄 Fallback: clasificador específico de procesos
     resultado_proceso = clasificar_proceso(texto)
     if resultado_proceso.get("intencion") == "consultar_proceso":
         return {
@@ -82,6 +76,7 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "jueves", "viernes", "sábado", "domingo"
         ])
     }
+
 
 
 
