@@ -37,7 +37,6 @@ async def chat(request: Request):
     intencion_info = clasificar_intencion_completa(mensaje_usuario)
     intencion = intencion_info["intencion"]
 
-    # 🧠 Diagnóstico de clasificación
     logging.info(f"[INTENCION] Detectada: {intencion}")
     logging.info(f"[INFO] Clasificación completa: {intencion_info}")
     logging.info(f"[INFO] Producto detectado: {intencion_info.get('producto')}")
@@ -48,7 +47,11 @@ async def chat(request: Request):
     codempleado = extraer_codempleado(mensaje_usuario)
     kpi = detectar_kpi(mensaje_usuario)
 
-    logging.info(f"[FECHA] Extraída: {fecha}")
+    if not fecha:
+        logging.warning("[FECHA] No se detectó una fecha válida. Se omitirá.")
+    else:
+        logging.info(f"[FECHA] Extraída: {fecha}")
+
     logging.info(f"[SALON] Código detectado: {codsalon}")
     logging.info(f"[KPI] Detectado: {kpi}")
     logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
@@ -78,65 +81,37 @@ async def chat(request: Request):
 
     # 🧴 CONSULTAR PRODUCTO
     if intencion == "consultar_producto":
-        nombre_producto = intencion_info.get("producto")
-        atributo_duda = intencion_info.get("atributo")
+        producto = intencion_info.get("producto") or extraer_nombre_producto(mensaje_usuario)
+        if producto:
+            actualizar_contexto(codsalon, "producto", producto)
 
-        if nombre_producto:
-            actualizar_contexto(codsalon, "producto", nombre_producto)
-        if atributo_duda:
-            actualizar_contexto(codsalon, "atributo", atributo_duda)
-
-        respuesta = consultar_producto_chatgpt(nombre_producto, atributo_duda)
+        respuesta = consultar_producto_chatgpt(producto, mensaje_usuario)
         respuesta_markdown = formato_markdown(respuesta)
 
         return {
             "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
         }
 
-    # ✂️ SERVICIOS ESTÉTICOS / PRODUCTOS COSMÉTICOS
-    if intencion == "explicar_producto":
-        nombre_producto = extraer_nombre_producto(mensaje_usuario)
-        if nombre_producto:
-            logging.info(f"[PRODUCTO] Detectado por alias: {nombre_producto}")
-            respuesta = consultar_producto_chatgpt(nombre_producto)
-            respuesta_markdown = formato_markdown(respuesta)
-            return {
-                "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
-            }
-        else:
-            logging.info("[PRODUCTO] No se encontró producto por alias.")
+    # 🧠 CUALQUIER OTRA INTENCIÓN
+    sesion = {"ip": ip_usuario}
+    argumentos = {
+        "intencion": intencion,
+        "texto_usuario": mensaje_usuario,
+        "codsalon": codsalon,
+        "codempleado": codempleado,
+        "kpi": kpi,
+        "sesion": sesion
+    }
 
+    if fecha:
+        argumentos["fecha"] = fecha
 
-    contexto = obtener_contexto(codsalon)
-
-    # 🔁 RESET CONTEXTO si cambió la intención
-    if intencion != contexto.get("intencion"):
-        limpiar_contexto(codsalon)
-
-    actualizar_contexto(codsalon, "codsalon", codsalon)
-    actualizar_contexto(codsalon, "fecha", fecha)
-    actualizar_contexto(codsalon, "codempleado", codempleado)
-    actualizar_contexto(codsalon, "kpi", kpi)
-    actualizar_contexto(codsalon, "intencion", intencion)
-
-    resultado = despachar_intencion(
-        intencion=intencion,
-        texto_usuario=mensaje_usuario,
-        fecha=fecha,
-        codsalon=codsalon,
-        codempleado=codempleado,
-        kpi=kpi,
-        sesion=contexto
-    )
-
-    if resultado:
-        logging.info("[RESPUESTA] Generada correctamente desde función directa")
-        resultado_final = formato_markdown(resultado)
-        return {"respuesta": f"**Hola, soy Mont Dirección.**\n\n{resultado_final}"}
+    respuesta = despachar_intencion(**argumentos)
 
     return {
-        "respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."
+        "respuesta": f"**Hola, soy Mont Dirección.**\n\n{formato_markdown(respuesta)}"
     }
+
 
 
 
