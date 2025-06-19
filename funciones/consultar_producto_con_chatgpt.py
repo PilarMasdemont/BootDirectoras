@@ -1,50 +1,48 @@
+import os
 import json
+from openai import OpenAI
+from difflib import get_close_matches
 
-PRODUCTOS_PATH = "Archivos_estaticos/productos_diccionario.json"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def cargar_productos():
-    with open(PRODUCTOS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+with open("Archivos_estaticos/productos_diccionario.json", "r", encoding="utf-8") as f:
+    PRODUCTOS = json.load(f)
 
-PRODUCTOS = cargar_productos()
+def consultar_producto_chatgpt(nombre_producto: str, atributo_dudado: str) -> str:
+    if not nombre_producto:
+        return "❗️No estoy segura a qué producto te refieres. ¿Podrías especificarlo un poco más?"
 
-def consultar_producto_chatgpt(nombre_producto: str, atributo_duda: str = None) -> str:
-    nombre = nombre_producto.lower().strip()
+    claves_lower = {k.lower(): k for k in PRODUCTOS}
+    coincidencias = get_close_matches(nombre_producto.lower(), claves_lower.keys(), n=1, cutoff=0.5)
+    if not coincidencias:
+        return f"❗️No encontré ningún producto que se parezca a '{nombre_producto}'."
 
-    # Buscar coincidencia exacta o parcial
-    coincidencia = next(
-        (key for key in PRODUCTOS if nombre == key.lower()), None
-    ) or next(
-        (key for key in PRODUCTOS if nombre in key.lower()), None
-    )
+    producto_clave = claves_lower[coincidencias[0]]
+    contenido = PRODUCTOS[producto_clave]
 
-    if not coincidencia:
-        return f"No tengo información sobre el producto **{nombre_producto}** en la base de datos."
+    prompt = f"""
+Eres Mont Dirección, una asistente especializada en gestión de salones de belleza. 
+Una usuaria te ha preguntado sobre el producto **{producto_clave}**, específicamente sobre: **{atributo_dudado}**.
 
-    info_producto = PRODUCTOS[coincidencia]
+A continuación tienes la información del producto:
+"""
+{contenido}
+"""
 
-    if atributo_duda:
-        atributo = atributo_duda.lower()
-        resultados = []
+Con esta información, responde de forma clara, profesional y práctica. No inventes información que no aparezca.
 
-        for subtitulo, descripcion in info_producto.items():
-            lineas = descripcion.split("\n")
-            filtrado = "\n".join(l for l in lineas if atributo in l.lower())
-            if filtrado.strip():
-                resultados.append(f"**{subtitulo}**:\n{filtrado}")
+Respuesta:
+"""
 
-        if resultados:
-            return f"**{coincidencia}** – Resultados sobre *{atributo_duda}*:\n\n" + "\n\n".join(resultados)
-        else:
-            resumen = ", ".join(info_producto.keys())
-            return f"No encontré detalles sobre *{atributo_duda}* en **{coincidencia}**. Secciones disponibles: {resumen}"
-
-    # Si no se pide un atributo, devolver todo
-    partes = [f"**{coincidencia}**"]
-    for subtitulo, descripcion in info_producto.items():
-        partes.append(f"**{subtitulo}**:\n{descripcion.strip()}")
-
-    return "\n\n".join(partes)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"❌ Error al consultar GPT: {e}"
 
 
 
