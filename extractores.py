@@ -1,4 +1,3 @@
-# extractores.py
 import re
 import calendar
 import logging
@@ -52,7 +51,7 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10
     }
     for palabra, numero in numeros_texto.items():
-        texto = re.sub(rf"\\b{palabra}\\b", str(numero), texto)
+        texto = re.sub(rf"\b{palabra}\b", str(numero), texto)
 
     for es, en in meses_es_en.items():
         texto = texto.replace(es, en)
@@ -128,14 +127,15 @@ def extraer_fecha_desde_texto(texto: str, anio_por_defecto=2025):
         return fecha_str
     except Exception as e:
         logger.error(f"[FECHA] ❌ Error al interpretar la fecha: {e}")
-        return "FECHA_NO_VALIDA"
+        return None
 
 def extraer_codsalon(texto: str):
     texto = texto.lower()
-    match = re.search(r"sal[oó]n\\s*(\\d+)", texto)
+    match = re.search(r"sal[oó]n\s*(\d+)", texto)
     if match:
         logger.info(f"[SALON] Código de salón extraído: {match.group(1)}")
         return match.group(1)
     logger.info("[SALON] No se detectó código de salón")
     return None
+
 
