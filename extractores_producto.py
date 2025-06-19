@@ -38,6 +38,4 @@ def explicar_producto(nombre_producto: str) -> str:
     return "\n\n".join(partes)
 
 
-    return respuesta
-
 
