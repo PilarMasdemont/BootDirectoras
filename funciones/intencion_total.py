@@ -1,61 +1,15 @@
-import json
-import re
-import logging
-
+# funciones/intencion_total.py
 from funciones.intencion import clasificar_intencion as clasificar_general
 from funciones.intention_process import clasificar_intencion as clasificar_proceso
-from funciones.intention_producto import es_intencion_producto
+from funciones.intention_producto import clasificar_intencion_producto as clasificar_producto
 from funciones.extractores_proceso import extraer_nombre_proceso, extraer_duda_proceso
-from funciones.extractores_producto import extraer_nombre_producto
-
-def normalizar(texto: str) -> str:
-    texto = texto.lower()
-    texto = re.sub(r"[^\w\sáéíóúüñ]", "", texto)  # eliminar puntuación
-    texto = re.sub(r"\b\d+\s?(ml|g|gr|kg|l|litros)?\b", "", texto)  # elimina unidades
-    texto = re.sub(r"\s+", " ", texto).strip()
-    return texto
+from funciones.extractores_producto import extraer_nombre_producto, extraer_duda_producto
+from funciones.consultar_producto_con_chatgpt import consultar_producto_chatgpt as consultar_producto
 
 def clasificar_intencion_completa(texto: str) -> dict:
-    texto_limpio = normalizar(texto)
+    texto = texto.strip().lower()
 
-    palabras_servicio = [
-        "mechas", "queratina", "alisado", "coloración", "tratamiento", "brillo",
-        "masdemont", "hidratar", "reparar", "cabello", "pelo", "tinte", "vegana"
-    ]
-
-    palabras_proceso = [
-        "caja", "inventario", "cerrar", "cuadrar", "proceso", "tarea", "pedido", "stock"
-    ]
-
-    # 🧴 CONSULTAR PRODUCTO
-    if es_intencion_producto(texto):
-        nombre = extraer_nombre_producto(texto)
-        return {
-            "intencion": "consultar_producto",
-            "producto": nombre,
-            "comentario": f"Detectado producto '{nombre}' usando intención de producto",
-            "tiene_fecha": False
-        }
-
-    # 🔁 CONSULTAR PROCESO
-    if any(p in texto_limpio for p in palabras_proceso):
-        return {
-            "intencion": "consultar_proceso",
-            "comentario": "Detectado como proceso interno",
-            "proceso": extraer_nombre_proceso(texto),
-            "atributo": extraer_duda_proceso(texto),
-            "tiene_fecha": False
-        }
-
-    # ✂️ SERVICIO ESTÉTICO
-    if any(p in texto_limpio for p in palabras_servicio):
-        return {
-            "intencion": "explicar_producto",
-            "comentario": "Detectado como técnica o servicio de peluquería",
-            "tiene_fecha": False
-        }
-
-    # 🔄 Fallback: clasificador específico de procesos
+    # Paso 1: Detectar si es sobre procesos
     resultado_proceso = clasificar_proceso(texto)
     if resultado_proceso.get("intencion") == "consultar_proceso":
         return {
@@ -66,15 +20,36 @@ def clasificar_intencion_completa(texto: str) -> dict:
             "tiene_fecha": False
         }
 
-    # 🌍 Fallback general
-    resultado_general = clasificar_general(texto)
+    # Paso 2: Detectar si es sobre productos
+    resultado_producto = clasificar_producto(texto)
+    if resultado_producto.get("intencion") == "consultar_producto":
+        return {
+            "intencion": "consultar_producto",
+            "comentario": resultado_producto.get("comentario"),
+            "producto": extraer_nombre_producto(texto),
+            "atributo": extraer_duda_producto(texto),
+            "tiene_fecha": False
+        }
+
+    # Paso 3: Solo si contiene fecha, clasificar como general
+    contiene_fecha = any(p in texto for p in [
+        "hoy", "ayer", "semana", "mes", "lunes", "martes",
+        "miércoles", "jueves", "viernes", "sábado", "domingo"
+    ])
+
+    if contiene_fecha:
+        resultado_general = clasificar_general(texto)
+        return {
+            "intencion": resultado_general.get("intencion", "desconocida"),
+            "comentario": resultado_general.get("comentario"),
+            "tiene_fecha": True
+        }
+
+    # No se detectó intención clara
     return {
-        "intencion": resultado_general.get("intencion", "desconocida"),
-        "comentario": resultado_general.get("comentario"),
-        "tiene_fecha": any(p in texto_limpio for p in [
-            "hoy", "ayer", "semana", "mes", "lunes", "martes", "miércoles",
-            "jueves", "viernes", "sábado", "domingo"
-        ])
+        "intencion": "desconocida",
+        "comentario": "No se detecta intención clara",
+        "tiene_fecha": False
     }
 
 
