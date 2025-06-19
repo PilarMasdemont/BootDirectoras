@@ -14,7 +14,7 @@ from extractores import (
     extraer_codempleado,
     detectar_kpi,
 )
-from extractores_producto import extraer_nombre_producto
+from funciones.extractores_producto import extraer_nombre_producto
 from memory import obtener_contexto, actualizar_contexto, limpiar_contexto
 from dispatcher import despachar_intencion
 
