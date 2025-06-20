@@ -24,3 +24,10 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Consulta general de indicadores"
         }
 
+    # Si no es ninguno de los casos anteriores, se clasifica como "otro"
+    return {
+        "intencion": "otro",
+        "tiene_fecha": bool(re.search(r"\d{1,2} de [a-z]+ de \d{4}", texto)),
+        "comentario": "No se detectó una intención conocida"
+    }
+
