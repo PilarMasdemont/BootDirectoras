@@ -1,22 +1,17 @@
-import sys
-import os
-
-
 from fastapi import APIRouter, Request
 import logging
 
-from funciones.consultar_con_chatgpt import consultar_con_chatgpt
-from funciones.intencion_total import clasificar_intencion_completa
-from memory import obtener_contexto, actualizar_contexto
 from dispatcher import despachar_intencion
+from funciones.intencion import clasificar_intencion
+from extractores import (
+    extraer_fecha_desde_texto,
+    extraer_codsalon,
+    extraer_codempleado,
+    detectar_kpi,
+)
+from google_sheets_session import cargar_sesion
 
 router = APIRouter()
-
-def formato_markdown(texto: str) -> str:
-    texto = texto.replace("\ud83d\udd39", "-")  # viñetas unicode
-    texto = texto.replace("\u2022", "-")        # viñetas estándar
-    texto = texto.replace("\n\n", "\n")         # elimina dobles saltos
-    return texto.strip()
 
 @router.post("")
 async def chat(request: Request):
@@ -26,47 +21,39 @@ async def chat(request: Request):
 
     logging.info(f"📥 Petición recibida: '{mensaje_usuario}'")
 
-    # Paso 1: Clasificación de intención
-    intencion_info = clasificar_intencion_completa(mensaje_usuario)
+    intencion_info = clasificar_intencion(mensaje_usuario)
     intencion = intencion_info["intencion"]
-    logging.info(f"[INTENCION] Detectada: {intencion} | Comentario: {intencion_info.get('comentario')}")
 
-    codsalon = body.get("codsalon")
-    contexto = obtener_contexto(codsalon)
-    actualizar_contexto(codsalon, "intencion", intencion)
+    logging.info(f"[INTENCION] Detectada: {intencion} | Datos: {intencion_info}")
 
-    # Paso 2: Si es una duda sobre productos o procesos, usar nuevo flujo
-    if intencion in ["consultar_proceso", "consultar_producto"]:
-        respuesta = consultar_con_chatgpt(mensaje_usuario)
-        respuesta_markdown = formato_markdown(respuesta)
+    fecha = extraer_fecha_desde_texto(mensaje_usuario)
+    codsalon = body.get("codsalon") or extraer_codsalon(mensaje_usuario)
+    codempleado = extraer_codempleado(mensaje_usuario)
+    kpi = detectar_kpi(mensaje_usuario)
 
-        return {
-            "respuesta": f"**Hola, soy Mont Dirección.**\n\n{respuesta_markdown}"
-        }
+    logging.info(f"[FECHA] Extraída: {fecha}")
+    logging.info(f"[SALON] Código detectado: {codsalon}")
+    logging.info(f"[KPI] Detectado: {kpi}")
+    logging.info(f"[EMPLEADO] Código detectado: {codempleado}")
 
-    # Paso 3: Otras intenciones (métricas, agenda, KPIs...) → flujo directo
+    sesion = cargar_sesion(ip_usuario, fecha)
+
     resultado = despachar_intencion(
         intencion=intencion,
         texto_usuario=mensaje_usuario,
-        fecha=body.get("fecha"),
+        fecha=fecha,
         codsalon=codsalon,
-        codempleado=body.get("codempleado"),
-        kpi=body.get("kpi"),
-        sesion=contexto
+        codempleado=codempleado,
+        kpi=kpi,
+        sesion=sesion
     )
 
     if resultado:
-        logging.info("[RESPUESTA] Generada correctamente desde función directa")
-        resultado_final = formato_markdown(resultado)
-        return {
-            "respuesta": f"**Hola, soy Mont Dirección.**\n\n{resultado_final}"
-        }
+        logging.info("[RESPUESTA] Resultado generado exitosamente desde función directa")
+        return {"respuesta": f"Hola, soy Mont Dirección.\n\n{resultado}"}
 
-    return {
-        "respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."
-    }
-
-
+    logging.info("[FLUJO] No se ejecutó ninguna función directa")
+    return {"respuesta": "Estoy pensando cómo responderte mejor. Pronto te daré una respuesta."}
 
 
 
