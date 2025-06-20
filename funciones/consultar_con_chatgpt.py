@@ -1,52 +1,78 @@
 import os
 import json
 from openai import OpenAI
-from funciones.selector_dinamico import seleccionar_apartados
-from funciones.util_json import extraer_fragmentos_desde_rutas
-
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def consultar_con_chatgpt(pregunta_usuario: str) -> str:
+def seleccionar_y_responder_con_documentos(pregunta_usuario: str) -> str:
     try:
-        # Paso 1: Pedir a ChatGPT qué partes consultar
-        rutas = seleccionar_apartados(pregunta_usuario)
+        indice_path = "Archivos_estaticos/indice_doc.json"
+        with open(indice_path, encoding="utf-8") as f:
+            indice = json.load(f)
 
-        if not rutas:
-            return "❗️No encontré ninguna sección relevante para responder a tu pregunta."
+        lista_docs = ""
+        for item in indice:
+            nombre = item.get("nombre")
+            descripcion = item.get("descripcion")
+            lista_docs += f"- {nombre}: {descripcion}\n"
 
-        # Paso 2: Extraer contenido de los JSON indicados
-        fragmentos = extraer_fragmentos_desde_rutas(rutas)
+        prompt_seleccion = f"""
+El usuario ha hecho esta pregunta:
+\"\"\"{pregunta_usuario}\"\"\"
 
-        if not fragmentos:
-            return "❗️No pude obtener contenido útil de los documentos."
+A continuación hay una lista de documentos disponibles con sus descripciones.
 
-        # Paso 3: Construir contexto para el modelo
-        contexto = ""
-        for clave, contenido in fragmentos.items():
-            contexto += f"\n📄 {clave}:\n\"\"\"\n{contenido}\n\"\"\"\n"
+{lista_docs}
 
-        # Paso 4: Armar prompt completo
-        prompt = f"""
-Eres Mont Dirección, una asistente profesional especializada en productos y procesos de salón de belleza.
-
-La siguiente usuaria tiene esta duda:
-"{pregunta_usuario}"
-
-A continuación tienes información útil extraída de los documentos disponibles:
-{contexto}
-
-Con esta información, responde de forma clara, útil, y profesional. No inventes. Sé concreta, cálida y segura.
+Según esta lista, ¿qué documentos son los más útiles para responder la pregunta del usuario? 
+Devuélveme solo los nombres exactos de archivo, separados por coma si son varios (por ejemplo: inventario_manual.json, productos.json). 
+No expliques nada más.
 """
 
-        # Paso 5: Enviar a GPT
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt_seleccion}],
+            temperature=0
+        )
+        seleccion = response.choices[0].message.content.strip()
+
+        if not seleccion:
+            return None
+
+        nombres_docs = [nombre.strip() for nombre in seleccion.split(",")]
+
+        contexto = ""
+        for nombre in nombres_docs:
+            ruta_doc = os.path.join("Archivos_estaticos", nombre)
+            if os.path.exists(ruta_doc):
+                with open(ruta_doc, encoding="utf-8") as f:
+                    contenido = f.read()
+                contexto += f"\n📄 {nombre}:\n\"\"\"\n{contenido}\n\"\"\"\n"
+
+        if not contexto:
+            return None
+
+        prompt_respuesta = f"""
+Eres Mont Dirección, una asistente profesional especializada en productos y procesos de salón de belleza.
+
+La usuaria ha preguntado lo siguiente:
+\"\"\"{pregunta_usuario}\"\"\"
+
+Aquí tienes información útil extraída de los documentos relevantes:
+{contexto}
+
+Con base en esta información, responde de forma clara, útil y profesional. Sé cálida, concreta y no inventes datos.
+"""
+
+        respuesta_final = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt_respuesta}],
             temperature=0.5
         )
-        return response.choices[0].message.content.strip()
+
+        return respuesta_final.choices[0].message.content.strip()
 
     except Exception as e:
-        return f"❌ Error al consultar GPT: {e}"
+        return f"❌ Error al procesar los documentos: {str(e)}"
+
 
