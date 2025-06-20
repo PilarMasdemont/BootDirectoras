@@ -24,18 +24,3 @@ def clasificar_intencion(texto: str) -> dict:
             "comentario": "Consulta general de indicadores"
         }
 
-    # ✅ NUEVO BLOQUE: detectar intención de producto
-    if any(palabra in texto for palabra in [
-        "glatt", "producto", "alisador", "tratamiento", "beneficio", "cómo se usa", "opiniones", "comentarios", "hidrata", "schwarzkopf"
-    ]):
-        return {
-            "intencion": "explicar_producto",
-            "tiene_fecha": False,
-            "comentario": "Consulta sobre un producto o sus beneficios"
-        }
-
-    return {
-        "intencion": "general",
-        "tiene_fecha": False,
-        "comentario": "Respuesta no interpretable"
-    }
